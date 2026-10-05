@@ -8,6 +8,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 
+import com.alikuxac.humannature.client.InjuryHudOverlay;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+
 @EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
 public class ForgeClientEvents {
 
@@ -18,5 +21,10 @@ public class ForgeClientEvents {
             event.setPitch(event.getPitch() + offset.pitch);
             event.setRoll(event.getRoll() + offset.roll);
         }
+    }
+
+    @SubscribeEvent
+    public static void onRenderGuiPost(RenderGuiEvent.Post event) {
+        InjuryHudOverlay.render(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 }

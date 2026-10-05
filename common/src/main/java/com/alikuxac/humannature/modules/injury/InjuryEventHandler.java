@@ -12,6 +12,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PotionItem;
 
 public class InjuryEventHandler {
     public static final ResourceLocation FRACTURE_SPEED_MODIFIER_LEG1_ID = ResourceLocation.fromNamespaceAndPath("humannature", "bone_fracture_speed_leg1");
@@ -70,17 +72,6 @@ public class InjuryEventHandler {
         return count;
     }
 
-    public static void onLivingFall(LivingEntity entity, float fallDistance, float damageMultiplier) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
-        if (!(entity instanceof Player player)) return;
-
-        float calculatedDamage = (fallDistance - 3.0F) * damageMultiplier;
-
-        if (fallDistance >= 5.0F || calculatedDamage > 4.0F) {
-            applyBoneFracture(player);
-        }
-    }
-
     public static void applyBoneFracture(Player player) {
         player.setSprinting(false);
 
@@ -93,11 +84,9 @@ public class InjuryEventHandler {
         int currentFractures = getFractureCount(player);
 
         if (hasSplint) {
-            // With splint: apply reduced speed penalty only once
             if (!speedAttr.hasModifier(SPLINT_SPEED_MODIFIER_ID)) {
                 speedAttr.addTransientModifier(SPLINT_SPEED_MODIFIER);
             }
-            // Remove any existing fracture modifiers
             speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
             speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
             if (jumpAttr != null) {
@@ -105,7 +94,6 @@ public class InjuryEventHandler {
                 jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
             }
         } else {
-            // Without splint: normal fracture logic
             if (currentFractures == 0) {
                 speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG1);
                 if (jumpAttr != null && !jumpAttr.hasModifier(FRACTURE_JUMP_MODIFIER_LEG1_ID)) {
@@ -119,7 +107,6 @@ public class InjuryEventHandler {
             }
         }
 
-        // Lower pitch sound when 2nd leg breaks (only without splint)
         float pitch = hasSplint ? 0.9F : (currentFractures == 0 ? 0.8F : 0.6F);
 
         player.level().playSound(
@@ -132,5 +119,87 @@ public class InjuryEventHandler {
                 1.0F,
                 pitch
         );
+        
+        InjuryModule.startFractureTimer(player.getUUID());
+    }
+
+    public static void reduceFractureTimer(Player player, int amount) {
+        InjuryModule.reduceFractureTimer(player.getUUID(), amount);
+    }
+
+    public static int getRemainingFractureTime(Player player) {
+        return InjuryModule.getRemainingFractureTime(player.getUUID());
+    }
+
+    public static boolean isFractureActive(Player player) {
+        return InjuryModule.isFractureActive(player.getUUID());
+    }
+
+    public static void clearFractureTimer(Player player) {
+        InjuryModule.clearFractureTimer(player.getUUID());
+
+        AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        AttributeInstance jumpAttr = player.getAttribute(Attributes.JUMP_STRENGTH);
+
+        if (speedAttr != null) {
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
+            speedAttr.removeModifier(SPLINT_SPEED_MODIFIER_ID);
+        }
+
+        if (jumpAttr != null) {
+            jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG1_ID);
+            jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
+        }
+    }
+
+    public static void handleItemConsumption(Player player, ItemStack stack) {
+        if (!isFractureActive(player)) return;
+
+        double reductionPercent = 0.0;
+
+        if (stack.is(Items.MILK_BUCKET)) {
+            reductionPercent = 0.50;
+        } else if (stack.is(Items.RABBIT_STEW) ||
+                 stack.is(Items.MUSHROOM_STEW) ||
+                 stack.is(Items.BEETROOT_SOUP) ||
+                 stack.is(Items.SUSPICIOUS_STEW)) {
+            reductionPercent = 0.30;
+        } else if (stack.is(Items.GOLDEN_APPLE) ||
+                 stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+            reductionPercent = 0.75;
+        } else if (stack.getItem() instanceof PotionItem) {
+            reductionPercent = 0.40;
+        }
+
+        if (reductionPercent > 0.0) {
+            int currentTime = getRemainingFractureTime(player);
+            int reducedTime = (int) (currentTime * reductionPercent);
+            reduceFractureTimer(player, reducedTime);
+
+            if (!isFractureActive(player)) {
+                clearFractureTimer(player);
+            }
+
+            player.level().playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.BONE_MEAL_USE,
+                SoundSource.PLAYERS,
+                1.0F,
+                1.0F
+            );
+        }
+    }
+
+    public static void onLivingFall(LivingEntity entity, float distance, float damageMultiplier) {
+        if (!(entity instanceof Player player)) return;
+        if (!CommonConfig.ENABLE_INJURY.get()) return;
+
+        if (distance > 3.0F && !player.isCreative() && !player.isSpectator()) {
+            applyBoneFracture(player);
+        }
     }
 }
