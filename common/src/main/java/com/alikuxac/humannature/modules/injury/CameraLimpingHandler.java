@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.modules.injury;
 
+import com.alikuxac.humannature.compat.CuriosCompat;
 import com.alikuxac.humannature.config.CommonConfig;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -22,6 +23,11 @@ public class CameraLimpingHandler {
         }
 
         if (player == null || !player.onGround()) {
+            return new CameraOffset(0.0F, 0.0F);
+        }
+
+        // Disable camera limping if splint is active
+        if (CommonConfig.ENABLE_SPLINT.get() && CuriosCompat.hasActiveSplint(player)) {
             return new CameraOffset(0.0F, 0.0F);
         }
 
