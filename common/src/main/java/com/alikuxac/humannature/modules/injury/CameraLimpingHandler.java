@@ -1,6 +1,5 @@
 package com.alikuxac.humannature.modules.injury;
 
-import com.alikuxac.humannature.compat.CuriosCompat;
 import com.alikuxac.humannature.config.CommonConfig;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -26,13 +25,8 @@ public class CameraLimpingHandler {
             return new CameraOffset(0.0F, 0.0F);
         }
 
-        // Disable camera limping if splint is active
-        if (CommonConfig.ENABLE_SPLINT.get() && CuriosCompat.hasActiveSplint(player)) {
-            return new CameraOffset(0.0F, 0.0F);
-        }
-
-        int fractures = InjuryEventHandler.getFractureCount(player);
-        if (fractures == 0) {
+        InjuryTier tier = InjuryEventHandler.getFractureTier(player);
+        if (tier == InjuryTier.NONE) {
             return new CameraOffset(0.0F, 0.0F);
         }
 
@@ -45,7 +39,7 @@ public class CameraLimpingHandler {
 
         float cycle = walkDist * (float) Math.PI * 2.0F;
 
-        if (fractures == 1) {
+        if (tier == InjuryTier.TIER_1_SINGLE_LEG) {
             // Single leg broken: asymmetrical limp
             float rollOffset = Mth.sin(cycle) * 0.6F;
             float pitchOffset = Math.max(0.0F, Mth.sin(cycle)) * 0.3F;

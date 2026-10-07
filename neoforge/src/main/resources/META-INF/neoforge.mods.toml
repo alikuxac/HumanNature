@@ -23,9 +23,3 @@ A lightweight, immersive physiology overhaul introducing bone fractures, hypothe
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
-
-[[dependencies.${mod_id}]]
-    modId="curios"
-    type="optional"
-    ordering="AFTER"
-    side="BOTH"

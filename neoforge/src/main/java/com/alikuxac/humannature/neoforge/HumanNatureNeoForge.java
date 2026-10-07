@@ -11,6 +11,5 @@ public class HumanNatureNeoForge {
     public HumanNatureNeoForge(IEventBus modBus, ModContainer container) {
         HumanNatureCommon.init();
         ModItems.register(modBus);
-        HumanNatureCommon.registerCuriosSlots(modBus);
     }
 }

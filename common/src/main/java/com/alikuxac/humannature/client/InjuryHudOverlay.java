@@ -1,6 +1,5 @@
 package com.alikuxac.humannature.client;
 
-import com.alikuxac.humannature.compat.CuriosCompat;
 import com.alikuxac.humannature.config.CommonConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import net.minecraft.client.Minecraft;
@@ -25,7 +24,6 @@ public class InjuryHudOverlay {
         int seconds = totalSeconds % 60;
 
         boolean isResting = player.isCrouching() || player.isSleeping();
-        boolean hasSplint = CommonConfig.ENABLE_SPLINT.get() && CuriosCompat.hasActiveSplint(player);
         boolean isMoving = player.walkDist - player.walkDistO > 0.001F && !isResting;
 
         String title;
@@ -39,10 +37,7 @@ public class InjuryHudOverlay {
 
         String statusText;
         int statusColor;
-        if (hasSplint) {
-            statusText = String.format("Healing: %02d:%02d (Splinted)", minutes, seconds);
-            statusColor = 0xFF55FF55; // Light green
-        } else if (isResting) {
+        if (isResting) {
             statusText = String.format("Healing: %02d:%02d (Resting 2x)", minutes, seconds);
             statusColor = 0xFFFFFF55; // Yellow
         } else if (isMoving) {

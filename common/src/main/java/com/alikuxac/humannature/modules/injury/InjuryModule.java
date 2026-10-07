@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public class InjuryModule implements IHumanModule {
     private static final Map<UUID, Integer> FRACTURE_TIMERS = new HashMap<>();
+    private static final Map<UUID, InjuryTier> FRACTURE_TIERS = new HashMap<>();
 
     @Override
     public void init() {
@@ -19,15 +20,34 @@ public class InjuryModule implements IHumanModule {
         return CommonConfig.ENABLE_INJURY.get();
     }
 
-    public static void startFractureTimer(UUID playerId) {
+    public static void startFractureTimer(UUID playerId, InjuryTier tier) {
         FRACTURE_TIMERS.put(playerId, CommonConfig.BONE_FRACTURE_DURATION.get());
+        FRACTURE_TIERS.put(playerId, tier);
+    }
+
+    public static void setFractureTier(UUID playerId, InjuryTier tier) {
+        if (tier == InjuryTier.NONE) {
+            clearFractureTimer(playerId);
+        } else {
+            FRACTURE_TIERS.put(playerId, tier);
+            if (!FRACTURE_TIMERS.containsKey(playerId)) {
+                FRACTURE_TIMERS.put(playerId, CommonConfig.BONE_FRACTURE_DURATION.get());
+            }
+        }
+    }
+
+    public static InjuryTier getFractureTier(UUID playerId) {
+        return FRACTURE_TIERS.getOrDefault(playerId, InjuryTier.NONE);
     }
 
     public static void reduceFractureTimer(UUID playerId, int amount) {
         if (FRACTURE_TIMERS.containsKey(playerId)) {
             int newTime = FRACTURE_TIMERS.get(playerId) - amount;
-            if (newTime < 0) newTime = 0;
-            FRACTURE_TIMERS.put(playerId, newTime);
+            if (newTime <= 0) {
+                clearFractureTimer(playerId);
+            } else {
+                FRACTURE_TIMERS.put(playerId, newTime);
+            }
         }
     }
 
@@ -37,10 +57,11 @@ public class InjuryModule implements IHumanModule {
     }
 
     public static boolean isFractureActive(UUID playerId) {
-        return FRACTURE_TIMERS.containsKey(playerId) && FRACTURE_TIMERS.get(playerId) > 0;
+        return FRACTURE_TIMERS.containsKey(playerId) && FRACTURE_TIMERS.get(playerId) > 0 && getFractureTier(playerId) != InjuryTier.NONE;
     }
 
     public static void clearFractureTimer(UUID playerId) {
         FRACTURE_TIMERS.remove(playerId);
+        FRACTURE_TIERS.remove(playerId);
     }
 }

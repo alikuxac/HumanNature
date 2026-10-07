@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " S ",
+    "PWP",
+    " S "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:string"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "W": {
+      "tag": "minecraft:wool"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "humannature:wooden_splint"
+  }
+}
