@@ -12,26 +12,39 @@
 
 ## Core Features & Modules
 
-### 1. Injury & Bone Recovery System
-- **Two-Tier Leg Fractures**:
-  - **Tier 1 (Single Leg Broken)**: $-45\%$ movement speed, limping.
-  - **Tier 2 (Both Legs Broken)**: $-85\%$ movement speed, disabled jumping, forced crawling pose (`Pose.SWIMMING`).
-- **Near-Death Shock**: Fall damage resulting in $\le 1.0$ HP ($0.5$ heart) triggers Darkness, forced item drop, and heartbeat sound effects.
-- **Active Resting & Healing**:
+### 1. 6-Limb Skeletal Trauma & Recovery System
+- **Comprehensive Anatomical Tracking**:
+  - **Head**: Tier 1 causes periodic tinnitus/disorientation; Tier 2 triggers flashing darkness. Mitigated by Blast Protection helmets.
+  - **Torso**: Tier 1 increases metabolic food exhaustion; Tier 2 caps maximum health to 7 Hearts (14 HP). Mitigated by Diamond/Netherite chestplates.
+  - **Arms**: $-30\%$ Attack Speed when fractured.
+  - **Legs**: Tier 1 reduces speed by $-45\%$ and locks sprinting; Tier 2 causes severe $-85\%$ slow, disabled jumping, and forced crawling pose (`Pose.SWIMMING`).
+- **Mitigation & Thresholds**: Feather Falling boots and higher-tier leggings increase safe fall distance.
+- **Active Resting & Metabolic Healing**:
   - **Standing Still**: Standard recovery speed ($1\times$).
   - **Crouching / Sleeping**: Accelerated recovery speed ($2\times$).
   - **Moving (Unsplinted)**: Recovery timer pauses.
-- **Multi-Tier Splints & Right-Click Treatment**: Holding right-click for 2 seconds (40 ticks) performs treatment with `UseAnim.BRUSH`, wool particles, and leather sound effects across 5 tiers (Wooden, Reinforced, Golden, Diamond, Netherite).
-- **Nutrition & Healing Acceleration**: Drinking milk, eating nutrient-rich stews/soups, golden apples, or health potions instantly reduces remaining fracture recovery time.
-- **Client HUD Overlay**: Real-time display showing remaining recovery time and current status (`Resting 2x`, `Standing Still`, `Paused`).
+  - **Sleep Trauma Downgrade**: Waking with full hunger ($\ge 16$ points) downgrades the worst injury by 1 tier at the cost of 4 hunger points.
+- **Fair Death & Anti-Suicide Rules**:
+  - `keepInventory = false`: Full recovery and negative status cleansing on death.
+  - `keepInventory = true`: Applies a 30-second penalty (Weakness, Hunger, Tier 1 leg sprain) to prevent suicide exploits.
+- **Multi-Tier Splints**: 5 tiers (Wooden, Reinforced, Golden, Diamond, Netherite) usable via right-click channeling (2 seconds) or GUI first-aid.
+- **Nutritional Acceleration**: Milk, stews, golden apples, and potions provide instant percentage recovery cuts.
 
-### 2. Environmental Temperature System
+### 2. Diagnostic GUI & HUD Overlays
+- **Dedicated Diagnostic Screen**:
+  - Accessible via **`H`** hotkey or an **inventory tab button**.
+  - Interactive 6-limb color-coded silhouette (Healthy 🟢, Minor 🟡, Severe 🔴).
+  - Quick-treat injured limbs using any splint found in the player's inventory, protected by a 2-second cooldown.
+  - Seamless navigation with a return button (`← Inventory`) and **`E`** key shortcut.
+- **Client HUD Overlay**: Real-time display showing affected limbs, current recovery status, and remaining healing time.
+
+### 3. Environmental Temperature System
 - Dynamic body temperature mechanics influenced by biomes, weather, time of day, block heat sources, and equipment.
 
-### 3. Weight & Inventory Encumbrance
+### 4. Weight & Inventory Encumbrance
 - Realistic weight simulation based on inventory load, affecting stamina consumption and movement speed.
 
-### 4. Physiology & Survival Metrics
+### 5. Physiology & Survival Metrics
 - Core human body survival stats and physiological requirements.
 
 ---

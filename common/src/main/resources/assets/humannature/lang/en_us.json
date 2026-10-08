@@ -3,5 +3,7 @@
   "item.humannature.reinforced_splint": "Reinforced Splint",
   "item.humannature.golden_splint": "Golden Splint",
   "item.humannature.diamond_splint": "Diamond Splint",
-  "item.humannature.netherite_splint": "Netherite Splint"
+  "item.humannature.netherite_splint": "Netherite Splint",
+  "key.humannature.open_diagnostics": "Open Body Diagnostics",
+  "key.categories.humannature": "Human Nature"
 }

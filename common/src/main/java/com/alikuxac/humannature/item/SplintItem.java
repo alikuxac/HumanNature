@@ -7,12 +7,16 @@ import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -145,10 +149,15 @@ public class SplintItem extends Item {
                 InjuryEventHandler.updatePlayerAttributesAndPose(player);
                 break;
             case DIAMOND:
-                // Instantly heals fractures, grants Resistance II (amplifier 1) for 20s & Absorption
+                // Instantly heals fractures, grants Resistance II (20s) & Knockback Resistance (+0.5 for 60s)
                 InjuryEventHandler.clearFractureTimer(player);
                 player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 1));
-                player.setAbsorptionAmount(player.getAbsorptionAmount() + 4.0F);
+                AttributeInstance kbAttr = player.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
+                if (kbAttr != null) {
+                    ResourceLocation diamondKbId = ResourceLocation.fromNamespaceAndPath("humannature", "diamond_splint_knockback");
+                    kbAttr.removeModifier(diamondKbId);
+                    kbAttr.addTransientModifier(new AttributeModifier(diamondKbId, 0.5, AttributeModifier.Operation.ADD_VALUE));
+                }
                 break;
             case NETHERITE:
                 // Instantly heals all fractures & grants Adrenaline (Speed II + Resistance I for 45s)
