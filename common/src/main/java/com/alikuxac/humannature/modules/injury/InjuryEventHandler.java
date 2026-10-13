@@ -15,7 +15,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -31,10 +30,20 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class InjuryEventHandler {
     private static final Random RANDOM = new Random();
+    private static final Set<UUID> PENDING_TRAUMA_TOTEM = ConcurrentHashMap.newKeySet();
 
     public static final ResourceLocation FRACTURE_SPEED_MODIFIER_LEG1_ID = ResourceLocation.fromNamespaceAndPath("humannature", "bone_fracture_speed_leg1");
     public static final ResourceLocation FRACTURE_SPEED_MODIFIER_LEG2_ID = ResourceLocation.fromNamespaceAndPath("humannature", "bone_fracture_speed_leg2");
@@ -244,6 +253,7 @@ public class InjuryEventHandler {
     }
 
     public static void clearFractureTimer(Player player) {
+        PENDING_TRAUMA_TOTEM.remove(player.getUUID());
         InjuryModule.clearFractureTimer(player.getUUID());
 
         AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -690,5 +700,144 @@ public class InjuryEventHandler {
 
     public static boolean shouldCancelNaturalRegen(Player player) {
         return CommonConfig.ENABLE_INJURY.get() && isFractureActive(player);
+    }
+
+    public static void onLivingUseTotem(Player player, DamageSource damageSource, ItemStack totem, InteractionHand hand) {
+        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_TOTEM_BYPASS.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+        if (!damageSource.is(DamageTypes.FALL)) return;
+
+        PENDING_TRAUMA_TOTEM.add(player.getUUID());
+
+        applyBoneFractureTier(player, InjuryTier.TIER_2_DOUBLE_LEG);
+
+        executeKineticInventoryScatter(player, totem, hand);
+    }
+
+    public static boolean shouldDenyMobEffect(Player player, MobEffectInstance effectInstance) {
+        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_TOTEM_BYPASS.get()) return false;
+        if (PENDING_TRAUMA_TOTEM.contains(player.getUUID())) {
+            return effectInstance.getEffect().is(MobEffects.REGENERATION) || effectInstance.getEffect().is(MobEffects.ABSORPTION);
+        }
+        return false;
+    }
+
+    public static void onPlayerTick(Player player) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return;
+
+        if (PENDING_TRAUMA_TOTEM.remove(player.getUUID())) {
+            player.removeEffect(MobEffects.REGENERATION);
+            player.removeEffect(MobEffects.ABSORPTION);
+            player.setHealth(1.0F);
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
+        }
+    }
+
+    private static void executeKineticInventoryScatter(Player player, ItemStack activeTotem, InteractionHand totemHand) {
+        if (totemHand == InteractionHand.OFF_HAND) {
+            if (activeTotem.getCount() > 1) {
+                ItemStack extra = activeTotem.copy();
+                extra.shrink(1);
+                scatterItem(player, extra);
+            }
+            player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+
+            ItemStack main = player.getMainHandItem();
+            if (!main.isEmpty()) {
+                scatterItem(player, main.copy());
+                player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            }
+        } else if (totemHand == InteractionHand.MAIN_HAND) {
+            if (activeTotem.getCount() > 1) {
+                ItemStack extra = activeTotem.copy();
+                extra.shrink(1);
+                scatterItem(player, extra);
+            }
+            player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+
+            ItemStack off = player.getOffhandItem();
+            if (!off.isEmpty()) {
+                scatterItem(player, off.copy());
+                player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            }
+        } else {
+            ItemStack main = player.getMainHandItem();
+            if (!main.isEmpty()) {
+                scatterItem(player, main.copy());
+                player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            }
+            ItemStack off = player.getOffhandItem();
+            if (!off.isEmpty()) {
+                scatterItem(player, off.copy());
+                player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            }
+        }
+       
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = player.getInventory().items.get(i);
+            if (!stack.isEmpty()) {
+                scatterItem(player, stack.copy());
+                player.getInventory().items.set(i, ItemStack.EMPTY);
+            }
+        }
+        
+        List<Integer> occupiedSlots = new ArrayList<>();
+        for (int i = 9; i < 36; i++) {
+            if (!player.getInventory().items.get(i).isEmpty()) {
+                occupiedSlots.add(i);
+            }
+        }
+
+        if (!occupiedSlots.isEmpty()) {
+            Collections.shuffle(occupiedSlots, RANDOM);
+            int dropCount = (int) Math.ceil(occupiedSlots.size() * 0.30);
+            for (int k = 0; k < dropCount; k++) {
+                int slot = occupiedSlots.get(k);
+                ItemStack stack = player.getInventory().items.get(slot);
+                if (!stack.isEmpty()) {
+                    scatterItem(player, stack.copy());
+                    player.getInventory().items.set(slot, ItemStack.EMPTY);
+                }
+            }
+        }
+
+        player.level().playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.ITEM_BREAK,
+                SoundSource.PLAYERS,
+                1.0F,
+                0.9F
+        );
+        player.level().playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.BUNDLE_DROP_CONTENTS,
+                SoundSource.PLAYERS,
+                1.2F,
+                0.8F
+        );
+    }
+
+    private static void scatterItem(Player player, ItemStack stack) {
+        if (stack.isEmpty() || player.level().isClientSide()) return;
+
+        double angle = RANDOM.nextDouble() * 2.0 * Math.PI;
+        double dist = 0.5 + RANDOM.nextDouble() * 3.5; // Up to 4-block radius
+        double dx = Math.cos(angle) * dist;
+        double dz = Math.sin(angle) * dist;
+
+        double spawnX = player.getX() + dx * 0.2;
+        double spawnY = player.getY() + 0.3;
+        double spawnZ = player.getZ() + dz * 0.2;
+
+        ItemEntity itemEntity = new ItemEntity(player.level(), spawnX, spawnY, spawnZ, stack);
+        itemEntity.setDeltaMovement(dx * 0.12, 0.25 + RANDOM.nextDouble() * 0.15, dz * 0.12);
+        itemEntity.setPickUpDelay(40); // 2-second cooldown
+        player.level().addFreshEntity(itemEntity);
     }
 }

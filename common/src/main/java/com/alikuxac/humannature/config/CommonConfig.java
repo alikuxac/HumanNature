@@ -14,4 +14,5 @@ public class CommonConfig {
 
     public static Supplier<Integer> BONE_FRACTURE_DURATION = () -> 6000; // 6000 ticks = 5 minutes
     public static Supplier<Double> BONE_FRACTURE_CROUCH_MULTIPLIER = () -> 0.5; // half speed when crouching
+    public static Supplier<Boolean> ENABLE_TOTEM_BYPASS = () -> true;
 }

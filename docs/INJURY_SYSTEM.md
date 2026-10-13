@@ -84,3 +84,14 @@ Consuming recovery items instantly cuts the remaining healing timer:
   - Hovering a limb shows active debuffs.
   - Clicking an injured limb uses an available splint from inventory (2-second cooldown).
   - Press `E` or click `← Inventory` to return to the inventory screen.
+
+---
+
+### 8. Trauma Totem Bypass (Lethal Fall Damage)
+
+When a player triggers a Totem of Undying to survive fatal fall damage:
+
+- **Health & Effects Nullification**: Negates vanilla Totem Regeneration and Absorption. Player health is locked at $1.0$ HP ($0.5$ heart), and `Darkness` is applied for 3 seconds.
+- **Tier 2 Double Leg Fracture**: Immediately forces severe fractures on both legs (Tier 2), applying a $-85\%$ movement speed penalty, disabling jumping, and locking sprint.
+- **Kinetic Inventory Scatter**: Bypasses `keepInventory`, violently ejecting all items held in both hands (consuming exactly 1 totem), the entire 9-slot Hotbar, and $\lceil 30\% \rceil$ of occupied main storage slots outward across the ground within a 4-block impact radius with a 40-tick pickup cooldown.
+

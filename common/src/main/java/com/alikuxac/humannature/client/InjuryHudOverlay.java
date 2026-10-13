@@ -26,23 +26,22 @@ public class InjuryHudOverlay {
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
 
-        boolean isResting = player.isCrouching() || player.isSleeping();
-        boolean isMoving = player.walkDist - player.walkDistO > 0.001F && !isResting;
+        boolean isMoving = player.walkDist - player.walkDistO > 0.001F;
+        boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
 
         String statusText;
         int statusColor;
-        if (isResting) {
-            statusText = String.format("Healing: %02d:%02d (Resting 2x)", minutes, seconds);
-            statusColor = 0xFFFFFF55; // Yellow
-        } else if (isMoving) {
+        if (isMoving) {
             statusText = String.format("Healing: %02d:%02d (Paused)", minutes, seconds);
             statusColor = 0xFFFF5555; // Light red
+        } else if (isResting) {
+            statusText = String.format("Healing: %02d:%02d (Resting 2x)", minutes, seconds);
+            statusColor = 0xFFFFFF55; // Yellow
         } else {
             statusText = String.format("Healing: %02d:%02d (Standing Still)", minutes, seconds);
             statusColor = 0xFF55FFFF; // Cyan
         }
 
-        // Build list of injured limbs
         StringBuilder injuredLimbs = new StringBuilder();
         for (LimbType limb : LimbType.values()) {
             byte sev = injuryData.getSeverity(limb);

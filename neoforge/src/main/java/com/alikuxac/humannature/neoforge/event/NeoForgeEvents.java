@@ -11,9 +11,15 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
+import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
+import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +29,22 @@ import java.util.UUID;
 public class NeoForgeEvents {
 
     private static final Map<UUID, Float> PREV_WALK_DIST = new HashMap<>();
+
+    @SubscribeEvent
+    public static void onLivingUseTotem(LivingUseTotemEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            InjuryEventHandler.onLivingUseTotem(player, event.getSource(), event.getTotem(), event.getHandHolding());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMobEffectApplicable(MobEffectEvent.Applicable event) {
+        if (event.getEntity() instanceof Player player) {
+            if (InjuryEventHandler.shouldDenyMobEffect(player, event.getEffectInstance())) {
+                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+            }
+        }
+    }
 
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
@@ -65,6 +87,8 @@ public class NeoForgeEvents {
         UUID playerId = player.getUUID();
 
         if (CommonConfig.ENABLE_INJURY.get()) {
+            InjuryEventHandler.onPlayerTick(player);
+
             float currentWalkDist = player.walkDist;
             float prevWalkDist = PREV_WALK_DIST.getOrDefault(playerId, currentWalkDist);
             float delta = currentWalkDist - prevWalkDist;
@@ -80,13 +104,14 @@ public class NeoForgeEvents {
             }
             WAS_SLEEPING.put(playerId, isSleeping);
 
-            boolean canHeal = isCrouching || isSleeping || isStandingStill;
+            boolean isResting = isSleeping || (isCrouching && isStandingStill);
+            boolean canHeal = isSleeping || isStandingStill;
 
             if (InjuryEventHandler.isFractureActive(player)) {
                 InjuryEventHandler.updatePlayerAttributesAndPose(player);
 
                 if (canHeal) {
-                    int reductionAmount = (isCrouching || isSleeping) ? 2 : 1;
+                    int reductionAmount = isResting ? 2 : 1;
                     InjuryEventHandler.reduceFractureTimer(player, reductionAmount);
                 }
             }
@@ -112,7 +137,7 @@ public class NeoForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onBlockBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+    public static void onBlockBreak(BlockEvent.BreakEvent event) {
         Player player = event.getPlayer();
         if (player.level().isClientSide()) return;
         float blockHardness = event.getState().getDestroySpeed(event.getLevel(), event.getPos());
@@ -121,14 +146,14 @@ public class NeoForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onAttackEntity(net.neoforged.neoforge.event.entity.player.AttackEntityEvent event) {
+    public static void onAttackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
         if (player.level().isClientSide()) return;
         InjuryEventHandler.checkSpasmDrop(player);
     }
 
     @SubscribeEvent
-    public static void onShieldBlock(net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent event) {
+    public static void onShieldBlock(LivingShieldBlockEvent event) {
         if (event.getEntity() instanceof Player player) {
             if (InjuryEventHandler.isOffhandLocked(player)) {
                 event.setBlocked(false);
@@ -147,7 +172,7 @@ public class NeoForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onRightClickItem(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+    public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
             Player player = event.getEntity();
             if (InjuryEventHandler.isOffhandLocked(player)) {
@@ -157,7 +182,7 @@ public class NeoForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
             Player player = event.getEntity();
             if (InjuryEventHandler.isOffhandLocked(player)) {
