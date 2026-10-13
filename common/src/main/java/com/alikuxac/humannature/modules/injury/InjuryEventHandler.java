@@ -19,8 +19,6 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.monster.Ravager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.level.GameRules;
@@ -75,7 +73,7 @@ public class InjuryEventHandler {
 
     private static final AttributeModifier FRACTURE_ATTACK_SPEED_MODIFIER = new AttributeModifier(
             FRACTURE_ATTACK_SPEED_MODIFIER_ID,
-            -0.30,
+            -0.50,
             AttributeModifier.Operation.ADD_MULTIPLIED_BASE
     );
 
@@ -140,56 +138,46 @@ public class InjuryEventHandler {
 
         if (speedAttr == null) return;
 
-        // Clean up existing attribute modifiers to prevent duplicates
-        speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
-        speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
-        speedAttr.removeModifier(SPLINT_SPEED_MODIFIER_ID);
-        if (jumpAttr != null) {
-            jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG1_ID);
-            jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
-        }
-        if (maxHealthAttr != null) {
-            maxHealthAttr.removeModifier(FRACTURE_MAX_HEALTH_MODIFIER_ID);
-        }
-        if (attackSpeedAttr != null) {
-            attackSpeedAttr.removeModifier(FRACTURE_ATTACK_SPEED_MODIFIER_ID);
-        }
-
         if (!data.hasAnyInjury()) {
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
+            speedAttr.removeModifier(SPLINT_SPEED_MODIFIER_ID);
+            if (jumpAttr != null) {
+                jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG1_ID);
+                jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
+            }
+            if (maxHealthAttr != null) {
+                maxHealthAttr.removeModifier(FRACTURE_MAX_HEALTH_MODIFIER_ID);
+            }
+            if (attackSpeedAttr != null) {
+                attackSpeedAttr.removeModifier(FRACTURE_ATTACK_SPEED_MODIFIER_ID);
+            }
+
             player.removeEffect(MobEffects.DARKNESS);
             player.removeEffect(MobEffects.CONFUSION);
             player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            if (player.getPose() == Pose.SWIMMING && !player.isSwimming() && !player.isVisuallyCrawling()) {
-                player.setPose(Pose.STANDING);
-            }
             return;
         }
 
         player.setSprinting(false);
 
-        // --- 1. HEAD PENALTIES ---
         byte head = data.getSeverity(LimbType.HEAD);
         if (head == 1) {
-            // Tinnitus sound / light disorient
             if (player.level().getGameTime() % 100 == 0) {
                 player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 60, 0, false, false, false));
             }
         } else if (head >= 2) {
-            // Flash darkness & disorient
             if (player.level().getGameTime() % 80 == 0) {
                 player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 40, 0, false, false, true));
             }
         }
 
-        // --- 2. TORSO PENALTIES ---
         byte torso = data.getSeverity(LimbType.TORSO);
         if (torso == 1) {
-            // Exhaustion accelerates on moving
             if (player.walkDist - player.walkDistO > 0.001F) {
                 player.causeFoodExhaustion(0.02F);
             }
         } else if (torso >= 2) {
-            // Max Health capped to 14 HP (7 hearts) (-6 HP from base 20 HP)
             if (maxHealthAttr != null && !maxHealthAttr.hasModifier(FRACTURE_MAX_HEALTH_MODIFIER_ID)) {
                 maxHealthAttr.addTransientModifier(FRACTURE_MAX_HEALTH_MODIFIER);
                 if (player.getHealth() > maxHealthAttr.getValue()) {
@@ -201,32 +189,41 @@ public class InjuryEventHandler {
             }
         }
 
-        // --- 3. ARM PENALTIES ---
         byte mainArm = data.getSeverity(LimbType.MAIN_ARM);
-        byte offArm = data.getSeverity(LimbType.OFF_ARM);
-        if (mainArm > 0 || offArm > 0) {
+        if (mainArm > 0) {
             if (attackSpeedAttr != null && !attackSpeedAttr.hasModifier(FRACTURE_ATTACK_SPEED_MODIFIER_ID)) {
                 attackSpeedAttr.addTransientModifier(FRACTURE_ATTACK_SPEED_MODIFIER);
             }
+        } else if (attackSpeedAttr != null) {
+            attackSpeedAttr.removeModifier(FRACTURE_ATTACK_SPEED_MODIFIER_ID);
         }
 
-        // --- 4. LEG PENALTIES ---
         byte leftLeg = data.getSeverity(LimbType.LEFT_LEG);
         byte rightLeg = data.getSeverity(LimbType.RIGHT_LEG);
         boolean isBothLegsBroken = (leftLeg >= 2 && rightLeg >= 2) || (leftLeg >= 1 && rightLeg >= 2) || (leftLeg >= 2 && rightLeg >= 1);
         boolean isAnyLegBroken = leftLeg > 0 || rightLeg > 0;
 
         if (isBothLegsBroken) {
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
             if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID)) {
                 speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG2);
             }
             if (jumpAttr != null && !jumpAttr.hasModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID)) {
                 jumpAttr.addTransientModifier(FRACTURE_JUMP_MODIFIER_LEG2);
             }
-            player.setPose(Pose.SWIMMING);
         } else if (isAnyLegBroken) {
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
+            if (jumpAttr != null) {
+                jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
+            }
             if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID)) {
                 speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG1);
+            }
+        } else {
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
+            speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
+            if (jumpAttr != null) {
+                jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
             }
         }
     }
@@ -276,16 +273,12 @@ public class InjuryEventHandler {
         player.removeEffect(MobEffects.DARKNESS);
         player.removeEffect(MobEffects.CONFUSION);
         player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-        if (player.getPose() == Pose.SWIMMING && !player.isSwimming() && !player.isVisuallyCrawling()) {
-            player.setPose(Pose.STANDING);
-        }
     }
 
     public static void onPlayerDeath(Player player) {
         boolean keepInventory = player.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
 
         if (!keepInventory) {
-            // Keep inventory FALSE: Complete reset on death: wipe fracture timers, 6-limb trauma data, and attribute debuffs
             clearFractureTimer(player);
 
             player.removeEffect(MobEffects.DARKNESS);
@@ -298,29 +291,23 @@ public class InjuryEventHandler {
         boolean keepInventory = player.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
 
         if (!keepInventory) {
-            // Keep inventory FALSE: Ensure clean state upon respawning
             clearFractureTimer(player);
 
             player.removeEffect(MobEffects.DARKNESS);
             player.removeEffect(MobEffects.CONFUSION);
             player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
         } else {
-            // Keep inventory TRUE: Anti-suicide-spam penalty for 30 seconds (600 ticks)
-            // Clear severe debuffs first to set clean penalty
             clearFractureTimer(player);
 
-            // 1. Fatigue effects: Weakness I (30s) + Hunger I (30s)
             player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 600, 0));
             player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 600, 0));
 
-            // 2. Leg Tier 1 fracture penalty (30s timer)
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
             boolean pickLeft = RANDOM.nextBoolean();
             LimbType targetLeg = pickLeft ? LimbType.LEFT_LEG : LimbType.RIGHT_LEG;
             data.setSeverity(targetLeg, 1);
             InjuryModule.setInjuryData(player.getUUID(), data);
 
-            // Set fracture timer to exactly 30s (600 ticks)
             InjuryModule.reduceFractureTimer(player.getUUID(), InjuryModule.getRemainingFractureTime(player.getUUID()) - 600);
 
             updatePlayerAttributesAndPose(player);
@@ -331,7 +318,6 @@ public class InjuryEventHandler {
         if (!CommonConfig.ENABLE_INJURY.get()) return;
         if (player.level().isClientSide()) return;
 
-        // Sleep recovery requires sufficient nutrition (Food level >= 16, i.e. 8 drumsticks)
         int foodLevel = player.getFoodData().getFoodLevel();
         if (foodLevel >= 16) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -341,7 +327,6 @@ public class InjuryEventHandler {
                     InjuryModule.setInjuryData(player.getUUID(), data);
                     updatePlayerAttributesAndPose(player);
 
-                    // Consume some hunger as metabolic cost for bone recovery (4 hunger / 2 drumsticks)
                     player.getFoodData().setFoodLevel(Math.max(0, foodLevel - 4));
 
                     player.level().playSound(
@@ -401,15 +386,12 @@ public class InjuryEventHandler {
         if (!CommonConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
-        // Base safe fall threshold: 5.0 blocks
         float safeThreshold = 5.0F;
 
-        // Check Feather Falling enchant on boots (+2.0 blocks safe threshold per level)
         ItemStack boots = player.getItemBySlot(EquipmentSlot.FEET);
         int featherFallingLevel = getEnchantmentLevel(boots, Enchantments.FEATHER_FALLING);
         safeThreshold += (featherFallingLevel * 2.0F);
 
-        // Check Leggings material (+1.5 blocks for Diamond or Netherite leggings)
         ItemStack leggings = player.getItemBySlot(EquipmentSlot.LEGS);
         if (isDiamondOrNetheriteArmor(leggings)) {
             safeThreshold += 1.5F;
@@ -419,14 +401,12 @@ public class InjuryEventHandler {
         if (excessDistance > 0) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
             if (excessDistance >= 5.0F) {
-                // Tier 2: Severe fracture on both legs
                 data.setSeverity(LimbType.LEFT_LEG, 2);
                 data.setSeverity(LimbType.RIGHT_LEG, 2);
                 InjuryModule.setInjuryData(player.getUUID(), data);
                 updatePlayerAttributesAndPose(player);
                 playBoneCrackSound(player, 0.6F);
             } else {
-                // Tier 1: Single random leg fractured or sprained
                 boolean pickLeft = RANDOM.nextBoolean();
                 LimbType targetLeg = pickLeft ? LimbType.LEFT_LEG : LimbType.RIGHT_LEG;
                 int currentSev = data.getSeverity(targetLeg);
@@ -437,7 +417,6 @@ public class InjuryEventHandler {
             }
         }
 
-        // Near-Death Shock Check (<= 1.0 HP / 0.5 heart)
         if (player.getHealth() <= 1.0F && isFractureActive(player)) {
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
             player.drop(player.getItemBySlot(EquipmentSlot.MAINHAND).copy(), true);
@@ -464,7 +443,6 @@ public class InjuryEventHandler {
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
         boolean stateChanged = false;
 
-        // 1. HEAD Trauma: Falling blocks (anvil/gravel/sand) or Elytra fly into wall
         boolean isAnvilOrFallingBlock = damageSource.is(DamageTypes.FALLING_ANVIL) ||
                 damageSource.is(DamageTypes.FALLING_BLOCK);
         boolean isFlyIntoWall = damageSource.is(DamageTypes.FLY_INTO_WALL);
@@ -473,7 +451,6 @@ public class InjuryEventHandler {
             ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
             int blastProtLevel = getEnchantmentLevel(helmet, Enchantments.BLAST_PROTECTION);
             
-            // Blast Protection on Helmet mitigates 50% - 80% concussion chance
             double concussionChance = 1.0;
             if (blastProtLevel > 0) {
                 concussionChance = Math.max(0.2, 1.0 - (0.2 * blastProtLevel));
@@ -487,21 +464,23 @@ public class InjuryEventHandler {
             }
         }
 
-        // 2. TORSO Trauma: Heavy blunt hits from Ravager or Iron Golem
-        boolean isHeavyBluntEntity = damageSource.getEntity() instanceof Ravager ||
-                damageSource.getEntity() instanceof IronGolem;
-        if (isHeavyBluntEntity || amount >= 12.0F) {
+        if (isFlyIntoWall && amount >= 6.0F) {
+            LimbType crashArm = RANDOM.nextBoolean() ? LimbType.MAIN_ARM : LimbType.OFF_ARM;
+            int armSev = amount >= 12.0F ? 2 : 1;
+            data.setSeverity(crashArm, Math.max(data.getSeverity(crashArm), (byte) armSev));
+            stateChanged = true;
+        }
+
+        if (amount >= 12.0F) {
             ItemStack chestplate = player.getItemBySlot(EquipmentSlot.CHEST);
             boolean isDiamondOrNetheriteChest = isDiamondOrNetheriteArmor(chestplate);
 
             int currentSev = data.getSeverity(LimbType.TORSO);
             if (amount >= 14.0F) {
-                // Severe torso trauma
                 data.setSeverity(LimbType.TORSO, 2);
                 stateChanged = true;
                 playBoneCrackSound(player, 0.6F);
             } else if (!isDiamondOrNetheriteChest && currentSev == 0) {
-                // Tier 1 trauma nullified by Diamond or Netherite chestplate
                 data.setSeverity(LimbType.TORSO, 1);
                 stateChanged = true;
                 playBoneCrackSound(player, 0.8F);
@@ -512,6 +491,122 @@ public class InjuryEventHandler {
             InjuryModule.setInjuryData(player.getUUID(), data);
             updatePlayerAttributesAndPose(player);
         }
+    }
+
+    public static void onShieldBlock(Player player, DamageSource damageSource, float blockedDamage) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+
+        if (blockedDamage >= 10.0F) {
+            PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+            int currentSev = data.getSeverity(LimbType.OFF_ARM);
+            int newSev = blockedDamage >= 14.0F ? 2 : Math.min(2, currentSev + 1);
+            if (newSev > currentSev) {
+                data.setSeverity(LimbType.OFF_ARM, newSev);
+                InjuryModule.setInjuryData(player.getUUID(), data);
+                updatePlayerAttributesAndPose(player);
+                playBoneCrackSound(player, newSev >= 2 ? 0.6F : 0.8F);
+            }
+        }
+    }
+
+    public static void onShieldDisabled(Player player) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        int currentSev = data.getSeverity(LimbType.OFF_ARM);
+        int newSev = Math.min(2, currentSev + 1);
+        if (newSev > currentSev) {
+            data.setSeverity(LimbType.OFF_ARM, newSev);
+            InjuryModule.setInjuryData(player.getUUID(), data);
+            updatePlayerAttributesAndPose(player);
+            playBoneCrackSound(player, newSev >= 2 ? 0.6F : 0.8F);
+        }
+    }
+
+    public static float modifyBreakSpeed(Player player, float originalSpeed) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return originalSpeed;
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        if (data.getSeverity(LimbType.MAIN_ARM) > 0) {
+            return originalSpeed * 0.5F;
+        }
+        return originalSpeed;
+    }
+
+    public static void checkMiningExhaustion(Player player, float blockHardness) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+
+        if (blockHardness >= 10.0F) {
+            if (RANDOM.nextDouble() < 0.05) {
+                PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+                int currentSev = data.getSeverity(LimbType.MAIN_ARM);
+                if (currentSev < 2) {
+                    data.setSeverity(LimbType.MAIN_ARM, currentSev + 1);
+                    InjuryModule.setInjuryData(player.getUUID(), data);
+                    updatePlayerAttributesAndPose(player);
+                    playBoneCrackSound(player, 0.8F);
+                }
+            }
+        }
+    }
+
+    public static boolean checkSpasmDrop(Player player) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (player.isCreative() || player.isSpectator()) return false;
+
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        if (data.getSeverity(LimbType.MAIN_ARM) > 0) {
+            if (RANDOM.nextDouble() < 0.15) {
+                ItemStack held = player.getMainHandItem();
+                if (!held.isEmpty()) {
+                    player.drop(held.copy(), true);
+                    player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+                    player.level().playSound(
+                            null,
+                            player.getX(),
+                            player.getY(),
+                            player.getZ(),
+                            SoundEvents.PLAYER_ATTACK_WEAK,
+                            SoundSource.PLAYERS,
+                            1.0F,
+                            0.7F
+                    );
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isOffhandLocked(Player player) {
+        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (player.isCreative() || player.isSpectator()) return false;
+
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        return data.getSeverity(LimbType.OFF_ARM) > 0;
+    }
+
+    public static boolean handleWeaponDrawTick(LivingEntity entity, ItemStack stack, int useDuration) {
+        if (!(entity instanceof Player player)) return false;
+        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (player.isCreative() || player.isSpectator()) return false;
+
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        byte mainArmSev = data.getSeverity(LimbType.MAIN_ARM);
+        if (mainArmSev <= 0) return false;
+
+        boolean isBowOrCrossbow = stack.is(Items.BOW) || stack.is(Items.CROSSBOW);
+        if (isBowOrCrossbow) {
+            int drawTicks = stack.getUseDuration(entity) - useDuration;
+            if (drawTicks >= 12) {
+                player.stopUsingItem();
+                playBoneCrackSound(player, 0.9F);
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int getEnchantmentLevel(ItemStack stack, ResourceKey<Enchantment> enchantmentKey) {
@@ -540,7 +635,6 @@ public class InjuryEventHandler {
             return false;
         }
 
-        // Enforce cooldown so UI treatment cannot be spammed without channeling delay
         if (player.getCooldowns().isOnCooldown(splintItem)) {
             return false;
         }
@@ -551,7 +645,6 @@ public class InjuryEventHandler {
             return false;
         }
 
-        // Reduce severity based on splint tier
         int reduction = (splintItem.getTier() == SplintTier.DIAMOND ||
                 splintItem.getTier() == SplintTier.NETHERITE) ? 2 : 1;
 
@@ -560,13 +653,10 @@ public class InjuryEventHandler {
         InjuryModule.setInjuryData(player.getUUID(), data);
         updatePlayerAttributesAndPose(player);
 
-        // Apply 40-tick cooldown (2s) matching the item's use duration
         player.getCooldowns().addCooldown(splintItem, SplintItem.CHANNEL_DURATION);
 
-        // Damage the splint by 1
         splintStack.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
 
-        // Sound effect
         player.level().playSound(
                 null,
                 player.getX(),
@@ -582,17 +672,14 @@ public class InjuryEventHandler {
     }
 
     public static ItemStack findFirstSplint(Player player) {
-        // 1. Check cursor item
         ItemStack cursor = player.containerMenu.getCarried();
         if (SplintItem.isValidSplint(cursor)) return cursor;
 
-        // 2. Check main hand / offhand
         ItemStack main = player.getMainHandItem();
         if (SplintItem.isValidSplint(main)) return main;
         ItemStack off = player.getOffhandItem();
         if (SplintItem.isValidSplint(off)) return off;
 
-        // 3. Check inventory slots
         for (ItemStack item : player.getInventory().items) {
             if (SplintItem.isValidSplint(item)) {
                 return item;

@@ -101,4 +101,67 @@ public class ForgeEvents {
 
         InjuryEventHandler.handleItemConsumption(player, event.getItem());
     }
+
+    @SubscribeEvent
+    public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
+        Player player = event.getEntity();
+        float originalSpeed = event.getNewSpeed();
+        float modifiedSpeed = InjuryEventHandler.modifyBreakSpeed(player, originalSpeed);
+        event.setNewSpeed(modifiedSpeed);
+    }
+
+    @SubscribeEvent
+    public static void onBlockBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+        Player player = event.getPlayer();
+        if (player.level().isClientSide()) return;
+        float blockHardness = event.getState().getDestroySpeed(event.getLevel(), event.getPos());
+        InjuryEventHandler.checkMiningExhaustion(player, blockHardness);
+        InjuryEventHandler.checkSpasmDrop(player);
+    }
+
+    @SubscribeEvent
+    public static void onAttackEntity(net.neoforged.neoforge.event.entity.player.AttackEntityEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+        InjuryEventHandler.checkSpasmDrop(player);
+    }
+
+    @SubscribeEvent
+    public static void onShieldBlock(net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            if (InjuryEventHandler.isOffhandLocked(player)) {
+                event.setBlocked(false);
+                event.setCanceled(true);
+                return;
+            }
+            InjuryEventHandler.onShieldBlock(player, event.getDamageSource(), event.getBlockedDamage());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onItemUseTick(LivingEntityUseItemEvent.Tick event) {
+        if (InjuryEventHandler.handleWeaponDrawTick(event.getEntity(), event.getItem(), event.getDuration())) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRightClickItem(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+        if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
+            Player player = event.getEntity();
+            if (InjuryEventHandler.isOffhandLocked(player)) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
+            Player player = event.getEntity();
+            if (InjuryEventHandler.isOffhandLocked(player)) {
+                event.setCanceled(true);
+            }
+        }
+    }
 }

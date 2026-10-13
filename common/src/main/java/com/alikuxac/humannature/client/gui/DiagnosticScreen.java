@@ -184,7 +184,8 @@ public class DiagnosticScreen extends Screen {
                 switch (hoveredBox.limb()) {
                     case HEAD -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Mild Disorientation" : "§cPenalty: Flashing Darkness"));
                     case TORSO -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Increased Hunger Exhaustion" : "§cPenalty: Max Health Capped (7 Hearts)"));
-                    case MAIN_ARM, OFF_ARM -> tooltip.add(Component.literal("§7Penalty: -30% Attack Speed"));
+                    case MAIN_ARM -> tooltip.add(Component.literal("§cPenalty: -50% Attack/Mine Speed, Spasm Drop, Draw Lock"));
+                    case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
                     case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
                 }
                 if (hasSplint) {
