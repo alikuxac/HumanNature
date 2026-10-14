@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.client;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ClientConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.modules.injury.LimbType;
@@ -15,7 +16,7 @@ public class InjuryHudOverlay {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null || mc.options.hideGui) return;
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get() || !ClientConfig.ENABLE_HUD_OVERLAY.get()) return;
 
         PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
         boolean isActive = InjuryEventHandler.isFractureActive(player) || injuryData.hasAnyInjury();
@@ -53,8 +54,8 @@ public class InjuryHudOverlay {
 
         String limbsTitle = injuredLimbs.isEmpty() ? "Trauma Status" : "Injured: " + injuredLimbs;
 
-        int x = 10;
-        int y = 10;
+        int x = ClientConfig.HUD_X.get();
+        int y = ClientConfig.HUD_Y.get();
         int boxWidth = Math.max(170, mc.font.width(limbsTitle) + 12);
 
         // Draw translucent dark background box

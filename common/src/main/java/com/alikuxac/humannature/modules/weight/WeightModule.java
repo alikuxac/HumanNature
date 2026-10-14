@@ -1,6 +1,6 @@
 package com.alikuxac.humannature.modules.weight;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
 
 public class WeightModule implements IHumanModule {
@@ -10,6 +10,6 @@ public class WeightModule implements IHumanModule {
 
     @Override
     public boolean isEnabled() {
-        return CommonConfig.ENABLE_WEIGHT.get();
+        return ServerConfig.ENABLE_WEIGHT.get();
     }
 }

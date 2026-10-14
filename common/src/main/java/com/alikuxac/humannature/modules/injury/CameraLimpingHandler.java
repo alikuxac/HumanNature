@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.modules.injury;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ClientConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 
@@ -17,7 +18,7 @@ public class CameraLimpingHandler {
     }
 
     public static CameraOffset calculateCameraOffset(Player player, float partialTick) {
-        if (!CommonConfig.ENABLE_INJURY.get()) {
+        if (!ServerConfig.ENABLE_INJURY.get() || !ClientConfig.ENABLE_CAMERA_LIMPING.get()) {
             return new CameraOffset(0.0F, 0.0F);
         }
 

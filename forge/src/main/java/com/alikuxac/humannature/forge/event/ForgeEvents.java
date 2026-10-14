@@ -1,7 +1,7 @@
 package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
@@ -86,7 +86,7 @@ public class ForgeEvents {
         if (player.level().isClientSide()) return;
         UUID playerId = player.getUUID();
 
-        if (CommonConfig.ENABLE_INJURY.get()) {
+        if (ServerConfig.ENABLE_INJURY.get()) {
             InjuryEventHandler.onPlayerTick(player);
             InjuryEventHandler.recordFlightTick(player);
 

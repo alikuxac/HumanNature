@@ -1,6 +1,6 @@
 package com.alikuxac.humannature.modules.injury;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import net.minecraft.core.Holder;
@@ -97,7 +97,7 @@ public class InjuryEventHandler {
     );
 
     public static void updateSplintModifier() {
-        double reduction = CommonConfig.SPLINT_SPEED_REDUCTION.get();
+        double reduction = ServerConfig.SPLINT_SPEED_REDUCTION.get();
         SPLINT_SPEED_MODIFIER = new AttributeModifier(
                 SPLINT_SPEED_MODIFIER_ID,
                 -reduction,
@@ -141,7 +141,7 @@ public class InjuryEventHandler {
     }
 
     public static void updatePlayerAttributesAndPose(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
         AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -331,7 +331,7 @@ public class InjuryEventHandler {
     }
 
     public static void onPlayerWakeUp(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.level().isClientSide()) return;
 
         int foodLevel = player.getFoodData().getFoodLevel();
@@ -399,7 +399,7 @@ public class InjuryEventHandler {
 
     public static void onLivingFall(LivingEntity entity, float distance, float damageMultiplier) {
         if (!(entity instanceof Player player)) return;
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         float safeThreshold = 5.0F;
@@ -453,7 +453,7 @@ public class InjuryEventHandler {
 
     public static void onLivingDamage(LivingEntity entity, DamageSource damageSource, float amount) {
         if (!(entity instanceof Player player)) return;
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -492,7 +492,7 @@ public class InjuryEventHandler {
         boolean isKineticDiveFall = damageSource.is(DamageTypes.FALL) && isRecentFlight;
         boolean isKineticCrash = isFlyIntoWall || isKineticDiveFall;
 
-        if (isKineticCrash && CommonConfig.ENABLE_KINETIC_CRASH.get()) {
+        if (isKineticCrash && ServerConfig.ENABLE_KINETIC_CRASH.get()) {
             double impactSpeed = isRecentFlight ? flightState.speed() : (amount / 10.0 + 0.3);
             float impactPitch = isRecentFlight ? flightState.pitch() : 0.0F;
 
@@ -565,7 +565,7 @@ public class InjuryEventHandler {
 
     public static void onPlayerRightClickItem(Player player, InteractionHand hand, ItemStack stack) {
         if (player.level().isClientSide()) return;
-        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_GFORCE_BLACKOUT.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get() || !ServerConfig.ENABLE_GFORCE_BLACKOUT.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         if (player.isFallFlying() && stack.is(Items.FIREWORK_ROCKET)) {
@@ -628,7 +628,7 @@ public class InjuryEventHandler {
     }
 
     public static void onShieldBlock(Player player, DamageSource damageSource, float blockedDamage) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         if (blockedDamage >= 10.0F) {
@@ -645,7 +645,7 @@ public class InjuryEventHandler {
     }
 
     public static void onShieldDisabled(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -660,7 +660,7 @@ public class InjuryEventHandler {
     }
 
     public static float modifyBreakSpeed(Player player, float originalSpeed) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return originalSpeed;
+        if (!ServerConfig.ENABLE_INJURY.get()) return originalSpeed;
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
         if (data.getSeverity(LimbType.MAIN_ARM) > 0) {
             return originalSpeed * 0.5F;
@@ -669,7 +669,7 @@ public class InjuryEventHandler {
     }
 
     public static void checkMiningExhaustion(Player player, float blockHardness) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         if (blockHardness >= 10.0F) {
@@ -687,7 +687,7 @@ public class InjuryEventHandler {
     }
 
     public static boolean checkSpasmDrop(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (!ServerConfig.ENABLE_INJURY.get()) return false;
         if (player.isCreative() || player.isSpectator()) return false;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -715,7 +715,7 @@ public class InjuryEventHandler {
     }
 
     public static boolean isOffhandLocked(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (!ServerConfig.ENABLE_INJURY.get()) return false;
         if (player.isCreative() || player.isSpectator()) return false;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -724,7 +724,7 @@ public class InjuryEventHandler {
 
     public static boolean handleWeaponDrawTick(LivingEntity entity, ItemStack stack, int useDuration) {
         if (!(entity instanceof Player player)) return false;
-        if (!CommonConfig.ENABLE_INJURY.get()) return false;
+        if (!ServerConfig.ENABLE_INJURY.get()) return false;
         if (player.isCreative() || player.isSpectator()) return false;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -765,7 +765,7 @@ public class InjuryEventHandler {
     }
 
     public static boolean handleQuickTreat(Player player, LimbType limb, ItemStack splintStack) {
-        if (!CommonConfig.ENABLE_SPLINT.get() || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
+        if (!ServerConfig.ENABLE_SPLINT.get() || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
             return false;
         }
 
@@ -823,11 +823,11 @@ public class InjuryEventHandler {
     }
 
     public static boolean shouldCancelNaturalRegen(Player player) {
-        return CommonConfig.ENABLE_INJURY.get() && isFractureActive(player);
+        return ServerConfig.ENABLE_INJURY.get() && isFractureActive(player);
     }
 
     public static void onLivingUseTotem(Player player, DamageSource damageSource, ItemStack totem, InteractionHand hand) {
-        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_TOTEM_BYPASS.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get() || !ServerConfig.ENABLE_TOTEM_BYPASS.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
         if (!damageSource.is(DamageTypes.FALL)) return;
 
@@ -839,7 +839,7 @@ public class InjuryEventHandler {
     }
 
     public static boolean shouldDenyMobEffect(Player player, MobEffectInstance effectInstance) {
-        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_TOTEM_BYPASS.get()) return false;
+        if (!ServerConfig.ENABLE_INJURY.get() || !ServerConfig.ENABLE_TOTEM_BYPASS.get()) return false;
         if (PENDING_TRAUMA_TOTEM.contains(player.getUUID())) {
             return effectInstance.getEffect().is(MobEffects.REGENERATION) || effectInstance.getEffect().is(MobEffects.ABSORPTION);
         }
@@ -847,7 +847,7 @@ public class InjuryEventHandler {
     }
 
     public static void onPlayerTick(Player player) {
-        if (!CommonConfig.ENABLE_INJURY.get()) return;
+        if (!ServerConfig.ENABLE_INJURY.get()) return;
 
         if (PENDING_TRAUMA_TOTEM.remove(player.getUUID())) {
             player.removeEffect(MobEffects.REGENERATION);

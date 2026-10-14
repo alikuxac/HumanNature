@@ -1,6 +1,6 @@
 package com.alikuxac.humannature.item;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -90,7 +90,7 @@ public class SplintItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!CommonConfig.ENABLE_SPLINT.get()) {
+        if (!ServerConfig.ENABLE_SPLINT.get()) {
             return InteractionResultHolder.pass(stack);
         }
 

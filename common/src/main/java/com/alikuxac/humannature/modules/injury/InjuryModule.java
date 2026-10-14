@@ -1,6 +1,6 @@
 package com.alikuxac.humannature.modules.injury;
 
-import com.alikuxac.humannature.config.CommonConfig;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +18,7 @@ public class InjuryModule implements IHumanModule {
 
     @Override
     public boolean isEnabled() {
-        return CommonConfig.ENABLE_INJURY.get();
+        return ServerConfig.ENABLE_INJURY.get();
     }
 
     public static PlayerInjuryData getOrCreateInjuryData(UUID playerId) {
@@ -29,7 +29,7 @@ public class InjuryModule implements IHumanModule {
         INJURY_DATA.put(playerId, data);
         if (data.hasAnyInjury()) {
             if (!FRACTURE_TIMERS.containsKey(playerId)) {
-                FRACTURE_TIMERS.put(playerId, CommonConfig.BONE_FRACTURE_DURATION.get());
+                FRACTURE_TIMERS.put(playerId, ServerConfig.BONE_FRACTURE_DURATION.get());
             }
             // Update legacy tier for backwards-compat with any legacy readers
             byte leftLeg = data.getSeverity(LimbType.LEFT_LEG);
@@ -55,7 +55,7 @@ public class InjuryModule implements IHumanModule {
     }
 
     public static void startFractureTimer(UUID playerId, InjuryTier tier) {
-        FRACTURE_TIMERS.put(playerId, CommonConfig.BONE_FRACTURE_DURATION.get());
+        FRACTURE_TIMERS.put(playerId, ServerConfig.BONE_FRACTURE_DURATION.get());
         FRACTURE_TIERS.put(playerId, tier);
         PlayerInjuryData data = getOrCreateInjuryData(playerId);
         if (tier == InjuryTier.TIER_2_DOUBLE_LEG) {
@@ -72,7 +72,7 @@ public class InjuryModule implements IHumanModule {
         } else {
             FRACTURE_TIERS.put(playerId, tier);
             if (!FRACTURE_TIMERS.containsKey(playerId)) {
-                FRACTURE_TIMERS.put(playerId, CommonConfig.BONE_FRACTURE_DURATION.get());
+                FRACTURE_TIMERS.put(playerId, ServerConfig.BONE_FRACTURE_DURATION.get());
             }
             PlayerInjuryData data = getOrCreateInjuryData(playerId);
             if (tier == InjuryTier.TIER_2_DOUBLE_LEG) {
