@@ -91,7 +91,22 @@ Consuming recovery items instantly cuts the remaining healing timer:
 
 When a player triggers a Totem of Undying to survive fatal fall damage:
 
-- **Health & Effects Nullification**: Negates vanilla Totem Regeneration and Absorption. Player health is locked at $1.0$ HP ($0.5$ heart), and `Darkness` is applied for 3 seconds.
-- **Tier 2 Double Leg Fracture**: Immediately forces severe fractures on both legs (Tier 2), applying a $-85\%$ movement speed penalty, disabling jumping, and locking sprint.
-- **Kinetic Inventory Scatter**: Bypasses `keepInventory`, violently ejecting all items held in both hands (consuming exactly 1 totem), the entire 9-slot Hotbar, and $\lceil 30\% \rceil$ of occupied main storage slots outward across the ground within a 4-block impact radius with a 40-tick pickup cooldown.
+- **Health & Effects Nullification**: Negates vanilla Totem Regeneration and Absorption. Locks player health at $1.0$ HP ($0.5$ heart) and applies `Darkness` for 3 seconds.
+- **Tier 2 Double Leg Fracture**: Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
+- **Kinetic Inventory Scatter**: Bypasses `keepInventory`, ejecting items held in both hands (consuming 1 totem), the 9-slot hotbar, and $\lceil 30\% \rceil$ of occupied storage slots within a 4-block radius with a 40-tick pickup cooldown.
+
+---
+
+### 9. Elytra Flight Dynamics & Kinetic Impact
+
+- **G-Force Overload**:
+  - Activating $\ge 2$ firework rockets within 40 ticks (2 seconds) while gliding applies `Darkness` for 1 second (20 ticks) and plays wind shear audio.
+- **Kinetic Crash Impact**:
+  - Colliding with walls or hitting the ground while gliding:
+    - **Moderate Impact** ($\ge 4.0$ damage or impact speed $\ge 0.7$ blocks/tick): Applies a Tier 1 fracture to one leg ($-45\%$ movement speed, sprint locked).
+    - **Extreme Impact** ($\ge 12.0$ damage, dive angle $\ge 35^\circ$ with speed $\ge 1.4$, or speed $\ge 1.8$):
+      - Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
+      - Drops any firework rockets held in either hand.
+
+
 

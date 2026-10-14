@@ -36,6 +36,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -44,6 +45,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InjuryEventHandler {
     private static final Random RANDOM = new Random();
     private static final Set<UUID> PENDING_TRAUMA_TOTEM = ConcurrentHashMap.newKeySet();
+    public record FlightState(double speed, float pitch, long tick) {}
+    private static final Map<UUID, Long> LAST_FIREWORK_USE_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, FlightState> RECENT_FLIGHT_STATE = new ConcurrentHashMap<>();
 
     public static final ResourceLocation FRACTURE_SPEED_MODIFIER_LEG1_ID = ResourceLocation.fromNamespaceAndPath("humannature", "bone_fracture_speed_leg1");
     public static final ResourceLocation FRACTURE_SPEED_MODIFIER_LEG2_ID = ResourceLocation.fromNamespaceAndPath("humannature", "bone_fracture_speed_leg2");
@@ -254,6 +258,8 @@ public class InjuryEventHandler {
 
     public static void clearFractureTimer(Player player) {
         PENDING_TRAUMA_TOTEM.remove(player.getUUID());
+        LAST_FIREWORK_USE_TICK.remove(player.getUUID());
+        RECENT_FLIGHT_STATE.remove(player.getUUID());
         InjuryModule.clearFractureTimer(player.getUUID());
 
         AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -481,6 +487,39 @@ public class InjuryEventHandler {
             stateChanged = true;
         }
 
+        FlightState flightState = getRecentFlightState(player);
+        boolean isRecentFlight = flightState != null;
+        boolean isKineticDiveFall = damageSource.is(DamageTypes.FALL) && isRecentFlight;
+        boolean isKineticCrash = isFlyIntoWall || isKineticDiveFall;
+
+        if (isKineticCrash && CommonConfig.ENABLE_KINETIC_CRASH.get()) {
+            double impactSpeed = isRecentFlight ? flightState.speed() : (amount / 10.0 + 0.3);
+            float impactPitch = isRecentFlight ? flightState.pitch() : 0.0F;
+
+            boolean isExtremeImpact = amount >= 12.0F ||
+                    (impactSpeed >= 1.4 && impactPitch >= 35.0F) ||
+                    impactSpeed >= 1.8;
+            boolean isModerateImpact = amount >= 4.0F || impactSpeed >= 0.7;
+
+            if (isExtremeImpact) {
+                data.setSeverity(LimbType.LEFT_LEG, 2);
+                data.setSeverity(LimbType.RIGHT_LEG, 2);
+                stateChanged = true;
+                playBoneCrackSound(player, 0.6F);
+
+                dropHeldFireworks(player);
+            } else if (isModerateImpact) {
+                byte leftLeg = data.getSeverity(LimbType.LEFT_LEG);
+                byte rightLeg = data.getSeverity(LimbType.RIGHT_LEG);
+                if (leftLeg == 0 && rightLeg == 0) {
+                    LimbType targetLeg = RANDOM.nextBoolean() ? LimbType.LEFT_LEG : LimbType.RIGHT_LEG;
+                    data.setSeverity(targetLeg, 1);
+                    stateChanged = true;
+                    playBoneCrackSound(player, 0.8F);
+                }
+            }
+        }
+
         if (amount >= 12.0F) {
             ItemStack chestplate = player.getItemBySlot(EquipmentSlot.CHEST);
             boolean isDiamondOrNetheriteChest = isDiamondOrNetheriteArmor(chestplate);
@@ -500,6 +539,91 @@ public class InjuryEventHandler {
         if (stateChanged) {
             InjuryModule.setInjuryData(player.getUUID(), data);
             updatePlayerAttributesAndPose(player);
+        }
+    }
+
+    public static void recordFlightTick(Player player) {
+        if (player.level().isClientSide()) return;
+        long currentTick = player.level().getGameTime();
+        if (player.isFallFlying()) {
+            double speed = player.getDeltaMovement().length();
+            float pitch = player.getXRot();
+            RECENT_FLIGHT_STATE.put(player.getUUID(), new FlightState(speed, pitch, currentTick));
+        }
+    }
+
+    public static FlightState getRecentFlightState(Player player) {
+        FlightState state = RECENT_FLIGHT_STATE.get(player.getUUID());
+        if (state != null) {
+            long diff = player.level().getGameTime() - state.tick();
+            if (diff >= 0 && diff <= 10) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    public static void onPlayerRightClickItem(Player player, InteractionHand hand, ItemStack stack) {
+        if (player.level().isClientSide()) return;
+        if (!CommonConfig.ENABLE_INJURY.get() || !CommonConfig.ENABLE_GFORCE_BLACKOUT.get()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+
+        if (player.isFallFlying() && stack.is(Items.FIREWORK_ROCKET)) {
+            long currentTick = player.level().getGameTime();
+            Long lastTick = LAST_FIREWORK_USE_TICK.get(player.getUUID());
+            if (lastTick != null && (currentTick - lastTick) <= 40) {
+                // Apply G-force blackout (1 second = 20 ticks)
+                player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 20, 0, false, false, true));
+                player.level().playSound(
+                        null,
+                        player.getX(),
+                        player.getY(),
+                        player.getZ(),
+                        SoundEvents.ELYTRA_FLYING,
+                        SoundSource.PLAYERS,
+                        1.6F,
+                        1.8F
+                );
+                player.level().playSound(
+                        null,
+                        player.getX(),
+                        player.getY(),
+                        player.getZ(),
+                        SoundEvents.WIND_CHARGE_BURST,
+                        SoundSource.PLAYERS,
+                        1.2F,
+                        0.6F
+                );
+            }
+            LAST_FIREWORK_USE_TICK.put(player.getUUID(), currentTick);
+        }
+    }
+
+    private static void dropHeldFireworks(Player player) {
+        boolean dropped = false;
+        ItemStack mainHand = player.getItemBySlot(EquipmentSlot.MAINHAND);
+        if (mainHand.is(Items.FIREWORK_ROCKET)) {
+            player.drop(mainHand.copy(), true);
+            player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            dropped = true;
+        }
+        ItemStack offHand = player.getItemBySlot(EquipmentSlot.OFFHAND);
+        if (offHand.is(Items.FIREWORK_ROCKET)) {
+            player.drop(offHand.copy(), true);
+            player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            dropped = true;
+        }
+        if (dropped) {
+            player.level().playSound(
+                    null,
+                    player.getX(),
+                    player.getY(),
+                    player.getZ(),
+                    SoundEvents.ITEM_BREAK,
+                    SoundSource.PLAYERS,
+                    1.0F,
+                    0.9F
+            );
         }
     }
 

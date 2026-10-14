@@ -4,6 +4,7 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.CommonConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionHand;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -87,6 +88,7 @@ public class ForgeEvents {
 
         if (CommonConfig.ENABLE_INJURY.get()) {
             InjuryEventHandler.onPlayerTick(player);
+            InjuryEventHandler.recordFlightTick(player);
 
             float currentWalkDist = player.walkDist;
             float prevWalkDist = PREV_WALK_DIST.getOrDefault(playerId, currentWalkDist);
@@ -172,17 +174,19 @@ public class ForgeEvents {
 
     @SubscribeEvent
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-        if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
-            Player player = event.getEntity();
+        Player player = event.getEntity();
+        if (event.getHand() == InteractionHand.OFF_HAND) {
             if (InjuryEventHandler.isOffhandLocked(player)) {
                 event.setCanceled(true);
+                return;
             }
         }
+        InjuryEventHandler.onPlayerRightClickItem(player, event.getHand(), event.getItemStack());
     }
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND) {
+        if (event.getHand() == InteractionHand.OFF_HAND) {
             Player player = event.getEntity();
             if (InjuryEventHandler.isOffhandLocked(player)) {
                 event.setCanceled(true);

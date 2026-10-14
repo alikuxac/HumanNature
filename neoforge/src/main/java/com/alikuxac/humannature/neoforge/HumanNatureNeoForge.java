@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.neoforge;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.init.ModCreativeTabs;
 import com.alikuxac.humannature.init.ModItems;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -11,5 +12,7 @@ public class HumanNatureNeoForge {
     public HumanNatureNeoForge(IEventBus modBus, ModContainer container) {
         HumanNatureCommon.init();
         ModItems.register(modBus);
+        ModCreativeTabs.register(modBus);
+        modBus.addListener(ModCreativeTabs::onBuildCreativeModeTabContents);
     }
 }
