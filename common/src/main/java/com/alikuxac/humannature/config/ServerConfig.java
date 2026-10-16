@@ -20,4 +20,11 @@ public class ServerConfig {
     public static Supplier<Boolean> ENABLE_TOTEM_BYPASS = () -> true;
     public static Supplier<Boolean> ENABLE_GFORCE_BLACKOUT = () -> true;
     public static Supplier<Boolean> ENABLE_KINETIC_CRASH = () -> true;
+
+    // Physiology - Sleep Deprivation Mechanics
+    public static Supplier<Boolean> ENABLE_SLEEP_DEPRIVATION = () -> true;
+    public static Supplier<Integer> SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = () -> 72000; // 3 in-game days
+    public static Supplier<Double> SLEEP_FATIGUE_BLINK_THRESHOLD = () -> 0.80; // 80% fatigue
+    public static Supplier<Integer> SLEEP_FATIGUE_BLINK_MIN_INTERVAL = () -> 300; // 15 seconds
+    public static Supplier<Integer> SLEEP_FATIGUE_BLINK_MAX_INTERVAL = () -> 800; // 40 seconds
 }

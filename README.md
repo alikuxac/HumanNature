@@ -54,11 +54,15 @@ Simulates body temperature based on biome, weather, time of day, nearby heat sou
 ### 4. Weight & Encumbrance
 Scales stamina use and movement speed by carried inventory weight.
 
+### 5. Physiology
+Tracks sleep deprivation and fatigue buildup over time, triggering brief involuntary darkness blinks during motion when reaching severe exhaustion.
+
 ---
 
 ## Documentation
 For detailed module specifications, refer to:
 - [Injury System Documentation](docs/INJURY_SYSTEM.md)
+- [Physiology System Documentation](docs/PHYSIOLOGY_SYSTEM.md)
 
 ---
 

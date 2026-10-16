@@ -1,12 +1,15 @@
 package com.alikuxac.humannature.client.gui;
 
 import com.alikuxac.humannature.client.ModKeyMappings;
+import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.modules.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
+import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
+import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -153,22 +156,83 @@ public class DiagnosticScreen extends Screen {
             curY += 4;
         }
 
+        // Physiology Status
+        List<Component> physTooltip = null;
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+            float fatigueScore = physData.getFatigueScore();
+            float fatiguePct = physData.getFatiguePercentage();
+
+            String fatigueColor;
+            String fatigueLabel;
+            if (fatigueScore >= 0.80f) {
+                fatigueColor = "§c";
+                fatigueLabel = "Drowsy";
+            } else if (fatigueScore >= 0.50f) {
+                fatigueColor = "§6";
+                fatigueLabel = "Tired";
+            } else if (fatigueScore >= 0.20f) {
+                fatigueColor = "§e";
+                fatigueLabel = "Mild";
+            } else {
+                fatigueColor = "§a";
+                fatigueLabel = "Rested";
+            }
+
+            guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
+            curY += 4;
+
+            int physLabelY = curY;
+            String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueColor + fatigueLabel + "§8)";
+            guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
+            curY += 10;
+
+            int barWidth = (leftPos + GUI_WIDTH - 12) - infoX;
+            int barHeight = 4;
+            int barY = curY;
+            guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
+            guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
+
+            int filledWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, fatigueScore)));
+            int barColor = fatigueScore >= 0.80f ? 0xFFFF4444 : (fatigueScore >= 0.50f ? 0xFFFFAA00 : (fatigueScore >= 0.20f ? 0xFFFFFF55 : 0xFF55FF55));
+            if (filledWidth > 0) {
+                guiGraphics.fill(infoX, barY, infoX + filledWidth, barY + barHeight, barColor);
+            }
+            curY += barHeight + 5;
+
+            // Check tooltip hover over physiology section
+            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
+                physTooltip = new ArrayList<>();
+                physTooltip.add(Component.literal("§6Sleep Fatigue: " + fatigueColor + String.format("%.1f%%", fatiguePct)));
+                long awakeTicks = physData.getAwakeTicks();
+                double awakeDays = (double) awakeTicks / 24000.0;
+                physTooltip.add(Component.literal(String.format("§7Awake: %.1f in-game day(s)", awakeDays)));
+                if (physData.isBlinkEligible()) {
+                    physTooltip.add(Component.literal("§c⚠ Micro-Sleep Active: Periodic Darkness blinks while moving"));
+                } else {
+                    physTooltip.add(Component.literal("§a✔ Darkness Blinks: Inactive (< 80% fatigue)"));
+                }
+                physTooltip.add(Component.literal("§8Sleep in a bed through the night to reset fatigue."));
+            }
+        }
+
         // Help & Splint Treatment Tip
-        guiGraphics.fill(infoX, topPos + 118, leftPos + GUI_WIDTH - 12, topPos + 119, 0xFF353535);
+        int splintDividerY = Math.max(curY + 2, topPos + 118);
+        guiGraphics.fill(infoX, splintDividerY, leftPos + GUI_WIDTH - 12, splintDividerY + 1, 0xFF353535);
         ItemStack availableSplint = InjuryEventHandler.findFirstSplint(player);
         boolean hasSplint = !availableSplint.isEmpty();
         boolean isOnCooldown = hasSplint && player.getCooldowns().isOnCooldown(availableSplint.getItem());
 
         if (hasSplint) {
             if (isOnCooldown) {
-                guiGraphics.drawString(this.font, "§c⌛ Treating... Please wait", infoX, topPos + 124, 0xFF6666, false);
+                guiGraphics.drawString(this.font, "§c⌛ Treating... Please wait", infoX, splintDividerY + 5, 0xFF6666, false);
             } else {
-                guiGraphics.drawString(this.font, "§e[Ready] Click limb to treat", infoX, topPos + 124, 0xFFFF55, false);
+                guiGraphics.drawString(this.font, "§e[Ready] Click limb to treat", infoX, splintDividerY + 5, 0xFFFF55, false);
             }
-            guiGraphics.drawString(this.font, "§7Using: " + availableSplint.getHoverName().getString(), infoX, topPos + 136, 0xAAAAAA, false);
+            guiGraphics.drawString(this.font, "§7Using: " + availableSplint.getHoverName().getString(), infoX, splintDividerY + 17, 0xAAAAAA, false);
         } else {
-            guiGraphics.drawString(this.font, "§8No Splint in inventory", infoX, topPos + 124, 0x888888, false);
-            guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, topPos + 136, 0x666666, false);
+            guiGraphics.drawString(this.font, "§8No Splint in inventory", infoX, splintDividerY + 5, 0x888888, false);
+            guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, splintDividerY + 17, 0x666666, false);
         }
 
         // Hover tooltip
@@ -202,6 +266,8 @@ public class DiagnosticScreen extends Screen {
             }
 
             guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+        } else if (physTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, physTooltip, mouseX, mouseY);
         }
 
         RenderSystem.enableDepthTest();

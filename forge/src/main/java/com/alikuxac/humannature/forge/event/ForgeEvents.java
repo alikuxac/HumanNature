@@ -3,6 +3,7 @@ package com.alikuxac.humannature.forge.event;
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
+import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -20,6 +21,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -69,16 +71,29 @@ public class ForgeEvents {
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Player player) {
-            InjuryEventHandler.onPlayerDeath(player);
+            if (ServerConfig.ENABLE_INJURY.get()) {
+                InjuryEventHandler.onPlayerDeath(player);
+            }
+            if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+                PhysiologyEventHandler.onPlayerDeath(player);
+            }
         }
     }
 
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        InjuryEventHandler.onPlayerRespawn(event.getEntity());
+        Player player = event.getEntity();
+        if (ServerConfig.ENABLE_INJURY.get()) {
+            InjuryEventHandler.onPlayerRespawn(player);
+        }
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PhysiologyEventHandler.onPlayerRespawn(player);
+        }
     }
 
     private static final Map<UUID, Boolean> WAS_SLEEPING = new HashMap<>();
+    private static final Map<UUID, Integer> CONSECUTIVE_SLEEP_TICKS = new HashMap<>();
+    private static final Map<UUID, Vec3> PREV_POS = new HashMap<>();
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
@@ -86,24 +101,52 @@ public class ForgeEvents {
         if (player.level().isClientSide()) return;
         UUID playerId = player.getUUID();
 
+        Vec3 currentPos = player.position();
+        Vec3 prevPos = PREV_POS.getOrDefault(playerId, currentPos);
+        double dx = currentPos.x - prevPos.x;
+        double dz = currentPos.z - prevPos.z;
+        double horizontalDistSq = dx * dx + dz * dz;
+
+        float currentWalkDist = player.walkDist;
+        float prevWalkDist = PREV_WALK_DIST.getOrDefault(playerId, currentWalkDist);
+        float delta = currentWalkDist - prevWalkDist;
+
+        boolean isMoving = horizontalDistSq > 0.0004
+                || Math.abs(delta) > 0.001F
+                || player.getDeltaMovement().horizontalDistanceSqr() > 0.0004;
+        boolean isStandingStill = !isMoving;
+
+        boolean isCrouching = player.isCrouching();
+        boolean isSleeping = player.isSleeping();
+
+        // Track consecutive sleep ticks
+        int sleepTicks = CONSECUTIVE_SLEEP_TICKS.getOrDefault(playerId, 0);
+        if (isSleeping) {
+            sleepTicks++;
+            CONSECUTIVE_SLEEP_TICKS.put(playerId, sleepTicks);
+        }
+
+        // Trigger sleep handlers when waking up (transitioning from sleeping -> awake)
+        boolean wasSleeping = WAS_SLEEPING.getOrDefault(playerId, false);
+        if (wasSleeping && !isSleeping) {
+            if (ServerConfig.ENABLE_INJURY.get()) {
+                InjuryEventHandler.onPlayerWakeUp(player);
+            }
+            if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+                PhysiologyEventHandler.onPlayerWakeUp(player, sleepTicks);
+            }
+            CONSECUTIVE_SLEEP_TICKS.remove(playerId);
+        }
+        WAS_SLEEPING.put(playerId, isSleeping);
+
+        // Physiology module ticking
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PhysiologyEventHandler.onPlayerTick(player, isMoving, isSleeping);
+        }
+
         if (ServerConfig.ENABLE_INJURY.get()) {
             InjuryEventHandler.onPlayerTick(player);
             InjuryEventHandler.recordFlightTick(player);
-
-            float currentWalkDist = player.walkDist;
-            float prevWalkDist = PREV_WALK_DIST.getOrDefault(playerId, currentWalkDist);
-            float delta = currentWalkDist - prevWalkDist;
-
-            boolean isCrouching = player.isCrouching();
-            boolean isSleeping = player.isSleeping();
-            boolean isStandingStill = Math.abs(delta) < 0.001F;
-
-            // Trigger sleep trauma downgrade when waking up (transitioning from sleeping -> awake)
-            boolean wasSleeping = WAS_SLEEPING.getOrDefault(playerId, false);
-            if (wasSleeping && !isSleeping) {
-                InjuryEventHandler.onPlayerWakeUp(player);
-            }
-            WAS_SLEEPING.put(playerId, isSleeping);
 
             boolean isResting = isSleeping || (isCrouching && isStandingStill);
             boolean canHeal = isSleeping || isStandingStill;
@@ -116,9 +159,10 @@ public class ForgeEvents {
                     InjuryEventHandler.reduceFractureTimer(player, reductionAmount);
                 }
             }
-
-            PREV_WALK_DIST.put(playerId, currentWalkDist);
         }
+
+        PREV_WALK_DIST.put(playerId, currentWalkDist);
+        PREV_POS.put(playerId, currentPos);
     }
 
     @SubscribeEvent

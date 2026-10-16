@@ -60,6 +60,24 @@ public class ForgeConfig {
                 .define("enableKineticCrash", true);
         serverBuilder.pop();
 
+        serverBuilder.comment("Physiology & sleep deprivation mechanics").push("physiology");
+        ModConfigSpec.BooleanValue enableSleepDeprivation = serverBuilder
+                .comment("Enable sleep deprivation and fatigue buildup")
+                .define("enableSleepDeprivation", true);
+        ModConfigSpec.IntValue sleepDeprivationFullFatigueTicks = serverBuilder
+                .comment("Ticks of being awake required to reach 100% fatigue (72000 ticks = 3 in-game days)")
+                .defineInRange("sleepDeprivationFullFatigueTicks", 72000, 20, 720000);
+        ModConfigSpec.DoubleValue sleepFatigueBlinkThreshold = serverBuilder
+                .comment("Fatigue score threshold (0.0 to 1.0) above which darkness blinks begin occurring")
+                .defineInRange("sleepFatigueBlinkThreshold", 0.80, 0.0, 1.0);
+        ModConfigSpec.IntValue sleepFatigueBlinkMinInterval = serverBuilder
+                .comment("Minimum interval in ticks between darkness blinks (20 ticks = 1s)")
+                .defineInRange("sleepFatigueBlinkMinIntervalTicks", 300, 20, 72000);
+        ModConfigSpec.IntValue sleepFatigueBlinkMaxInterval = serverBuilder
+                .comment("Maximum interval in ticks between darkness blinks")
+                .defineInRange("sleepFatigueBlinkMaxIntervalTicks", 800, 40, 72000);
+        serverBuilder.pop();
+
         SERVER_SPEC = serverBuilder.build();
 
         // Wire ServerConfig suppliers
@@ -75,6 +93,11 @@ public class ForgeConfig {
         ServerConfig.ENABLE_TOTEM_BYPASS = enableTotemBypass::get;
         ServerConfig.ENABLE_GFORCE_BLACKOUT = enableGForceBlackout::get;
         ServerConfig.ENABLE_KINETIC_CRASH = enableKineticCrash::get;
+        ServerConfig.ENABLE_SLEEP_DEPRIVATION = enableSleepDeprivation::get;
+        ServerConfig.SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = sleepDeprivationFullFatigueTicks::get;
+        ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD = sleepFatigueBlinkThreshold::get;
+        ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL = sleepFatigueBlinkMinInterval::get;
+        ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL = sleepFatigueBlinkMaxInterval::get;
 
         // Build Client Config
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
