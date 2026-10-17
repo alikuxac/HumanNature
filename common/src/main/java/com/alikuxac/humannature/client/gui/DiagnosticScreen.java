@@ -10,6 +10,7 @@ import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
+import com.alikuxac.humannature.modules.physiology.ToxinType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -156,63 +157,115 @@ public class DiagnosticScreen extends Screen {
             curY += 4;
         }
 
-        // Physiology Status
+        // Physiology Status (Fatigue & Toxin Buildup)
         List<Component> physTooltip = null;
+        List<Component> toxinTooltip = null;
+
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-            float fatigueScore = physData.getFatigueScore();
-            float fatiguePct = physData.getFatiguePercentage();
-
-            String fatigueColor;
-            String fatigueLabel;
-            if (fatigueScore >= 0.80f) {
-                fatigueColor = "§c";
-                fatigueLabel = "Drowsy";
-            } else if (fatigueScore >= 0.50f) {
-                fatigueColor = "§6";
-                fatigueLabel = "Tired";
-            } else if (fatigueScore >= 0.20f) {
-                fatigueColor = "§e";
-                fatigueLabel = "Mild";
-            } else {
-                fatigueColor = "§a";
-                fatigueLabel = "Rested";
-            }
+            int barWidth = (leftPos + GUI_WIDTH - 12) - infoX;
 
             guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
             curY += 4;
 
-            int physLabelY = curY;
-            String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueColor + fatigueLabel + "§8)";
-            guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
-            curY += 10;
+            // Sleep Fatigue
+            if (PhysiologyModule.isSleepDeprivationEnabled()) {
+                float fatigueScore = physData.getFatigueScore();
+                float fatiguePct = physData.getFatiguePercentage();
 
-            int barWidth = (leftPos + GUI_WIDTH - 12) - infoX;
-            int barHeight = 4;
-            int barY = curY;
-            guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
-            guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
-
-            int filledWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, fatigueScore)));
-            int barColor = fatigueScore >= 0.80f ? 0xFFFF4444 : (fatigueScore >= 0.50f ? 0xFFFFAA00 : (fatigueScore >= 0.20f ? 0xFFFFFF55 : 0xFF55FF55));
-            if (filledWidth > 0) {
-                guiGraphics.fill(infoX, barY, infoX + filledWidth, barY + barHeight, barColor);
-            }
-            curY += barHeight + 5;
-
-            // Check tooltip hover over physiology section
-            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
-                physTooltip = new ArrayList<>();
-                physTooltip.add(Component.literal("§6Sleep Fatigue: " + fatigueColor + String.format("%.1f%%", fatiguePct)));
-                long awakeTicks = physData.getAwakeTicks();
-                double awakeDays = (double) awakeTicks / 24000.0;
-                physTooltip.add(Component.literal(String.format("§7Awake: %.1f in-game day(s)", awakeDays)));
-                if (physData.isBlinkEligible()) {
-                    physTooltip.add(Component.literal("§c⚠ Micro-Sleep Active: Periodic Darkness blinks while moving"));
+                String fatigueColor;
+                String fatigueLabel;
+                if (fatigueScore >= 0.80f) {
+                    fatigueColor = "§c";
+                    fatigueLabel = "Drowsy";
+                } else if (fatigueScore >= 0.50f) {
+                    fatigueColor = "§6";
+                    fatigueLabel = "Tired";
+                } else if (fatigueScore >= 0.20f) {
+                    fatigueColor = "§e";
+                    fatigueLabel = "Mild";
                 } else {
-                    physTooltip.add(Component.literal("§a✔ Darkness Blinks: Inactive (< 80% fatigue)"));
+                    fatigueColor = "§a";
+                    fatigueLabel = "Rested";
                 }
-                physTooltip.add(Component.literal("§8Sleep in a bed through the night to reset fatigue."));
+
+                int physLabelY = curY;
+                String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueColor + fatigueLabel + "§8)";
+                guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
+                curY += 9;
+
+                int barHeight = 3;
+                int barY = curY;
+                guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
+                guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
+
+                int filledWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, fatigueScore)));
+                int barColor = fatigueScore >= 0.80f ? 0xFFFF4444 : (fatigueScore >= 0.50f ? 0xFFFFAA00 : (fatigueScore >= 0.20f ? 0xFFFFFF55 : 0xFF55FF55));
+                if (filledWidth > 0) {
+                    guiGraphics.fill(infoX, barY, infoX + filledWidth, barY + barHeight, barColor);
+                }
+                curY += barHeight + 4;
+
+                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
+                    physTooltip = new ArrayList<>();
+                    physTooltip.add(Component.literal("§6Sleep Fatigue: " + fatigueColor + String.format("%.1f%%", fatiguePct)));
+                    long awakeTicks = physData.getAwakeTicks();
+                    double awakeDays = (double) awakeTicks / 24000.0;
+                    physTooltip.add(Component.literal(String.format("§7Awake: %.1f in-game day(s)", awakeDays)));
+                    if (physData.isBlinkEligible()) {
+                        physTooltip.add(Component.literal("§c⚠ Micro-Sleep Active: Periodic Darkness blinks while moving"));
+                    } else {
+                        physTooltip.add(Component.literal("§a✔ Darkness Blinks: Inactive (< 80% fatigue)"));
+                    }
+                    physTooltip.add(Component.literal("§8Sleep in a bed through the night to reset fatigue."));
+                }
+            }
+
+            // Toxin Buildup
+            if (PhysiologyModule.isToxinBuildupEnabled()) {
+                float toxinBuildup = physData.getToxinBuildup();
+                ToxinType toxinType = physData.getLastToxinType();
+
+                String toxinLabel = toxinType == ToxinType.NONE ? "§aClear" : toxinType.getColorCode() + toxinType.getDisplayName();
+                String toxinText = "§7Toxin: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.0f%%", toxinBuildup) : "§a0%")
+                        + " §8(" + toxinLabel + "§8)";
+
+                int toxinLabelY = curY;
+                guiGraphics.drawString(this.font, toxinText, infoX, curY, 0xFFFFFF, false);
+                curY += 9;
+
+                int toxinBarHeight = 3;
+                int toxinBarY = curY;
+                guiGraphics.fill(infoX, toxinBarY, infoX + barWidth, toxinBarY + toxinBarHeight, 0xFF101010);
+                guiGraphics.renderOutline(infoX, toxinBarY, barWidth, toxinBarHeight, 0xFF282828);
+
+                int filledToxinWidth = (int) (barWidth * (Math.min(100.0f, Math.max(0.0f, toxinBuildup)) / 100.0f));
+                int toxinBarColor = toxinType == ToxinType.WITHER ? 0xFFBA68C8 : (toxinBuildup > 0.0f ? 0xFF00E676 : 0xFF44AA44);
+                if (filledToxinWidth > 0) {
+                    guiGraphics.fill(infoX, toxinBarY, infoX + filledToxinWidth, toxinBarY + toxinBarHeight, toxinBarColor);
+                }
+                curY += toxinBarHeight + 5;
+
+                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= toxinLabelY && mouseY <= toxinBarY + toxinBarHeight + 2) {
+                    toxinTooltip = new ArrayList<>();
+                    toxinTooltip.add(Component.literal("§6Toxin Buildup: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.1f%%", toxinBuildup) : "§a0.0% (Clear)")));
+                    if (toxinBuildup > 0.0f) {
+                        toxinTooltip.add(Component.literal("§7Accumulated Type: " + toxinType.getColorCode() + toxinType.getDisplayName()));
+                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
+                        int elapsed = physData.getTicksSinceLastExposure();
+                        if (elapsed < delayTicks) {
+                            toxinTooltip.add(Component.literal(String.format("§7Decay Delay: %.1fs remaining", (delayTicks - elapsed) / 20.0)));
+                        } else {
+                            toxinTooltip.add(Component.literal("§a✔ Passive Decay Active (~2.0%/s)"));
+                        }
+                        toxinTooltip.add(Component.literal("§e⚡ Heat/Resting: 3x decay acceleration"));
+                        toxinTooltip.add(Component.literal("§b🍶 Milk Bucket: Clears 100% | 🍯 Honey: -50%"));
+                        toxinTooltip.add(Component.literal("§c⚠ Reaching 100% causes immediate outbreak!"));
+                    } else {
+                        toxinTooltip.add(Component.literal("§a✔ Toxin Free: Poison & Wither attacks build up here."));
+                        toxinTooltip.add(Component.literal("§8Effects erupt only when the buildup reaches 100%."));
+                    }
+                }
             }
         }
 
@@ -266,6 +319,8 @@ public class DiagnosticScreen extends Screen {
             }
 
             guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+        } else if (toxinTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, toxinTooltip, mouseX, mouseY);
         } else if (physTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, physTooltip, mouseX, mouseY);
         }

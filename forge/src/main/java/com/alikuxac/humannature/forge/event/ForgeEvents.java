@@ -44,6 +44,10 @@ public class ForgeEvents {
         if (event.getEntity() instanceof Player player) {
             if (InjuryEventHandler.shouldDenyMobEffect(player, event.getEffectInstance())) {
                 event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+                return;
+            }
+            if (PhysiologyEventHandler.handleMobEffectApplicable(player, event.getEffectInstance())) {
+                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
             }
         }
     }
@@ -171,6 +175,7 @@ public class ForgeEvents {
         if (player.level().isClientSide()) return;
 
         InjuryEventHandler.handleItemConsumption(player, event.getItem());
+        PhysiologyEventHandler.handleItemConsumption(player, event.getItem());
     }
 
     @SubscribeEvent

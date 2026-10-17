@@ -27,4 +27,11 @@ public class ServerConfig {
     public static Supplier<Double> SLEEP_FATIGUE_BLINK_THRESHOLD = () -> 0.80; // 80% fatigue
     public static Supplier<Integer> SLEEP_FATIGUE_BLINK_MIN_INTERVAL = () -> 300; // 15 seconds
     public static Supplier<Integer> SLEEP_FATIGUE_BLINK_MAX_INTERVAL = () -> 800; // 40 seconds
+
+    // Physiology - Toxin Buildup Mechanics
+    public static Supplier<Boolean> ENABLE_TOXIN_BUILDUP = () -> true;
+    public static Supplier<Double> TOXIN_BASE_BUILDUP_PER_HIT = () -> 25.0; // 25% minimum buildup per exposure
+    public static Supplier<Integer> TOXIN_DECAY_DELAY_TICKS = () -> 80; // 4 seconds before decay starts
+    public static Supplier<Double> TOXIN_DECAY_RATE_PER_SECOND = () -> 2.0; // 2% per second passive decay
+    public static Supplier<Double> TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = () -> 3.0; // 3x decay near heat/resting
 }

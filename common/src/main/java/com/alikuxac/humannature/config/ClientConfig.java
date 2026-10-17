@@ -7,6 +7,7 @@ public class ClientConfig {
     public static Supplier<Boolean> ENABLE_HUD_OVERLAY = () -> true;
     public static Supplier<Integer> HUD_X = () -> 10;
     public static Supplier<Integer> HUD_Y = () -> 10;
+    public static Supplier<Boolean> ENABLE_TOXIN_HUD_OVERLAY = () -> true;
 
     // Camera & Visual Effects
     public static Supplier<Boolean> ENABLE_CAMERA_LIMPING = () -> true;

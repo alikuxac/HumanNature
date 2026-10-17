@@ -2,12 +2,15 @@ package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PhysiologyModule implements IHumanModule {
     private static final Map<UUID, PlayerPhysiologyData> PHYSIOLOGY_DATA = new ConcurrentHashMap<>();
+    private static final Set<UUID> ERUPTING_PLAYERS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Override
     public void init() {
@@ -23,6 +26,22 @@ public class PhysiologyModule implements IHumanModule {
         return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_SLEEP_DEPRIVATION.get();
     }
 
+    public static boolean isToxinBuildupEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_TOXIN_BUILDUP.get();
+    }
+
+    public static boolean isErupting(UUID playerId) {
+        return ERUPTING_PLAYERS.contains(playerId);
+    }
+
+    public static void setErupting(UUID playerId, boolean erupting) {
+        if (erupting) {
+            ERUPTING_PLAYERS.add(playerId);
+        } else {
+            ERUPTING_PLAYERS.remove(playerId);
+        }
+    }
+
     public static PlayerPhysiologyData getOrCreatePhysiologyData(UUID playerId) {
         return PHYSIOLOGY_DATA.computeIfAbsent(playerId, k -> new PlayerPhysiologyData());
     }
@@ -35,6 +54,21 @@ public class PhysiologyModule implements IHumanModule {
     public static float getFatiguePercentage(UUID playerId) {
         PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
         return data != null ? data.getFatiguePercentage() : 0.0f;
+    }
+
+    public static float getToxinBuildup(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getToxinBuildup() : 0.0f;
+    }
+
+    public static float getToxinPercentage(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getToxinPercentage() : 0.0f;
+    }
+
+    public static ToxinType getLastToxinType(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getLastToxinType() : ToxinType.NONE;
     }
 
     public static long getAwakeTicks(UUID playerId) {
@@ -53,8 +87,15 @@ public class PhysiologyModule implements IHumanModule {
         }
     }
 
+    public static void resetToxin(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        if (data != null) {
+            data.resetToxin();
+        }
+    }
+
     public static void clearData(UUID playerId) {
         PHYSIOLOGY_DATA.remove(playerId);
+        ERUPTING_PLAYERS.remove(playerId);
     }
 }
-

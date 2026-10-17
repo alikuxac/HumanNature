@@ -2,6 +2,7 @@ package com.alikuxac.humannature.neoforge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
+import com.alikuxac.humannature.client.ToxinHudOverlay;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
 import com.alikuxac.humannature.client.gui.DiagnosticTabButton;
@@ -32,7 +33,9 @@ public class NeoForgeClientEvents {
 
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
-        InjuryHudOverlay.render(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
+        ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
     }
 
     private static DiagnosticTabButton tabButton = null;

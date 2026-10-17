@@ -6,14 +6,26 @@ public class PlayerPhysiologyData {
     private long awakeTicks;
     private int blinkCooldown;
 
+    // Toxin Buildup
+    private float toxinBuildup;
+    private ToxinType lastToxinType;
+    private int ticksSinceLastExposure;
+    private int pendingDuration;
+    private int pendingAmplifier;
+
     public PlayerPhysiologyData() {
         this.awakeTicks = 0L;
         this.blinkCooldown = 0;
+        this.toxinBuildup = 0.0f;
+        this.lastToxinType = ToxinType.NONE;
+        this.ticksSinceLastExposure = 0;
+        this.pendingDuration = 0;
+        this.pendingAmplifier = 0;
     }
 
     public PlayerPhysiologyData(long initialAwakeTicks) {
+        this();
         this.awakeTicks = Math.max(0L, initialAwakeTicks);
-        this.blinkCooldown = 0;
     }
 
     public long getAwakeTicks() {
@@ -69,5 +81,88 @@ public class PlayerPhysiologyData {
     public void resetFatigue() {
         this.awakeTicks = 0L;
         this.blinkCooldown = 0;
+    }
+
+    // --- Toxin Buildup Methods ---
+
+    public float getToxinBuildup() {
+        return toxinBuildup;
+    }
+
+    public void setToxinBuildup(float toxinBuildup) {
+        this.toxinBuildup = Math.max(0.0f, Math.min(100.0f, toxinBuildup));
+        if (this.toxinBuildup <= 0.0f) {
+            this.lastToxinType = ToxinType.NONE;
+            this.pendingDuration = 0;
+            this.pendingAmplifier = 0;
+        }
+    }
+
+    public float getToxinPercentage() {
+        return this.toxinBuildup;
+    }
+
+    public ToxinType getLastToxinType() {
+        return lastToxinType != null ? lastToxinType : ToxinType.NONE;
+    }
+
+    public void setLastToxinType(ToxinType lastToxinType) {
+        this.lastToxinType = lastToxinType;
+    }
+
+    public int getTicksSinceLastExposure() {
+        return ticksSinceLastExposure;
+    }
+
+    public void setTicksSinceLastExposure(int ticksSinceLastExposure) {
+        this.ticksSinceLastExposure = Math.max(0, ticksSinceLastExposure);
+    }
+
+    public void incrementTicksSinceLastExposure() {
+        if (this.ticksSinceLastExposure < Integer.MAX_VALUE) {
+            this.ticksSinceLastExposure++;
+        }
+    }
+
+    public int getPendingDuration() {
+        return pendingDuration;
+    }
+
+    public int getPendingAmplifier() {
+        return pendingAmplifier;
+    }
+
+    public void addToxinBuildup(float amount, ToxinType type, int duration, int amplifier) {
+        this.toxinBuildup = Math.min(100.0f, this.toxinBuildup + Math.max(0.0f, amount));
+        this.lastToxinType = type;
+        this.ticksSinceLastExposure = 0;
+        this.pendingDuration = Math.max(this.pendingDuration, duration);
+        this.pendingAmplifier = Math.max(this.pendingAmplifier, amplifier);
+    }
+
+    public void decayToxinBuildup(float amount) {
+        if (this.toxinBuildup > 0.0f) {
+            this.toxinBuildup = Math.max(0.0f, this.toxinBuildup - Math.max(0.0f, amount));
+            if (this.toxinBuildup <= 0.0f) {
+                this.lastToxinType = ToxinType.NONE;
+                this.pendingDuration = 0;
+                this.pendingAmplifier = 0;
+            }
+        }
+    }
+
+    public void reduceToxinBuildup(float fraction) {
+        if (this.toxinBuildup > 0.0f) {
+            float reduction = this.toxinBuildup * Math.max(0.0f, Math.min(1.0f, fraction));
+            decayToxinBuildup(reduction);
+        }
+    }
+
+    public void resetToxin() {
+        this.toxinBuildup = 0.0f;
+        this.lastToxinType = ToxinType.NONE;
+        this.ticksSinceLastExposure = 0;
+        this.pendingDuration = 0;
+        this.pendingAmplifier = 0;
     }
 }
