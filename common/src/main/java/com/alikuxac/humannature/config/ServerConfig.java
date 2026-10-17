@@ -34,4 +34,6 @@ public class ServerConfig {
     public static Supplier<Integer> TOXIN_DECAY_DELAY_TICKS = () -> 80; // 4 seconds before decay starts
     public static Supplier<Double> TOXIN_DECAY_RATE_PER_SECOND = () -> 2.0; // 2% per second passive decay
     public static Supplier<Double> TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = () -> 3.0; // 3x decay near heat/resting
+    public static Supplier<Boolean> ENABLE_TOXIN_FATIGUE_SCALING = () -> true; // Scales toxin buildup with fatigue score
+    public static Supplier<Double> TOXIN_FRACTURE_BUILDUP_MULTIPLIER = () -> 1.5; // Multiplier when player is fractured
 }

@@ -67,7 +67,6 @@ public class NeoForgeEvents {
     public static void onLivingHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player) {
             if (InjuryEventHandler.shouldCancelNaturalRegen(player)) {
-                // Cancel natural food/saturation passive regeneration
                 event.setCanceled(true);
             }
         }
@@ -76,6 +75,12 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Player player) {
+            UUID playerId = player.getUUID();
+            WAS_SLEEPING.remove(playerId);
+            CONSECUTIVE_SLEEP_TICKS.remove(playerId);
+            PREV_POS.remove(playerId);
+            PREV_WALK_DIST.remove(playerId);
+
             if (ServerConfig.ENABLE_INJURY.get()) {
                 InjuryEventHandler.onPlayerDeath(player);
             }
@@ -88,11 +93,33 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
+        UUID playerId = player.getUUID();
+        WAS_SLEEPING.remove(playerId);
+        CONSECUTIVE_SLEEP_TICKS.remove(playerId);
+        PREV_POS.remove(playerId);
+        PREV_WALK_DIST.remove(playerId);
+
         if (ServerConfig.ENABLE_INJURY.get()) {
             InjuryEventHandler.onPlayerRespawn(player);
         }
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PhysiologyEventHandler.onPlayerRespawn(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        if (event.isWasDeath()) {
+            Player player = event.getEntity();
+            UUID playerId = player.getUUID();
+            WAS_SLEEPING.remove(playerId);
+            CONSECUTIVE_SLEEP_TICKS.remove(playerId);
+            PREV_POS.remove(playerId);
+            PREV_WALK_DIST.remove(playerId);
+
+            if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+                PhysiologyEventHandler.onPlayerRespawn(player);
+            }
         }
     }
 

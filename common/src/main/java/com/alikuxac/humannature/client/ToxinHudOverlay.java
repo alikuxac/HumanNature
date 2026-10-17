@@ -13,10 +13,18 @@ public class ToxinHudOverlay {
     private static long lastZeroTimestamp = 0L;
     private static boolean wasNonZero = false;
 
+    public static void reset() {
+        lastZeroTimestamp = 0L;
+        wasNonZero = false;
+    }
+
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
-        if (player == null || mc.options.hideGui) return;
+        if (player == null || mc.options.hideGui || player.isDeadOrDying()) {
+            reset();
+            return;
+        }
         if (!ServerConfig.ENABLE_PHYSIOLOGY.get() || !ServerConfig.ENABLE_TOXIN_BUILDUP.get()) return;
         if (!ClientConfig.ENABLE_TOXIN_HUD_OVERLAY.get()) return;
 

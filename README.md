@@ -8,6 +8,9 @@
 
 **Human Nature** is a survival-realism mod for Forge and NeoForge (Minecraft 1.21.1). It adds localized skeletal injuries, environmental temperature, inventory encumbrance, and metabolic recovery.
 
+> [!CAUTION]
+> **Mechanics First**: Core gameplay systems, mechanics, and balance take priority over visual polish. Textures, icons, and models remain minimal or placeholders while features are actively being built.
+
 ---
 
 ## Systems

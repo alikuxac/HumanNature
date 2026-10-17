@@ -2,6 +2,7 @@ package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
+import com.alikuxac.humannature.modules.injury.InjuryModule;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +93,26 @@ public class PhysiologyModule implements IHumanModule {
         if (data != null) {
             data.resetToxin();
         }
+    }
+
+    public static void reset(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        if (data != null) {
+            data.reset();
+        }
+        ERUPTING_PLAYERS.remove(playerId);
+    }
+
+    public static float calculateToxinMultiplier(UUID playerId) {
+        PlayerPhysiologyData data = getOrCreatePhysiologyData(playerId);
+        float fatigueScore = (isSleepDeprivationEnabled() && ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING.get())
+                ? data.getFatigueScore()
+                : 0.0f;
+        boolean isFractured = ServerConfig.ENABLE_INJURY.get() && InjuryModule.isFractureActive(playerId);
+        double fractureMultiplier = isFractured
+                ? (ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER != null ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER.get() : 1.5)
+                : 1.0;
+        return (float) ((1.0f + fatigueScore) * fractureMultiplier);
     }
 
     public static void clearData(UUID playerId) {

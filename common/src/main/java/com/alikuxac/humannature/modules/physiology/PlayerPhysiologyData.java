@@ -83,6 +83,11 @@ public class PlayerPhysiologyData {
         this.blinkCooldown = 0;
     }
 
+    public void reset() {
+        resetFatigue();
+        resetToxin();
+    }
+
     // --- Toxin Buildup Methods ---
 
     public float getToxinBuildup() {

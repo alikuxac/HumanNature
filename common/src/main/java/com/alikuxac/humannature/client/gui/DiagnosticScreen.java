@@ -19,12 +19,13 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.gui.components.Button;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DiagnosticScreen extends Screen {
-    public static final int GUI_WIDTH = 220;
+    public static final int GUI_WIDTH = 240;
     public static final int GUI_HEIGHT = 166;
 
     private int leftPos;
@@ -66,7 +67,7 @@ public class DiagnosticScreen extends Screen {
         this.topPos = (this.height - GUI_HEIGHT) / 2;
 
         // Button to return back to Inventory View
-        this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(
+        this.addRenderableWidget(Button.builder(
                 Component.literal("← Inventory"),
                 btn -> {
                     if (this.minecraft != null && this.minecraft.player != null) {
@@ -125,6 +126,7 @@ public class DiagnosticScreen extends Screen {
 
         // Details Panel on the right (x = leftPos + 88 to GUI_WIDTH - 12)
         int infoX = leftPos + 88;
+        int infoWidth = (leftPos + GUI_WIDTH - 12) - infoX;
         int curY = topPos + 30;
 
         guiGraphics.drawString(this.font, "§7Status Overview:", infoX, curY, 0xAAAAAA, false);
@@ -139,7 +141,7 @@ public class DiagnosticScreen extends Screen {
         if (totalFractures == 0) {
             guiGraphics.drawString(this.font, "§a✔ All limbs healthy", infoX, curY, 0x55FF55, false);
             curY += 12;
-            guiGraphics.drawString(this.font, "§8No bone fractures detected.", infoX, curY, 0x888888, false);
+            guiGraphics.drawString(this.font, "§8No fractures detected.", infoX, curY, 0x888888, false);
             curY += 14;
         } else {
             guiGraphics.drawString(this.font, "§c⚠ " + totalFractures + " Fractured Limb(s)", infoX, curY, 0xFF5555, false);
@@ -148,8 +150,8 @@ public class DiagnosticScreen extends Screen {
             for (LimbType limb : LimbType.values()) {
                 byte sev = data.getSeverity(limb);
                 if (sev > 0) {
-                    TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
-                    String line = "§f• " + limb.getDisplayName() + ": " + getSeverityColor(sev) + sevEnum.getDisplayName();
+                    String sevName = sev >= 2 ? "Broken" : "Sprained";
+                    String line = "§f• " + limb.getDisplayName() + ": " + getSeverityColor(sev) + sevName;
                     guiGraphics.drawString(this.font, line, infoX, curY, 0xFFFFFF, false);
                     curY += 11;
                 }
@@ -163,7 +165,7 @@ public class DiagnosticScreen extends Screen {
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-            int barWidth = (leftPos + GUI_WIDTH - 12) - infoX;
+            int barWidth = infoWidth;
 
             guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
             curY += 4;
@@ -190,7 +192,7 @@ public class DiagnosticScreen extends Screen {
                 }
 
                 int physLabelY = curY;
-                String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueColor + fatigueLabel + "§8)";
+                String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueLabel + "§8)";
                 guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
                 curY += 9;
 
@@ -226,9 +228,9 @@ public class DiagnosticScreen extends Screen {
                 float toxinBuildup = physData.getToxinBuildup();
                 ToxinType toxinType = physData.getLastToxinType();
 
-                String toxinLabel = toxinType == ToxinType.NONE ? "§aClear" : toxinType.getColorCode() + toxinType.getDisplayName();
+                String toxinLabel = toxinType == ToxinType.NONE ? "Clear" : toxinType.getDisplayName();
                 String toxinText = "§7Toxin: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.0f%%", toxinBuildup) : "§a0%")
-                        + " §8(" + toxinLabel + "§8)";
+                        + " §8(" + (toxinBuildup > 0.0f ? toxinType.getColorCode() : "§a") + toxinLabel + "§8)";
 
                 int toxinLabelY = curY;
                 guiGraphics.drawString(this.font, toxinText, infoX, curY, 0xFFFFFF, false);
@@ -249,6 +251,7 @@ public class DiagnosticScreen extends Screen {
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= toxinLabelY && mouseY <= toxinBarY + toxinBarHeight + 2) {
                     toxinTooltip = new ArrayList<>();
                     toxinTooltip.add(Component.literal("§6Toxin Buildup: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.1f%%", toxinBuildup) : "§a0.0% (Clear)")));
+                    float toxinMultiplier = PhysiologyModule.calculateToxinMultiplier(player.getUUID());
                     if (toxinBuildup > 0.0f) {
                         toxinTooltip.add(Component.literal("§7Accumulated Type: " + toxinType.getColorCode() + toxinType.getDisplayName()));
                         int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
@@ -260,9 +263,15 @@ public class DiagnosticScreen extends Screen {
                         }
                         toxinTooltip.add(Component.literal("§e⚡ Heat/Resting: 3x decay acceleration"));
                         toxinTooltip.add(Component.literal("§b🍶 Milk Bucket: Clears 100% | 🍯 Honey: -50%"));
+                        if (toxinMultiplier > 1.01f) {
+                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
+                        }
                         toxinTooltip.add(Component.literal("§c⚠ Reaching 100% causes immediate outbreak!"));
                     } else {
                         toxinTooltip.add(Component.literal("§a✔ Toxin Free: Poison & Wither attacks build up here."));
+                        if (toxinMultiplier > 1.01f) {
+                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
+                        }
                         toxinTooltip.add(Component.literal("§8Effects erupt only when the buildup reaches 100%."));
                     }
                 }
@@ -278,13 +287,14 @@ public class DiagnosticScreen extends Screen {
 
         if (hasSplint) {
             if (isOnCooldown) {
-                guiGraphics.drawString(this.font, "§c⌛ Treating... Please wait", infoX, splintDividerY + 5, 0xFF6666, false);
+                guiGraphics.drawString(this.font, "§c⌛ Treating...", infoX, splintDividerY + 5, 0xFF6666, false);
             } else {
-                guiGraphics.drawString(this.font, "§e[Ready] Click limb to treat", infoX, splintDividerY + 5, 0xFFFF55, false);
+                guiGraphics.drawString(this.font, "§eClick limb to treat", infoX, splintDividerY + 5, 0xFFFF55, false);
             }
-            guiGraphics.drawString(this.font, "§7Using: " + availableSplint.getHoverName().getString(), infoX, splintDividerY + 17, 0xAAAAAA, false);
+            String splintName = this.font.plainSubstrByWidth(availableSplint.getHoverName().getString(), infoWidth - 36);
+            guiGraphics.drawString(this.font, "§7Using: " + splintName, infoX, splintDividerY + 17, 0xAAAAAA, false);
         } else {
-            guiGraphics.drawString(this.font, "§8No Splint in inventory", infoX, splintDividerY + 5, 0x888888, false);
+            guiGraphics.drawString(this.font, "§8No splint in inventory", infoX, splintDividerY + 5, 0x888888, false);
             guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, splintDividerY + 17, 0x666666, false);
         }
 

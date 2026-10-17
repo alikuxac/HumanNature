@@ -26,6 +26,7 @@ public class PhysiologyEventHandler {
     public static void onPlayerTick(Player player, boolean isMoving, boolean isSleeping) {
         if (!ServerConfig.ENABLE_PHYSIOLOGY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
+        if (player.isDeadOrDying()) return;
 
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
 
@@ -99,7 +100,9 @@ public class PhysiologyEventHandler {
                 ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT.get() : 25.0;
         float durationFactor = (effectInstance.getDuration() / 20.0f) * 1.5f;
         float amplifierFactor = effectInstance.getAmplifier() + 1;
-        float addedBuildup = (float) Math.max(baseHit, Math.min(100.0, durationFactor * amplifierFactor));
+        float baseValue = (float) Math.max(baseHit, Math.min(100.0, durationFactor * amplifierFactor));
+        float multiplier = PhysiologyModule.calculateToxinMultiplier(player.getUUID());
+        float addedBuildup = baseValue * multiplier;
 
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         data.addToxinBuildup(addedBuildup, toxinType, effectInstance.getDuration(), effectInstance.getAmplifier());
@@ -186,20 +189,10 @@ public class PhysiologyEventHandler {
     }
 
     public static void onPlayerDeath(Player player) {
-        if (PhysiologyModule.isSleepDeprivationEnabled()) {
-            PhysiologyModule.resetSleepDeprivation(player.getUUID());
-        }
-        if (PhysiologyModule.isToxinBuildupEnabled()) {
-            PhysiologyModule.resetToxin(player.getUUID());
-        }
+        PhysiologyModule.reset(player.getUUID());
     }
 
     public static void onPlayerRespawn(Player player) {
-        if (PhysiologyModule.isSleepDeprivationEnabled()) {
-            PhysiologyModule.resetSleepDeprivation(player.getUUID());
-        }
-        if (PhysiologyModule.isToxinBuildupEnabled()) {
-            PhysiologyModule.resetToxin(player.getUUID());
-        }
+        PhysiologyModule.reset(player.getUUID());
     }
 }

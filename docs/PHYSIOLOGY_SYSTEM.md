@@ -1,83 +1,84 @@
 # Physiology System
 
-Tracks internal bodily state, including sleep deprivation, involuntary darkness blinks, and a Soulslike bad effect accumulation gauge (Toxin Buildup).
+The physiology module tracks sleep deprivation and replaces instant poison/wither damage with an accumulating toxin gauge.
 
 ---
 
 ## Mechanics
 
-### 1. Sleep Deprivation & Fatigue Score
+### Sleep Deprivation & Fatigue
 
-The server tracks consecutive awake ticks for each player when they are not sleeping in a bed.
+The server tracks consecutive awake ticks for survival/adventure players who are out of bed. Every 24,000 ticks (one in-game day) adds 33.3% to the player's hidden `fatigueScore`, capping at 100% (1.0) after 72,000 ticks (three in-game days). Ticks spent sleeping in bed pause this counter.
 
-- **Accumulation Rate**: Every 24,000 server ticks (1 in-game day) awake adds approximately $33.33\%$ to the hidden `fatigueScore`.
-- **Full Exhaustion**: Reaches $100\%$ ($1.0$) after 72,000 server ticks (3 consecutive in-game days awake) and clamps at $100\%$.
-- **Sleep Pausing**: Ticks spent actively sleeping in a bed do not increment awake time.
-- **Game Mode Restrictions**: Creative and Spectator players do not accumulate fatigue.
-
-| Awake Time | Server Ticks | Fatigue Score | Status |
+| Awake Time | Server Ticks | Fatigue Score | Symptoms |
 | :--- | :--- | :--- | :--- |
-| **0 Days** | 0 | $0.0\%$ | Rested |
-| **1 Day** | 24,000 | $33.3\%$ | Mild fatigue |
-| **2 Days** | 48,000 | $66.7\%$ | Moderate fatigue |
-| **2.4 Days** | 57,600 | $80.0\%$ | Severe fatigue (Darkness blinks unlock) |
-| **3 Days+** | 72,000+ | $100.0\%$ | Complete exhaustion |
+| **0 Days** | 0 | 0% | Rested |
+| **1 Day** | 24,000 | 33.3% | Mild fatigue |
+| **2 Days** | 48,000 | 66.7% | Moderate fatigue |
+| **2.4 Days** | 57,600 | 80.0% | Severe fatigue (involuntary blinks start) |
+| **3+ Days** | 72,000+ | 100.0% | Complete exhaustion (2x toxin vulnerability) |
+
+#### Involuntary Darkness Blinks
+Once fatigue hits 80%, moving players experience periodic 1-second (20-tick) Darkness blinks. Stationary players do not blink. Once a blink ends, the next blink triggers after a random cooldown between 300 and 800 ticks (15 to 40 seconds).
 
 ---
 
-### 2. Involuntary Darkness Blinks
+### Toxin Buildup (Poison & Wither Interception)
 
-When severe fatigue sets in, the player begins experiencing involuntary micro-sleep episodes while traversing the world.
+Incoming `minecraft:poison` and `minecraft:wither` effects do not apply status effects immediately. Instead, each hit adds points to a hidden 0–100% buildup gauge. All other status effects apply normally.
 
-- **Trigger Threshold**: `fatigueScore >= 80%` ($\ge 57,600$ awake ticks).
-- **Movement Requirement**: Blinks only trigger while the player is moving (horizontal movement delta $> 0.001$). Stationary players do not blink.
-- **Effect**: Applies `minecraft:darkness` for exactly 20 ticks (1.0 second) without particles or ambient sounds.
-- **Interval & Cooldown**: Once a blink finishes, the next blink is scheduled after a random interval between 300 ticks (15 seconds) and 800 ticks (40 seconds).
+#### Buildup Calculation & State Scaling
+Each exposure calculates a base buildup from the effect's duration and amplifier, with a configurable minimum (default 25%):
+
+$$\text{BaseValue} = \max(\text{baseHit}, \min(100, \text{durationFactor} \times \text{amplifierFactor}))$$
+
+This base value is then scaled by the player's exhaustion and physical injury:
+
+$$\Delta\text{Buildup} = \text{BaseValue} \times \left(1.0 + \frac{\text{FatigueScore}}{100}\right) \times (\text{isFractured} \mathbin{?} 1.5 : 1.0)$$
+
+- **Fatigue scaling**: Rested players take 1.0x buildup. Full sleep deprivation (100% fatigue) doubles incoming buildup (2.0x).
+- **Fracture multiplier**: Having any active bone fracture adds a 1.5x multiplier.
+- **Combined vulnerability**: A player who is both fully exhausted and fractured accumulates toxins 3.0x faster than normal.
+
+#### Eruption
+When buildup reaches 100%, the intercepted effect erupts onto the player with the full accumulated duration and amplifier, and the gauge resets to 0%.
+
+#### Passive Decay & Heat Acceleration
+If the player takes no new toxin hits for 80 ticks (4 seconds), buildup drains passively at 2.0% per second.
+
+Resting (sleeping, or crouching while standing still) or standing within 2 blocks of heat sources (fire, soul fire, campfires, lava, magma blocks) triples the decay rate to 6.0% per second.
+
+#### Item Counterplay
+- **Milk Bucket**: Clears 100% of accumulated buildup instantly.
+- **Honey Bottle**: Reduces current buildup by 50%.
 
 ---
 
-### 3. Soulslike Toxin Buildup Gauge (Poison & Wither Interception)
+### HUD Overlay & Diagnostic Tab
 
-Direct applications of harmful status effects (`Poison` and `Wither`) are intercepted and converted into points filling a hidden-to-transient buildup gauge ($0–100\%$).
-
-- **Interception Scope**: Exclusively intercepts `minecraft:poison` and `minecraft:wither`. Other effects proceed normally.
-- **Buildup Calculation**: Each hit adds buildup scaled with effect duration and amplifier, with a configurable minimum baseline (default: $25\%$ per exposure).
-- **Full Outbreak (100% Threshold)**: Only when the buildup gauge reaches $100\%$ does the effect officially erupt onto the player with its accumulated duration and amplifier. Upon outbreak, the buildup resets to $0\%$.
-- **Passive Decay**: After a delay without receiving new toxin exposure (default: 80 ticks / 4 seconds), buildup starts passively draining at $2.0\%$ per second.
-- **Heat & Rest Acceleration**: Standing near active heat sources (lit campfires, fire, soul fire, lava, magma blocks) or resting (sleeping or crouching while standing still) triples the decay rate ($3.0\times$, approx. $6.0\%$ per second).
-- **Item Counterplay**:
-  - **Milk Bucket**: Instantly clears $100\%$ of the accumulated buildup gauge.
-  - **Honey Bottle**: Reduces current buildup by $50\%$.
-
----
-
-### 4. Transient HUD Overlay & Diagnostic Tab
-
-#### Transient HUD Bar (Auto-Hide)
-- **Normal State**: $100\%$ clean screen; nothing renders when buildup is zero.
-- **Active State**: When buildup $> 0\%$, a minimalist $3\text{px}$ high gauge appears centered immediately above the hotbar.
-  - **Poison**: Toxic Emerald gradient (`#00E676`).
-  - **Wither**: Necrotic Violet gradient (`#BA68C8`).
-- **Fade Out**: When buildup reaches $0\%$, the bar smoothly fades out over exactly 1.0 second ($1000\text{ms}$) before disappearing completely.
+#### Transient HUD Bar
+- **Clean screen**: Nothing renders when buildup is at 0%.
+- **Active gauge**: When buildup exceeds 0%, a 3px bar appears centered above the hotbar (green for Poison, purple for Wither).
+- **Smooth fade**: When buildup returns to 0%, the bar fades out over 1.0 second.
 
 #### Diagnostic Tab (`H` Key)
-Inside the player inventory diagnostic panel:
-- **`Fatigue Level`**: Displays current awake percentage, color label, and visual bar.
-- **`Toxin Buildup`**: Displays current toxin percentage, active type (`Poison`, `Wither`, or `Clear`), and gauge bar.
-- **Interactive Tooltips**: Hovering over either section reveals comprehensive metrics (awake days, micro-sleep readiness, passive decay cooldown, heat bonuses, item counterplay hints, and outbreak warnings).
+The inventory diagnostic panel displays:
+- **Fatigue Level**: Current awake percentage, severity rating, and progress bar.
+- **Toxin Buildup**: Current accumulation percentage, active toxin type, and passive decay countdown.
+- **Vulnerability Warning**: Highlights active buildup multipliers when the player is fatigued or fractured.
 
 ---
 
-### 5. Recovery & Reset Triggers
+### Reset Triggers
 
-- **Sleeping Through the Night**: Waking up after sleeping $\ge 90$ consecutive ticks in a bed when morning arrives resets `awakeTicks` and `fatigueScore` to 0. Exiting a bed early without passing the night does not clear fatigue.
-- **Death & Respawn**: Dying resets the player's awake counter, fatigue score, and toxin buildup back to 0.
+- **Sleeping through the night**: Passing the night in a bed (at least 90 ticks) resets awake ticks and fatigue to 0. Waking up early before morning does not clear fatigue.
+- **Death & respawn**: Dying clears awake ticks, fatigue score, active toxin buildup, and eruption flags.
 
 ---
 
 ## Configuration
 
-Server settings are located in `config/humannature-server.toml`:
+Server settings are in `config/humannature-server.toml`:
 
 ```toml
 [physiology]
@@ -110,9 +111,14 @@ Server settings are located in `config/humannature-server.toml`:
     # Toxin decay rate multiplier when near heat sources (campfires, lava) or resting
     # Range: 1.0 ~ 20.0
     toxinRestingHeatDecayMultiplier = 3.0
+    # Enable toxin buildup rate scaling based on sleep deprivation and fatigue score
+    enableToxinFatigueScaling = true
+    # Toxin buildup multiplier when the player suffers from bone fractures or trauma
+    # Range: 1.0 ~ 5.0
+    toxinFractureBuildupMultiplier = 1.5
 ```
 
-Client settings are located in `config/humannature-client.toml`:
+Client settings are in `config/humannature-client.toml`:
 
 ```toml
 [hud]

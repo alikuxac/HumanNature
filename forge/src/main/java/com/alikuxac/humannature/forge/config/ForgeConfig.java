@@ -92,6 +92,12 @@ public class ForgeConfig {
         ModConfigSpec.DoubleValue toxinRestingHeatDecayMultiplier = serverBuilder
                 .comment("Toxin decay rate multiplier when near heat sources (campfires, lava) or resting")
                 .defineInRange("toxinRestingHeatDecayMultiplier", 3.0, 1.0, 20.0);
+        ModConfigSpec.BooleanValue enableToxinFatigueScaling = serverBuilder
+                .comment("Whether sleep deprivation and fatigue score increase toxin buildup accumulation rate")
+                .define("enableToxinFatigueScaling", true);
+        ModConfigSpec.DoubleValue toxinFractureBuildupMultiplier = serverBuilder
+                .comment("Toxin buildup multiplier when suffering from bone fractures or active trauma")
+                .defineInRange("toxinFractureBuildupMultiplier", 1.5, 1.0, 5.0);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
@@ -119,6 +125,8 @@ public class ForgeConfig {
         ServerConfig.TOXIN_DECAY_DELAY_TICKS = toxinDecayDelayTicks::get;
         ServerConfig.TOXIN_DECAY_RATE_PER_SECOND = toxinDecayRatePerSecond::get;
         ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = toxinRestingHeatDecayMultiplier::get;
+        ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING = enableToxinFatigueScaling::get;
+        ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER = toxinFractureBuildupMultiplier::get;
 
         // Build Client Config
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
