@@ -39,19 +39,11 @@ public class DiagnosticScreen extends Screen {
         }
     }
 
-    // Centered silhouette inside a 70x120 area
-    // Center X = 35
-    // Head: 22x22 (cx=35 -> x=24..46, y=10..32)
-    // Torso: 24x36 (cx=35 -> x=23..47, y=34..70)
-    // Left arm: 12x36 (x=9..21, y=34..70)
-    // Right arm: 12x36 (x=49..61, y=34..70)
-    // Left leg: 11x44 (x=23..34, y=72..116)
-    // Right leg: 11x44 (x=36..47, y=72..116)
     private static final List<LimbHitbox> HITBOXES = List.of(
             new LimbHitbox(LimbType.HEAD, 24, 10, 22, 22),
             new LimbHitbox(LimbType.TORSO, 23, 34, 24, 36),
-            new LimbHitbox(LimbType.MAIN_ARM, 9, 34, 12, 36),
-            new LimbHitbox(LimbType.OFF_ARM, 49, 34, 12, 36),
+            new LimbHitbox(LimbType.OFF_ARM, 9, 34, 12, 36),
+            new LimbHitbox(LimbType.MAIN_ARM, 49, 34, 12, 36),
             new LimbHitbox(LimbType.LEFT_LEG, 23, 72, 11, 44),
             new LimbHitbox(LimbType.RIGHT_LEG, 36, 72, 11, 44)
     );
@@ -66,7 +58,6 @@ public class DiagnosticScreen extends Screen {
         this.leftPos = (this.width - GUI_WIDTH) / 2;
         this.topPos = (this.height - GUI_HEIGHT) / 2;
 
-        // Button to return back to Inventory View
         this.addRenderableWidget(Button.builder(
                 Component.literal("← Inventory"),
                 btn -> {
@@ -90,16 +81,13 @@ public class DiagnosticScreen extends Screen {
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
 
-        // Dark modern panel background
         RenderSystem.disableDepthTest();
         guiGraphics.fill(leftPos, topPos, leftPos + GUI_WIDTH, topPos + GUI_HEIGHT, 0xF0181818);
         guiGraphics.renderOutline(leftPos, topPos, GUI_WIDTH, GUI_HEIGHT, 0xFF3E3E3E);
 
-        // Header Title
         guiGraphics.drawString(this.font, "§6§lBODY DIAGNOSTICS", leftPos + 12, topPos + 10, 0xFFFFFF, false);
         guiGraphics.fill(leftPos + 12, topPos + 24, leftPos + GUI_WIDTH - 12, topPos + 25, 0xFF353535);
 
-        // Sub-box for Silhouette Model (70x126)
         int silX = leftPos + 12;
         int silY = topPos + 30;
         guiGraphics.fill(silX, silY, silX + 70, silY + 124, 0xFF101010);
@@ -124,7 +112,6 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderOutline(bx, by, box.width(), box.height(), isHovered ? 0xFFFFFFFF : 0xFF222222);
         }
 
-        // Details Panel on the right (x = leftPos + 88 to GUI_WIDTH - 12)
         int infoX = leftPos + 88;
         int infoWidth = (leftPos + GUI_WIDTH - 12) - infoX;
         int curY = topPos + 30;
@@ -159,18 +146,17 @@ public class DiagnosticScreen extends Screen {
             curY += 4;
         }
 
-        // Physiology Status (Fatigue & Toxin Buildup)
         List<Component> physTooltip = null;
         List<Component> toxinTooltip = null;
+        List<Component> exertionTooltip = null;
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
             int barWidth = infoWidth;
 
             guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
-            curY += 4;
+            curY += 3;
 
-            // Sleep Fatigue
             if (PhysiologyModule.isSleepDeprivationEnabled()) {
                 float fatigueScore = physData.getFatigueScore();
                 float fatiguePct = physData.getFatiguePercentage();
@@ -196,7 +182,7 @@ public class DiagnosticScreen extends Screen {
                 guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
                 curY += 9;
 
-                int barHeight = 3;
+                int barHeight = 2;
                 int barY = curY;
                 guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
                 guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
@@ -206,7 +192,7 @@ public class DiagnosticScreen extends Screen {
                 if (filledWidth > 0) {
                     guiGraphics.fill(infoX, barY, infoX + filledWidth, barY + barHeight, barColor);
                 }
-                curY += barHeight + 4;
+                curY += barHeight + 3;
 
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
                     physTooltip = new ArrayList<>();
@@ -223,7 +209,6 @@ public class DiagnosticScreen extends Screen {
                 }
             }
 
-            // Toxin Buildup
             if (PhysiologyModule.isToxinBuildupEnabled()) {
                 float toxinBuildup = physData.getToxinBuildup();
                 ToxinType toxinType = physData.getLastToxinType();
@@ -236,7 +221,7 @@ public class DiagnosticScreen extends Screen {
                 guiGraphics.drawString(this.font, toxinText, infoX, curY, 0xFFFFFF, false);
                 curY += 9;
 
-                int toxinBarHeight = 3;
+                int toxinBarHeight = 2;
                 int toxinBarY = curY;
                 guiGraphics.fill(infoX, toxinBarY, infoX + barWidth, toxinBarY + toxinBarHeight, 0xFF101010);
                 guiGraphics.renderOutline(infoX, toxinBarY, barWidth, toxinBarHeight, 0xFF282828);
@@ -246,7 +231,7 @@ public class DiagnosticScreen extends Screen {
                 if (filledToxinWidth > 0) {
                     guiGraphics.fill(infoX, toxinBarY, infoX + filledToxinWidth, toxinBarY + toxinBarHeight, toxinBarColor);
                 }
-                curY += toxinBarHeight + 5;
+                curY += toxinBarHeight + 3;
 
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= toxinLabelY && mouseY <= toxinBarY + toxinBarHeight + 2) {
                     toxinTooltip = new ArrayList<>();
@@ -276,9 +261,69 @@ public class DiagnosticScreen extends Screen {
                     }
                 }
             }
+
+            if (PhysiologyModule.isExertionEnabled()) {
+                float exertion = physData.getExertionScore();
+                boolean isFailure = physData.isMuscleFailure();
+                boolean isCramped = physData.isSwimmingCramped();
+
+                String statusColor;
+                String statusLabel;
+                if (isFailure) {
+                    statusColor = "§c";
+                    statusLabel = "Failure";
+                } else if (exertion >= 50.0f) {
+                    statusColor = "§6";
+                    statusLabel = "Strained";
+                } else {
+                    statusColor = "§a";
+                    statusLabel = "Rested";
+                }
+
+                String exertionText = "§7Stamina: " + statusColor + String.format("%.0f%%", 100.0f - exertion)
+                        + " §8(" + statusLabel + (isCramped ? " §c| Cramp" : "") + "§8)";
+
+                int exertionLabelY = curY;
+                guiGraphics.drawString(this.font, exertionText, infoX, curY, 0xFFFFFF, false);
+                curY += 9;
+
+                int exertionBarHeight = 2;
+                int exertionBarY = curY;
+                guiGraphics.fill(infoX, exertionBarY, infoX + barWidth, exertionBarY + exertionBarHeight, 0xFF101010);
+                guiGraphics.renderOutline(infoX, exertionBarY, barWidth, exertionBarHeight, 0xFF282828);
+
+                float staminaFraction = Math.max(0.0f, Math.min(1.0f, (100.0f - exertion) / 100.0f));
+                int filledExertionWidth = (int) (barWidth * staminaFraction);
+                int exertionBarColor = isFailure ? 0xFFFF4444 : (exertion >= 50.0f ? 0xFFFFAA00 : 0xFF55FF55);
+                if (filledExertionWidth > 0) {
+                    guiGraphics.fill(infoX, exertionBarY, infoX + filledExertionWidth, exertionBarY + exertionBarHeight, exertionBarColor);
+                }
+                curY += exertionBarHeight + 3;
+
+                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= exertionLabelY && mouseY <= exertionBarY + exertionBarHeight + 2) {
+                    exertionTooltip = new ArrayList<>();
+                    exertionTooltip.add(Component.literal("§6Stamina & Muscle: " + statusColor + String.format("%.0f%% Capacity", 100.0f - exertion)));
+                    if (isFailure) {
+                        exertionTooltip.add(Component.literal("§c⚠ Muscle Failure: -50% Attack Speed & -50% Digging Speed"));
+                        exertionTooltip.add(Component.literal("§e⚡ Stand still & release mouse for 3–4s to recover 100%"));
+                    } else if (exertion > 0.0f) {
+                        exertionTooltip.add(Component.literal(String.format("§7Exertion: %.0f%% (Continuous labor/jumping/upstream)", exertion)));
+                        exertionTooltip.add(Component.literal("§8Recovers passively or completely when resting"));
+                    } else {
+                        exertionTooltip.add(Component.literal("§a✔ Muscles Rested: Full attack & mining efficiency"));
+                    }
+                    if (isCramped) {
+                        exertionTooltip.add(Component.literal("§c⚠ Swimming Cramp: -40% Swim Speed"));
+                        exertionTooltip.add(Component.literal("§e⚡ Exit to shore or boat for 3s to relieve cramp"));
+                    } else if (physData.getContinuousSwimmingTicks() > 200) {
+                        int crampThreshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS != null ? ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get() : 600;
+                        int remTicks = Math.max(0, crampThreshold - physData.getContinuousSwimmingTicks());
+                        exertionTooltip.add(Component.literal(String.format("§7Swimming: %.1fs until leg cramp", remTicks / 20.0)));
+                    }
+                }
+            }
         }
 
-        // Help & Splint Treatment Tip
         int splintDividerY = Math.max(curY + 2, topPos + 118);
         guiGraphics.fill(infoX, splintDividerY, leftPos + GUI_WIDTH - 12, splintDividerY + 1, 0xFF353535);
         ItemStack availableSplint = InjuryEventHandler.findFirstSplint(player);
@@ -298,7 +343,6 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, splintDividerY + 17, 0x666666, false);
         }
 
-        // Hover tooltip
         if (hoveredBox != null) {
             byte sev = data.getSeverity(hoveredBox.limb());
             TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
@@ -333,6 +377,8 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, toxinTooltip, mouseX, mouseY);
         } else if (physTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, physTooltip, mouseX, mouseY);
+        } else if (exertionTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
         }
 
         RenderSystem.enableDepthTest();
@@ -368,13 +414,11 @@ public class DiagnosticScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // Pressing H toggles and closes the screen
         if (ModKeyMappings.OPEN_DIAGNOSTICS.matches(keyCode, scanCode)) {
             this.onClose();
             return true;
         }
 
-        // Pressing E (Inventory Key) returns directly to Inventory View
         if (this.minecraft != null && this.minecraft.options.keyInventory.matches(keyCode, scanCode)) {
             if (this.minecraft.player != null) {
                 this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));

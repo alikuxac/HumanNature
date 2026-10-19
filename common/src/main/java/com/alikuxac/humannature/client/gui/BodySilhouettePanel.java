@@ -28,19 +28,11 @@ public class BodySilhouettePanel {
         }
     }
 
-    // Centered neatly in a 51x72 preview box
-    // Center X = 25.
-    // Head: 14x13 (cx=25 -> x=18..32)
-    // Torso: 16x22 (cx=25 -> x=17..33)
-    // Left arm: 8x22 (x=8..16)
-    // Right arm: 8x22 (x=34..42)
-    // Left leg: 7x26 (x=17..24)
-    // Right leg: 7x26 (x=26..33)
     private static final List<LimbHitbox> HITBOXES = List.of(
             new LimbHitbox(LimbType.HEAD, 18, 5, 15, 14),
             new LimbHitbox(LimbType.TORSO, 17, 20, 17, 22),
-            new LimbHitbox(LimbType.MAIN_ARM, 7, 20, 9, 22),
-            new LimbHitbox(LimbType.OFF_ARM, 35, 20, 9, 22),
+            new LimbHitbox(LimbType.OFF_ARM, 7, 20, 9, 22),
+            new LimbHitbox(LimbType.MAIN_ARM, 35, 20, 9, 22),
             new LimbHitbox(LimbType.LEFT_LEG, 17, 43, 8, 25),
             new LimbHitbox(LimbType.RIGHT_LEG, 26, 43, 8, 25)
     );
@@ -52,12 +44,10 @@ public class BodySilhouettePanel {
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
 
-        // Ensure pending draw calls are flushed and disable depth test so HUD is cleanly in front of 3D entity
         RenderSystem.disableDepthTest();
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0.0f, 0.0f, 200.0f);
 
-        // Completely cover the vanilla 3D player entity box with solid dark background
         guiGraphics.fill(originX, originY, originX + PANEL_WIDTH, originY + PANEL_HEIGHT, 0xFF141414);
         guiGraphics.renderOutline(originX, originY, PANEL_WIDTH, PANEL_HEIGHT, 0xFF373737);
 
@@ -71,7 +61,6 @@ public class BodySilhouettePanel {
             boolean isHovered = box.contains(mouseX, mouseY, originX, originY);
             if (isHovered) {
                 hoveredBox = box;
-                // Brighten alpha/tint on hover
                 color = (color & 0x00FFFFFF) | 0xFF000000;
             }
 
@@ -85,7 +74,6 @@ public class BodySilhouettePanel {
         guiGraphics.flush();
         RenderSystem.enableDepthTest();
 
-        // Render Tooltip on hovered limb (tooltips render with their own high z-index and depth handling)
         if (hoveredBox != null) {
             byte sev = data.getSeverity(hoveredBox.limb());
             TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
@@ -94,7 +82,6 @@ public class BodySilhouettePanel {
             tooltip.add(Component.literal("§6" + hoveredBox.limb().getDisplayName()));
             tooltip.add(Component.literal("Status: " + getSeverityColorCode(sev) + sevEnum.getDisplayName() + " (Tier " + sev + ")"));
 
-            // Tooltip debuff info
             if (sev > 0) {
                 switch (hoveredBox.limb()) {
                     case HEAD -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Mild Disorientation" : "§cPenalty: Flashing Darkness"));
@@ -128,14 +115,12 @@ public class BodySilhouettePanel {
 
         for (LimbHitbox box : HITBOXES) {
             if (box.contains((int) mouseX, (int) mouseY, originX, originY)) {
-                // Check if holding a splint in container cursor / hand
                 ItemStack carriedStack = mc.player.containerMenu.getCarried();
                 if (carriedStack.isEmpty()) {
                     carriedStack = player.getMainHandItem();
                 }
 
                 if (SplintItem.isValidSplint(carriedStack)) {
-                    // Perform quick treat
                     InjuryEventHandler.handleQuickTreat(player, box.limb(), carriedStack);
                     return true;
                 }

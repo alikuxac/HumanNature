@@ -15,7 +15,6 @@ public class PhysiologyModule implements IHumanModule {
 
     @Override
     public void init() {
-        // Module initialization
     }
 
     @Override
@@ -29,6 +28,14 @@ public class PhysiologyModule implements IHumanModule {
 
     public static boolean isToxinBuildupEnabled() {
         return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_TOXIN_BUILDUP.get();
+    }
+
+    public static boolean isExertionEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_PHYSICAL_EXERTION.get();
+    }
+
+    public static boolean isSwimmingCrampsEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_SWIMMING_CRAMPS.get();
     }
 
     public static boolean isErupting(UUID playerId) {
@@ -92,6 +99,35 @@ public class PhysiologyModule implements IHumanModule {
         PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
         if (data != null) {
             data.resetToxin();
+        }
+    }
+
+    public static float getExertionScore(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getExertionScore() : 0.0f;
+    }
+
+    public static boolean isMuscleFailure(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null && data.isMuscleFailure();
+    }
+
+    public static boolean isSwimmingCramped(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null && data.isSwimmingCramped();
+    }
+
+    public static void resetExertion(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        if (data != null) {
+            data.resetExertion();
+        }
+    }
+
+    public static void resetSwimmingCramps(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        if (data != null) {
+            data.resetSwimmingCramps();
         }
     }
 

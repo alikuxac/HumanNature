@@ -172,8 +172,6 @@ public class InjuryEventHandler {
             return;
         }
 
-        player.setSprinting(false);
-
         byte head = data.getSeverity(LimbType.HEAD);
         if (head == 1) {
             if (player.level().getGameTime() % 100 == 0) {
@@ -215,6 +213,10 @@ public class InjuryEventHandler {
         byte rightLeg = data.getSeverity(LimbType.RIGHT_LEG);
         boolean isBothLegsBroken = (leftLeg >= 2 && rightLeg >= 2) || (leftLeg >= 1 && rightLeg >= 2) || (leftLeg >= 2 && rightLeg >= 1);
         boolean isAnyLegBroken = leftLeg > 0 || rightLeg > 0;
+
+        if (isAnyLegBroken) {
+            player.setSprinting(false);
+        }
 
         if (isBothLegsBroken) {
             speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
@@ -466,7 +468,7 @@ public class InjuryEventHandler {
         if (isAnvilOrFallingBlock || isFlyIntoWall) {
             ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
             int blastProtLevel = getEnchantmentLevel(helmet, Enchantments.BLAST_PROTECTION);
-            
+
             double concussionChance = 1.0;
             if (blastProtLevel > 0) {
                 concussionChance = Math.max(0.2, 1.0 - (0.2 * blastProtLevel));
@@ -572,7 +574,6 @@ public class InjuryEventHandler {
             long currentTick = player.level().getGameTime();
             Long lastTick = LAST_FIREWORK_USE_TICK.get(player.getUUID());
             if (lastTick != null && (currentTick - lastTick) <= 40) {
-                // Apply G-force blackout (1 second = 20 ticks)
                 player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 20, 0, false, false, true));
                 player.level().playSound(
                         null,
@@ -628,15 +629,20 @@ public class InjuryEventHandler {
     }
 
     public static void onShieldBlock(Player player, DamageSource damageSource, float blockedDamage) {
+        onShieldBlock(player, damageSource, blockedDamage, player.getUsedItemHand());
+    }
+
+    public static void onShieldBlock(Player player, DamageSource damageSource, float blockedDamage, InteractionHand hand) {
         if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         if (blockedDamage >= 10.0F) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
-            int currentSev = data.getSeverity(LimbType.OFF_ARM);
+            LimbType arm = (hand == InteractionHand.MAIN_HAND) ? LimbType.MAIN_ARM : LimbType.OFF_ARM;
+            int currentSev = data.getSeverity(arm);
             int newSev = blockedDamage >= 14.0F ? 2 : Math.min(2, currentSev + 1);
             if (newSev > currentSev) {
-                data.setSeverity(LimbType.OFF_ARM, newSev);
+                data.setSeverity(arm, newSev);
                 InjuryModule.setInjuryData(player.getUUID(), data);
                 updatePlayerAttributesAndPose(player);
                 playBoneCrackSound(player, newSev >= 2 ? 0.6F : 0.8F);
@@ -645,14 +651,19 @@ public class InjuryEventHandler {
     }
 
     public static void onShieldDisabled(Player player) {
+        onShieldDisabled(player, player.getUsedItemHand());
+    }
+
+    public static void onShieldDisabled(Player player, InteractionHand hand) {
         if (!ServerConfig.ENABLE_INJURY.get()) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
-        int currentSev = data.getSeverity(LimbType.OFF_ARM);
+        LimbType arm = (hand == InteractionHand.MAIN_HAND) ? LimbType.MAIN_ARM : LimbType.OFF_ARM;
+        int currentSev = data.getSeverity(arm);
         int newSev = Math.min(2, currentSev + 1);
         if (newSev > currentSev) {
-            data.setSeverity(LimbType.OFF_ARM, newSev);
+            data.setSeverity(arm, newSev);
             InjuryModule.setInjuryData(player.getUUID(), data);
             updatePlayerAttributesAndPose(player);
             playBoneCrackSound(player, newSev >= 2 ? 0.6F : 0.8F);
@@ -722,14 +733,24 @@ public class InjuryEventHandler {
         return data.getSeverity(LimbType.OFF_ARM) > 0;
     }
 
+    public static boolean isMainArmBroken(Player player) {
+        if (!ServerConfig.ENABLE_INJURY.get()) return false;
+        if (player.isCreative() || player.isSpectator()) return false;
+
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        return data.getSeverity(LimbType.MAIN_ARM) > 0;
+    }
+
     public static boolean handleWeaponDrawTick(LivingEntity entity, ItemStack stack, int useDuration) {
         if (!(entity instanceof Player player)) return false;
         if (!ServerConfig.ENABLE_INJURY.get()) return false;
         if (player.isCreative() || player.isSpectator()) return false;
 
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
-        byte mainArmSev = data.getSeverity(LimbType.MAIN_ARM);
-        if (mainArmSev <= 0) return false;
+        InteractionHand hand = player.getUsedItemHand();
+        LimbType arm = (hand == InteractionHand.OFF_HAND) ? LimbType.OFF_ARM : LimbType.MAIN_ARM;
+        byte armSev = data.getSeverity(arm);
+        if (armSev <= 0) return false;
 
         boolean isBowOrCrossbow = stack.is(Items.BOW) || stack.is(Items.CROSSBOW);
         if (isBowOrCrossbow) {
@@ -896,7 +917,7 @@ public class InjuryEventHandler {
                 player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
             }
         }
-       
+
         for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().items.get(i);
             if (!stack.isEmpty()) {
@@ -904,7 +925,7 @@ public class InjuryEventHandler {
                 player.getInventory().items.set(i, ItemStack.EMPTY);
             }
         }
-        
+
         List<Integer> occupiedSlots = new ArrayList<>();
         for (int i = 9; i < 36; i++) {
             if (!player.getInventory().items.get(i).isEmpty()) {
@@ -951,7 +972,7 @@ public class InjuryEventHandler {
         if (stack.isEmpty() || player.level().isClientSide()) return;
 
         double angle = RANDOM.nextDouble() * 2.0 * Math.PI;
-        double dist = 0.5 + RANDOM.nextDouble() * 3.5; // Up to 4-block radius
+        double dist = 0.5 + RANDOM.nextDouble() * 3.5;
         double dx = Math.cos(angle) * dist;
         double dz = Math.sin(angle) * dist;
 
@@ -961,7 +982,7 @@ public class InjuryEventHandler {
 
         ItemEntity itemEntity = new ItemEntity(player.level(), spawnX, spawnY, spawnZ, stack);
         itemEntity.setDeltaMovement(dx * 0.12, 0.25 + RANDOM.nextDouble() * 0.15, dz * 0.12);
-        itemEntity.setPickUpDelay(40); // 2-second cooldown
+        itemEntity.setPickUpDelay(40);
         player.level().addFreshEntity(itemEntity);
     }
 }

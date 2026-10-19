@@ -41,12 +41,10 @@ public class CameraLimpingHandler {
         float cycle = walkDist * (float) Math.PI * 2.0F;
 
         if (tier == InjuryTier.TIER_1_SINGLE_LEG) {
-            // Single leg broken: asymmetrical limp
             float rollOffset = Mth.sin(cycle) * 0.6F;
             float pitchOffset = Math.max(0.0F, Mth.sin(cycle)) * 0.3F;
             return new CameraOffset(pitchOffset, rollOffset);
         } else {
-            // Both legs broken: severe double-dip & heavier wobble
             float rollOffset = Mth.sin(cycle * 2.0F) * 1.0F;
             float pitchOffset = Math.abs(Mth.sin(cycle)) * 0.6F;
             return new CameraOffset(pitchOffset, rollOffset);

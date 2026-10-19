@@ -13,7 +13,6 @@ public class InjuryModule implements IHumanModule {
 
     @Override
     public void init() {
-        // Timer initialization handled on fracture application
     }
 
     @Override
@@ -31,7 +30,6 @@ public class InjuryModule implements IHumanModule {
             if (!FRACTURE_TIMERS.containsKey(playerId)) {
                 FRACTURE_TIMERS.put(playerId, ServerConfig.BONE_FRACTURE_DURATION.get());
             }
-            // Update legacy tier for backwards-compat with any legacy readers
             byte leftLeg = data.getSeverity(LimbType.LEFT_LEG);
             byte rightLeg = data.getSeverity(LimbType.RIGHT_LEG);
             if (leftLeg == 2 || rightLeg == 2 || (leftLeg > 0 && rightLeg > 0)) {

@@ -25,7 +25,7 @@ import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
 public class SplintItem extends Item {
-    public static final int CHANNEL_DURATION = 40; // 2 seconds (40 ticks)
+    public static final int CHANNEL_DURATION = 40;
     private final SplintTier tier;
 
     public SplintItem(SplintTier tier) {
@@ -53,7 +53,6 @@ public class SplintItem extends Item {
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int count) {
         if (entity instanceof Player player) {
-            // Play leather rustle sound every 5 ticks
             if (count % 5 == 0) {
                 level.playSound(
                         null,
@@ -67,7 +66,6 @@ public class SplintItem extends Item {
                 );
             }
 
-            // Spawn white wool item particles on the player positioning
             if (level.isClientSide()) {
                 double px = player.getX() + (level.random.nextDouble() - 0.5D) * 0.4D;
                 double py = player.getY() + 0.8D + (level.random.nextDouble() - 0.5D) * 0.3D;
@@ -130,18 +128,15 @@ public class SplintItem extends Item {
     private void applySplintTreatment(Player player, ItemStack stack) {
         switch (tier) {
             case WOODEN:
-                // Instantly relieves fracture state to Splinted status
                 InjuryEventHandler.clearFractureTimer(player);
                 break;
             case REINFORCED:
-                // Cuts remaining fracture timer by 50% & gives Resistance I for 30s
                 int time = InjuryModule.getRemainingFractureTime(player.getUUID());
                 InjuryModule.reduceFractureTimer(player.getUUID(), (int) (time * 0.5));
                 player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));
                 InjuryEventHandler.updatePlayerAttributesAndPose(player);
                 break;
             case GOLDEN:
-                // Reduces remaining fracture timer by 67% (3x faster heal), gives Absorption & Regen
                 int goldenTime = InjuryModule.getRemainingFractureTime(player.getUUID());
                 InjuryModule.reduceFractureTimer(player.getUUID(), (int) (goldenTime * 0.67));
                 player.setAbsorptionAmount(player.getAbsorptionAmount() + tier.getAbsorptionAmount());
@@ -149,7 +144,6 @@ public class SplintItem extends Item {
                 InjuryEventHandler.updatePlayerAttributesAndPose(player);
                 break;
             case DIAMOND:
-                // Instantly heals fractures, grants Resistance II (20s) & Knockback Resistance (+0.5 for 60s)
                 InjuryEventHandler.clearFractureTimer(player);
                 player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 1));
                 AttributeInstance kbAttr = player.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
@@ -160,7 +154,6 @@ public class SplintItem extends Item {
                 }
                 break;
             case NETHERITE:
-                // Instantly heals all fractures & grants Adrenaline (Speed II + Resistance I for 45s)
                 InjuryEventHandler.clearFractureTimer(player);
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, tier.getPrimaryBuffDuration(), 1));
                 player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));

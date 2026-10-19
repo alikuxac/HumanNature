@@ -34,13 +34,13 @@ public class InjuryHudOverlay {
         int statusColor;
         if (isMoving) {
             statusText = String.format("Healing: %02d:%02d (Paused)", minutes, seconds);
-            statusColor = 0xFFFF5555; // Light red
+            statusColor = 0xFFFF5555;
         } else if (isResting) {
             statusText = String.format("Healing: %02d:%02d (Resting 2x)", minutes, seconds);
-            statusColor = 0xFFFFFF55; // Yellow
+            statusColor = 0xFFFFFF55;
         } else {
             statusText = String.format("Healing: %02d:%02d (Standing Still)", minutes, seconds);
-            statusColor = 0xFF55FFFF; // Cyan
+            statusColor = 0xFF55FFFF;
         }
 
         StringBuilder injuredLimbs = new StringBuilder();
@@ -58,11 +58,9 @@ public class InjuryHudOverlay {
         int y = ClientConfig.HUD_Y.get();
         int boxWidth = Math.max(170, mc.font.width(limbsTitle) + 12);
 
-        // Draw translucent dark background box
         guiGraphics.fill(x - 4, y - 4, x + boxWidth, y + 26, 0x90000000);
         guiGraphics.renderOutline(x - 4, y - 4, boxWidth + 4, 30, 0xFF444444);
 
-        // Render text
         guiGraphics.drawString(mc.font, limbsTitle, x, y, 0xFFFFAA00, true);
         guiGraphics.drawString(mc.font, statusText, x, y + 12, statusColor, true);
     }

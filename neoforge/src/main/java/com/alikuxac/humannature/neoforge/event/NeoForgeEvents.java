@@ -10,6 +10,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
 import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
@@ -22,7 +23,6 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
-
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +50,14 @@ public class NeoForgeEvents {
             if (PhysiologyEventHandler.handleMobEffectApplicable(player, event.getEffectInstance())) {
                 event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            if (player.level().isClientSide()) return;
+            PhysiologyEventHandler.recordJumpAction(player);
         }
     }
 
@@ -151,14 +159,12 @@ public class NeoForgeEvents {
         boolean isCrouching = player.isCrouching();
         boolean isSleeping = player.isSleeping();
 
-        // Track consecutive sleep ticks
         int sleepTicks = CONSECUTIVE_SLEEP_TICKS.getOrDefault(playerId, 0);
         if (isSleeping) {
             sleepTicks++;
             CONSECUTIVE_SLEEP_TICKS.put(playerId, sleepTicks);
         }
 
-        // Trigger sleep handlers when waking up (transitioning from sleeping -> awake)
         boolean wasSleeping = WAS_SLEEPING.getOrDefault(playerId, false);
         if (wasSleeping && !isSleeping) {
             if (ServerConfig.ENABLE_INJURY.get()) {
@@ -171,7 +177,6 @@ public class NeoForgeEvents {
         }
         WAS_SLEEPING.put(playerId, isSleeping);
 
-        // Physiology module ticking
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PhysiologyEventHandler.onPlayerTick(player, isMoving, isSleeping);
         }
@@ -196,7 +201,7 @@ public class NeoForgeEvents {
         PREV_WALK_DIST.put(playerId, currentWalkDist);
         PREV_POS.put(playerId, currentPos);
     }
-    
+
     @SubscribeEvent
     public static void onItemUseFinish(LivingEntityUseItemEvent.Finish event) {
         if (!(event.getEntity() instanceof Player player)) return;
@@ -209,8 +214,10 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
         Player player = event.getEntity();
+        PhysiologyEventHandler.recordMiningAction(player);
         float originalSpeed = event.getNewSpeed();
         float modifiedSpeed = InjuryEventHandler.modifyBreakSpeed(player, originalSpeed);
+        modifiedSpeed = PhysiologyEventHandler.modifyBreakSpeed(player, modifiedSpeed);
         event.setNewSpeed(modifiedSpeed);
     }
 
@@ -227,23 +234,37 @@ public class NeoForgeEvents {
     public static void onAttackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
         if (player.level().isClientSide()) return;
+        PhysiologyEventHandler.recordAttackAction(player);
         InjuryEventHandler.checkSpasmDrop(player);
     }
 
     @SubscribeEvent
     public static void onShieldBlock(LivingShieldBlockEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (InjuryEventHandler.isOffhandLocked(player)) {
+            InteractionHand hand = player.getUsedItemHand();
+            boolean isOffHand = (hand == InteractionHand.OFF_HAND);
+
+            if (isOffHand && InjuryEventHandler.isOffhandLocked(player)) {
+                event.setBlocked(false);
+                event.setCanceled(true);
+                return;
+            } else if (!isOffHand && InjuryEventHandler.isMainArmBroken(player)) {
                 event.setBlocked(false);
                 event.setCanceled(true);
                 return;
             }
-            InjuryEventHandler.onShieldBlock(player, event.getDamageSource(), event.getBlockedDamage());
+            InjuryEventHandler.onShieldBlock(player, event.getDamageSource(), event.getBlockedDamage(), hand);
         }
     }
 
     @SubscribeEvent
     public static void onItemUseTick(LivingEntityUseItemEvent.Tick event) {
+        if (event.getEntity() instanceof Player player) {
+            if (player.getUsedItemHand() == InteractionHand.OFF_HAND && InjuryEventHandler.isOffhandLocked(player)) {
+                event.setCanceled(true);
+                return;
+            }
+        }
         if (InjuryEventHandler.handleWeaponDrawTick(event.getEntity(), event.getItem(), event.getDuration())) {
             event.setCanceled(true);
         }

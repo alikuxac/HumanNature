@@ -2,6 +2,7 @@ package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
+import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
@@ -25,7 +26,8 @@ public class ForgeClientEvents {
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         if (event.getCamera().getEntity() instanceof Player player) {
-            CameraLimpingHandler.CameraOffset offset = CameraLimpingHandler.calculateCameraOffset(player, (float) event.getPartialTick());
+            float partialTick = (float) event.getPartialTick();
+            CameraLimpingHandler.CameraOffset offset = CameraLimpingHandler.calculateCameraOffset(player, partialTick);
             event.setPitch(event.getPitch() + offset.pitch);
             event.setRoll(event.getRoll() + offset.roll);
         }
@@ -36,6 +38,7 @@ public class ForgeClientEvents {
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
         InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
         ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
+        StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
     }
 
     private static DiagnosticTabButton tabButton = null;
@@ -46,7 +49,6 @@ public class ForgeClientEvents {
             int leftPos = (invScreen.width - 176) / 2;
             int topPos = (invScreen.height - 166) / 2;
 
-            // Tab attached flush to left border of inventory GUI (x = leftPos - 27, y = topPos + 8)
             tabButton = new DiagnosticTabButton(
                     leftPos - 27,
                     topPos + 8,

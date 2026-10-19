@@ -12,7 +12,6 @@ public class ForgeConfig {
     private static final ModConfigSpec CLIENT_SPEC;
 
     static {
-        // Build Server Config
         ModConfigSpec.Builder serverBuilder = new ModConfigSpec.Builder();
 
         serverBuilder.comment("Module master toggles").push("modules");
@@ -98,11 +97,41 @@ public class ForgeConfig {
         ModConfigSpec.DoubleValue toxinFractureBuildupMultiplier = serverBuilder
                 .comment("Toxin buildup multiplier when suffering from bone fractures or active trauma")
                 .defineInRange("toxinFractureBuildupMultiplier", 1.5, 1.0, 5.0);
+
+        ModConfigSpec.BooleanValue enablePhysicalExertion = serverBuilder
+                .comment("Enable physical exertion and muscle failure")
+                .define("enablePhysicalExertion", true);
+        ModConfigSpec.IntValue exertionContinuousMiningTicks = serverBuilder
+                .comment("Ticks of continuous chopping or mining required to trigger muscle failure (200 ticks = 10s)")
+                .defineInRange("exertionContinuousMiningTicks", 200, 20, 72000);
+        ModConfigSpec.IntValue exertionRestRecoveryTicks = serverBuilder
+                .comment("Ticks standing still without actions to recover 100% muscle capacity (70 ticks = 3.5s)")
+                .defineInRange("exertionRestRecoveryTicks", 70, 10, 1200);
+        ModConfigSpec.DoubleValue exertionAttackSpeedPenalty = serverBuilder
+                .comment("Attack speed penalty fraction during muscle failure (0.50 = -50%)")
+                .defineInRange("exertionAttackSpeedPenalty", 0.50, 0.0, 1.0);
+        ModConfigSpec.DoubleValue exertionMiningSpeedPenalty = serverBuilder
+                .comment("Mining break speed penalty fraction during muscle failure (0.50 = -50%)")
+                .defineInRange("exertionMiningSpeedPenalty", 0.50, 0.0, 1.0);
+        ModConfigSpec.DoubleValue exertionSprintDrainPerTick = serverBuilder
+                .comment("Stamina / exertion drain per tick while sprinting (0.08 = ~1.6% per sec, ~60s to deplete)")
+                .defineInRange("exertionSprintDrainPerTick", 0.08, 0.001, 10.0);
+        ModConfigSpec.BooleanValue enableSwimmingCramps = serverBuilder
+                .comment("Enable temporary swimming cramps from prolonged continuous swimming/diving")
+                .define("enableSwimmingCramps", true);
+        ModConfigSpec.IntValue swimmingCrampThresholdTicks = serverBuilder
+                .comment("Ticks of continuous swimming before leg cramp occurs (600 ticks = 30s)")
+                .defineInRange("swimmingCrampThresholdTicks", 600, 40, 72000);
+        ModConfigSpec.DoubleValue swimmingCrampSpeedPenalty = serverBuilder
+                .comment("Swimming speed penalty fraction during cramp (0.40 = -40%)")
+                .defineInRange("swimmingCrampSpeedPenalty", 0.40, 0.0, 1.0);
+        ModConfigSpec.IntValue swimmingCrampRecoveryTicks = serverBuilder
+                .comment("Ticks resting on land or boat to recover from leg cramp (60 ticks = 3s)")
+                .defineInRange("swimmingCrampRecoveryTicks", 60, 10, 1200);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
 
-        // Wire ServerConfig suppliers
         ServerConfig.ENABLE_INJURY = enableInjury::get;
         ServerConfig.ENABLE_TEMPERATURE = enableTemperature::get;
         ServerConfig.ENABLE_WEIGHT = enableWeight::get;
@@ -127,8 +156,17 @@ public class ForgeConfig {
         ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = toxinRestingHeatDecayMultiplier::get;
         ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING = enableToxinFatigueScaling::get;
         ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER = toxinFractureBuildupMultiplier::get;
+        ServerConfig.ENABLE_PHYSICAL_EXERTION = enablePhysicalExertion::get;
+        ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS = exertionContinuousMiningTicks::get;
+        ServerConfig.EXERTION_REST_RECOVERY_TICKS = exertionRestRecoveryTicks::get;
+        ServerConfig.EXERTION_ATTACK_SPEED_PENALTY = exertionAttackSpeedPenalty::get;
+        ServerConfig.EXERTION_MINING_SPEED_PENALTY = exertionMiningSpeedPenalty::get;
+        ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK = exertionSprintDrainPerTick::get;
+        ServerConfig.ENABLE_SWIMMING_CRAMPS = enableSwimmingCramps::get;
+        ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS = swimmingCrampThresholdTicks::get;
+        ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY = swimmingCrampSpeedPenalty::get;
+        ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS = swimmingCrampRecoveryTicks::get;
 
-        // Build Client Config
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 
         clientBuilder.comment("HUD overlay settings").push("hud");
@@ -144,6 +182,9 @@ public class ForgeConfig {
         ModConfigSpec.BooleanValue enableToxinHudOverlay = clientBuilder
                 .comment("Show transient soulslike toxin buildup bar above hotbar")
                 .define("enableToxinHudOverlay", true);
+        ModConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
+                .comment("Show transient stamina / exertion bar above hotbar")
+                .define("enableStaminaHudOverlay", true);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
@@ -154,11 +195,11 @@ public class ForgeConfig {
 
         CLIENT_SPEC = clientBuilder.build();
 
-        // Wire ClientConfig suppliers
         ClientConfig.ENABLE_HUD_OVERLAY = enableHudOverlay::get;
         ClientConfig.HUD_X = hudX::get;
         ClientConfig.HUD_Y = hudY::get;
         ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = enableToxinHudOverlay::get;
+        ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
     }
 

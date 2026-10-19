@@ -72,11 +72,9 @@ public class ToxinHudOverlay {
         int alphaOutline = applyAlpha(outlineColor, alpha);
         int alphaFill = applyAlpha(fillColor, alpha);
 
-        // Render sleek background & 1px dark border
         guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, alphaOutline);
         guiGraphics.fill(x, y, x + barWidth, y + barHeight, alphaBg);
 
-        // Render filled progress
         int filledWidth = (int) (barWidth * (Math.min(100.0f, Math.max(0.0f, buildup)) / 100.0f));
         if (filledWidth > 0) {
             guiGraphics.fill(x, y, x + filledWidth, y + barHeight, alphaFill);
