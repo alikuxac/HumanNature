@@ -1,6 +1,6 @@
 # Physiology System
 
-The physiology module tracks sleep deprivation and replaces instant poison/wither damage with an accumulating toxin gauge.
+The physiology module tracks sleep deprivation, handles stamina and muscle fatigue, and replaces instant poison/wither damage with an accumulating toxin gauge.
 
 ---
 
@@ -8,7 +8,7 @@ The physiology module tracks sleep deprivation and replaces instant poison/withe
 
 ### Sleep Deprivation & Fatigue
 
-The server tracks consecutive awake ticks for survival/adventure players who are out of bed. Every 24,000 ticks (one in-game day) adds 33.3% to the player's hidden `fatigueScore`, capping at 100% (1.0) after 72,000 ticks (three in-game days). Ticks spent sleeping in bed pause this counter.
+The server tracks consecutive awake ticks for survival and adventure players who are out of bed. Every 24,000 ticks (one in-game day) adds 33.3% to the player's hidden `fatigue score`, capping at 100% (1.0) after 72,000 ticks (three in-game days). Sleeping in bed pauses this counter.
 
 | Awake Time | Server Ticks | Fatigue Score | Symptoms |
 | :--- | :--- | :--- | :--- |
@@ -19,20 +19,20 @@ The server tracks consecutive awake ticks for survival/adventure players who are
 | **3+ Days** | 72,000+ | 100.0% | Complete exhaustion (2x toxin vulnerability) |
 
 #### Involuntary Darkness Blinks
-Once fatigue hits 80%, moving players experience periodic 1-second (20-tick) Darkness blinks. Stationary players do not blink. Once a blink ends, the next blink triggers after a random cooldown between 300 and 800 ticks (15 to 40 seconds).
+At 80% fatigue, moving players trigger a 1-second (20-tick) Darkness blink every 300 to 800 ticks (15 to 40 seconds). Stationary players do not blink.
 
 ---
 
 ### Toxin Buildup (Poison & Wither Interception)
 
-Incoming `minecraft:poison` and `minecraft:wither` effects do not apply status effects immediately. Instead, each hit adds points to a hidden 0–100% buildup gauge. All other status effects apply normally.
+Incoming `minecraft:poison` and `minecraft:wither` hits add to a hidden 0–100% buildup gauge instead of applying status effects immediately. Other status effects apply normally.
 
 #### Buildup Calculation & State Scaling
-Each exposure calculates a base buildup from the effect's duration and amplifier, with a configurable minimum (default 25%):
+Each exposure calculates base buildup from the effect duration and amplifier, with a configurable minimum (default 25%):
 
 $$\text{BaseValue} = \max(\text{baseHit}, \min(100, \text{durationFactor} \times \text{amplifierFactor}))$$
 
-This base value is then scaled by the player's exhaustion and physical injury:
+Exhaustion and physical injuries scale this base value:
 
 $$\Delta\text{Buildup} = \text{BaseValue} \times \left(1.0 + \frac{\text{FatigueScore}}{100}\right) \times (\text{isFractured} \mathbin{?} 1.5 : 1.0)$$
 
@@ -41,12 +41,12 @@ $$\Delta\text{Buildup} = \text{BaseValue} \times \left(1.0 + \frac{\text{Fatigue
 - **Combined vulnerability**: A player who is both fully exhausted and fractured accumulates toxins 3.0x faster than normal.
 
 #### Eruption
-When buildup reaches 100%, the intercepted effect erupts onto the player with the full accumulated duration and amplifier, and the gauge resets to 0%.
+At 100% buildup, the intercepted effect triggers with full accumulated duration and amplifier, resetting the gauge to 0%.
 
 #### Passive Decay & Heat Acceleration
-If the player takes no new toxin hits for 80 ticks (4 seconds), buildup drains passively at 2.0% per second.
+After 80 ticks (4 seconds) without new toxin hits, buildup drains at 2.0% per second.
 
-Resting (sleeping, or crouching while standing still) or standing within 2 blocks of heat sources (fire, soul fire, campfires, lava, magma blocks) triples the decay rate to 6.0% per second.
+Resting (sleeping or crouching while still) or standing within 2 blocks of heat sources (fire, soul fire, campfires, lava, magma blocks) triples decay to 6.0% per second.
 
 #### Item Counterplay
 - **Milk Bucket**: Clears 100% of accumulated buildup instantly.
@@ -54,25 +54,67 @@ Resting (sleeping, or crouching while standing still) or standing within 2 block
 
 ---
 
-### HUD Overlay & Diagnostic Tab
+### Physical Exertion & Stamina
 
-#### Transient HUD Bar
-- **Clean screen**: Nothing renders when buildup is at 0%.
-- **Active gauge**: When buildup exceeds 0%, a 3px bar appears centered above the hotbar (green for Poison, purple for Wither).
-- **Smooth fade**: When buildup returns to 0%, the bar fades out over 1.0 second.
+Physical actions drain stamina from a 0–100% capacity gauge. Reaching 100% exertion triggers muscle failure.
+
+#### Exertion Triggers & Costs
+- **Continuous Mining / Chopping**: Breaking blocks continuously adds 0.5% exertion per tick, triggering muscle failure at 10 seconds (200 ticks). Guarded per tick against multi-hit exploits.
+- **Sprinting**: Adds 0.08% exertion per tick (~1.6% per second), depleting full stamina in ~60 seconds.
+- **Consecutive Jumping**:
+  - Base jump cost: 10.0% exertion per jump.
+  - Bunny hopping: Jumps within 40 ticks (2 seconds) of each other increase cost by +1% per jump after the second jump, capping at +6% (10% on jumps 1–2, 11% on jump 3, up to 16% on jump 8).
+  - 8 consecutive jumps guarantee 100% exertion and immediate muscle failure.
+  - Jump threshold: Jumping requires at least 10% stamina (<90% exertion) and no active muscle failure. Otherwise, vertical jump velocity zeroes out and `generic.jump_strength` drops by 100%.
+- **Attacking**: Swings add 4.0% exertion per hit.
+- **Upstream Swimming**: Moving against fluid flow (`fluid.getFlow()`) adds 0.75% exertion per tick.
+
+#### Muscle Failure Threshold
+At 100% exertion:
+- **Attack Speed**: -50% (`generic.attack_speed`).
+- **Mining Speed**: -50% block break speed.
+- **Sprint Lockdown**: Cancels sprinting immediately and blocks sprint input.
+- **Jump Lockdown**: Zeroes vertical jump velocity and applies a -100% modifier to `generic.jump_strength`.
+
+#### Stamina Recovery
+- **Stationary Rest**: Standing still on ground (`!isMoving && onGround`) without mining or jumping for 3.5 seconds (70 ticks) restores full stamina and clears muscle failure.
+- **Walking Decay**: Moving without sprinting or muscle failure clears exertion at 0.2% per tick (4.0% per second).
+
+---
+
+### Swimming Cramps
+
+#### Triggers & Consequences
+- **Trigger**: Swimming or diving continuously for more than 30 seconds (600 ticks) triggers a leg cramp.
+- **Speed Penalty**: Reduces horizontal swimming speed by 40%.
+- **Audio Feedback**: Plays water struggle and pain sounds.
+
+#### Recovery
+- Move onto dry ground (`!isInWater && onGround`) or into a vehicle.
+- Resting on land or in a boat for 3 seconds (60 ticks) clears the cramp.
+
+---
+
+### HUD & Diagnostic Interface
+
+#### Transient HUD Overlays
+- **Stamina Crosshair Arc**: When stamina is below 100%, a radial arc renders right of the crosshair (radius 19–23 px, angle -55° to +55°), draining top to bottom. Fades out over 1.5 seconds once stamina reaches 100%.
+  - **Colors**: `#FFD23F` (yellow, normal), `#FF7043` (orange, < 25%), pulsing `#FF0000` (red, muscle failure), `#00E5FF` (cyan, swimming cramp).
+- **Toxin Buildup Bar**: When toxin buildup is above 0%, renders a horizontal bar above the hotbar (green for Poison, purple for Wither). Renders independently of the stamina arc.
 
 #### Diagnostic Tab (`H` Key)
 The inventory diagnostic panel displays:
-- **Fatigue Level**: Current awake percentage, severity rating, and progress bar.
-- **Toxin Buildup**: Current accumulation percentage, active toxin type, and passive decay countdown.
-- **Vulnerability Warning**: Highlights active buildup multipliers when the player is fatigued or fractured.
+- **Fatigue**: Awake time percentage, severity rating, and progress bar.
+- **Toxin Buildup**: Current percentage, active toxin type, and decay countdown.
+- **Stamina & Muscles**: Muscle status (Rested, Strained, Muscle Failure), remaining stamina bar, and swimming cramp indicator.
+- **Vulnerability Multipliers**: Active buildup scaling from fatigue or bone fractures.
 
 ---
 
 ### Reset Triggers
 
-- **Sleeping through the night**: Passing the night in a bed (at least 90 ticks) resets awake ticks and fatigue to 0. Waking up early before morning does not clear fatigue.
-- **Death & respawn**: Dying clears awake ticks, fatigue score, active toxin buildup, and eruption flags.
+- **Sleeping through the night**: Passing the night in a bed (at least 90 ticks) resets awake ticks, fatigue, exertion, and cramps to 0. Waking up early before morning does not clear fatigue.
+- **Death & respawn**: Dying clears awake ticks, fatigue score, active toxin buildup, eruption flags, muscle failure, and leg cramps.
 
 ---
 
@@ -116,12 +158,46 @@ Server settings are in `config/humannature-server.toml`:
     # Toxin buildup multiplier when the player suffers from bone fractures or trauma
     # Range: 1.0 ~ 5.0
     toxinFractureBuildupMultiplier = 1.5
+
+    # Enable physical exertion and muscle failure
+    enablePhysicalExertion = true
+    # Ticks of continuous chopping or mining required to trigger muscle failure (200 ticks = 10s)
+    exertionContinuousMiningTicks = 200
+    # Ticks standing still without actions to recover 100% muscle capacity (70 ticks = 3.5s)
+    exertionRestRecoveryTicks = 70
+    # Attack speed penalty fraction during muscle failure (0.50 = -50%)
+    exertionAttackSpeedPenalty = 0.50
+    # Mining break speed penalty fraction during muscle failure (0.50 = -50%)
+    exertionMiningSpeedPenalty = 0.50
+    # Stamina / exertion drain per tick while sprinting (0.08 = ~1.6% per sec, ~60s to deplete)
+    exertionSprintDrainPerTick = 0.08
+
+    # Enable temporary swimming cramps from prolonged continuous swimming/diving
+    enableSwimmingCramps = true
+    # Ticks of continuous swimming before leg cramp occurs (600 ticks = 30s)
+    swimmingCrampThresholdTicks = 600
+    # Swimming speed penalty fraction during cramp (0.40 = -40%)
+    swimmingCrampSpeedPenalty = 0.40
+    # Ticks resting on land or boat to recover from leg cramp (60 ticks = 3s)
+    swimmingCrampRecoveryTicks = 60
 ```
 
 Client settings are in `config/humannature-client.toml`:
 
 ```toml
 [hud]
+    # Show injury & trauma status HUD overlay on screen
+    enableHudOverlay = true
+    # Screen X position of the injury HUD overlay
+    hudX = 10
+    # Screen Y position of the injury HUD overlay
+    hudY = 10
     # Show transient soulslike toxin buildup bar above hotbar
     enableToxinHudOverlay = true
+    # Show transient stamina crosshair arc overlay
+    enableStaminaHudOverlay = true
+
+[camera]
+    # Enable camera wobble/tilt effect when walking with fractured leg(s)
+    enableCameraLimping = true
 ```
