@@ -17,6 +17,7 @@ public class InjuryHudOverlay {
         Player player = mc.player;
         if (player == null || mc.options.hideGui) return;
         if (!ServerConfig.ENABLE_INJURY.get() || !ClientConfig.ENABLE_HUD_OVERLAY.get()) return;
+        if (ClientConfig.ENABLE_SWAPPABLE_HUD.get() && SwappableHudOverlay.getCurrentMode() != SwappableHudOverlay.HudMode.INJURY) return;
 
         PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
         boolean isActive = InjuryEventHandler.isFractureActive(player) || injuryData.hasAnyInjury();

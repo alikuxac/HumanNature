@@ -13,5 +13,6 @@ public class NeoForgeClientModEvents {
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(ModKeyMappings.OPEN_DIAGNOSTICS);
+        event.register(ModKeyMappings.CYCLE_HUD);
     }
 }

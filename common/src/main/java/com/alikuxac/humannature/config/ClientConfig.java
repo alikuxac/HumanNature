@@ -8,6 +8,9 @@ public class ClientConfig {
     public static Supplier<Integer> HUD_Y = () -> 10;
     public static Supplier<Boolean> ENABLE_TOXIN_HUD_OVERLAY = () -> true;
     public static Supplier<Boolean> ENABLE_STAMINA_HUD_OVERLAY = () -> true;
+    public static Supplier<Boolean> ENABLE_SWAPPABLE_HUD = () -> true;
+    public static Supplier<Integer> SWAPPABLE_HUD_X = () -> 10;
+    public static Supplier<Integer> SWAPPABLE_HUD_Y = () -> 10;
 
     public static Supplier<Boolean> ENABLE_CAMERA_LIMPING = () -> true;
 }

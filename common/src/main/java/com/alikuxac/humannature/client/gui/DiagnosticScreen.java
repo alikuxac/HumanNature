@@ -149,6 +149,7 @@ public class DiagnosticScreen extends Screen {
         List<Component> physTooltip = null;
         List<Component> toxinTooltip = null;
         List<Component> exertionTooltip = null;
+        List<Component> heartRateTooltip = null;
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
@@ -322,9 +323,69 @@ public class DiagnosticScreen extends Screen {
                     }
                 }
             }
+
+            int bpm = calculateHeartRateBpm(player, physData);
+            String bpmColor;
+            String bpmLabel;
+            if (bpm >= 140) {
+                bpmColor = "§c";
+                bpmLabel = "Tachycardia";
+            } else if (bpm >= 110) {
+                bpmColor = "§6";
+                bpmLabel = "Elevated";
+            } else if (bpm >= 80) {
+                bpmColor = "§e";
+                bpmLabel = "Moderate";
+            } else {
+                bpmColor = "§a";
+                bpmLabel = "Normal";
+            }
+
+            int hrLabelY = curY;
+            String hrText = "§7Heart Rate: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)";
+            guiGraphics.drawString(this.font, hrText, infoX, curY, 0xFFFFFF, false);
+            curY += 9;
+
+            int hrBarHeight = 2;
+            int hrBarY = curY;
+            guiGraphics.fill(infoX, hrBarY, infoX + barWidth, hrBarY + hrBarHeight, 0xFF101010);
+            guiGraphics.renderOutline(infoX, hrBarY, barWidth, hrBarHeight, 0xFF282828);
+
+            float hrFraction = Math.max(0.0f, Math.min(1.0f, (bpm - 55.0f) / 140.0f));
+            int filledHrWidth = (int) (barWidth * hrFraction);
+            int hrBarColor = bpm >= 140 ? 0xFFFF3333 : (bpm >= 110 ? 0xFFFFAA00 : (bpm >= 80 ? 0xFFFFFF55 : 0xFF55FF55));
+            if (filledHrWidth > 0) {
+                guiGraphics.fill(infoX, hrBarY, infoX + filledHrWidth, hrBarY + hrBarHeight, hrBarColor);
+            }
+            curY += hrBarHeight + 3;
+
+            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= hrLabelY && mouseY <= hrBarY + hrBarHeight + 2) {
+                heartRateTooltip = new ArrayList<>();
+                heartRateTooltip.add(Component.literal("§c❤ Heart Rate: " + bpmColor + bpm + " BPM (" + bpmLabel + ")"));
+                heartRateTooltip.add(Component.literal("§7Resting Baseline: ~68 BPM"));
+                double exertionBpm = (physData.getExertionScore() / 100.0) * 45.0;
+                if (exertionBpm > 0.5) {
+                    heartRateTooltip.add(Component.literal(String.format("§7• Exertion / Labor: +%.0f BPM", exertionBpm)));
+                }
+                float maxHp = player.getMaxHealth();
+                float curHp = player.getHealth();
+                if (maxHp > 0.0f && curHp < maxHp) {
+                    double traumaBpm = (1.0f - (curHp / maxHp)) * 40.0;
+                    heartRateTooltip.add(Component.literal(String.format("§c• Trauma / Low HP: +%.0f BPM", traumaBpm)));
+                }
+                if (physData.getToxinBuildup() > 0.0f) {
+                    double toxinBpm = (physData.getToxinBuildup() / 100.0) * 25.0;
+                    heartRateTooltip.add(Component.literal(String.format("§2• Toxin Cardiovascular Strain: +%.0f BPM", toxinBpm)));
+                }
+                if (physData.getFatigueScore() > 0.1f) {
+                    double fatigueBpm = physData.getFatigueScore() * 15.0;
+                    heartRateTooltip.add(Component.literal(String.format("§6• Fatigue Stress: +%.0f BPM", fatigueBpm)));
+                }
+                heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
+            }
         }
 
-        int splintDividerY = Math.max(curY + 2, topPos + 118);
+        int splintDividerY = Math.max(curY + 2, topPos + 124);
         guiGraphics.fill(infoX, splintDividerY, leftPos + GUI_WIDTH - 12, splintDividerY + 1, 0xFF353535);
         ItemStack availableSplint = InjuryEventHandler.findFirstSplint(player);
         boolean hasSplint = !availableSplint.isEmpty();
@@ -379,9 +440,30 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, physTooltip, mouseX, mouseY);
         } else if (exertionTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
+        } else if (heartRateTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, heartRateTooltip, mouseX, mouseY);
         }
 
         RenderSystem.enableDepthTest();
+    }
+
+    public static int calculateHeartRateBpm(Player player, PlayerPhysiologyData physData) {
+        if (player == null || physData == null) return 68;
+
+        double bpm = 68.0;
+        bpm += (physData.getExertionScore() / 100.0) * 45.0;
+
+        float maxHp = player.getMaxHealth();
+        float curHp = player.getHealth();
+        if (maxHp > 0.0f) {
+            float healthFraction = Math.max(0.0f, Math.min(1.0f, curHp / maxHp));
+            bpm += (1.0f - healthFraction) * 40.0;
+        }
+
+        bpm += (Math.min(100.0f, physData.getToxinBuildup()) / 100.0) * 25.0;
+        bpm += physData.getFatigueScore() * 15.0;
+
+        return (int) Math.round(Math.max(55.0, Math.min(195.0, bpm)));
     }
 
     private static String getSeverityColor(int sev) {

@@ -39,6 +39,7 @@ public class ForgeClientEvents {
         InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
         ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
         StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
+        com.alikuxac.humannature.client.SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
     }
 
     private static DiagnosticTabButton tabButton = null;
@@ -71,6 +72,9 @@ public class ForgeClientEvents {
             } else if (mc.screen instanceof DiagnosticScreen) {
                 mc.screen.onClose();
             }
+        }
+        while (ModKeyMappings.CYCLE_HUD.consumeClick()) {
+            com.alikuxac.humannature.client.SwappableHudOverlay.cycleHudMode(mc.player);
         }
     }
 }

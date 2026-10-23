@@ -185,6 +185,15 @@ public class ForgeConfig {
         ModConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
                 .comment("Show transient stamina / exertion bar above hotbar")
                 .define("enableStaminaHudOverlay", true);
+        ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
+                .comment("Enable swappable HUD module cycling")
+                .define("enableSwappableHud", true);
+        ModConfigSpec.IntValue swappableHudX = clientBuilder
+                .comment("Screen X position of the swappable HUD mini box")
+                .defineInRange("swappableHudX", 10, 0, 10000);
+        ModConfigSpec.IntValue swappableHudY = clientBuilder
+                .comment("Screen Y position of the swappable HUD mini box")
+                .defineInRange("swappableHudY", 10, 0, 10000);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
@@ -200,6 +209,9 @@ public class ForgeConfig {
         ClientConfig.HUD_Y = hudY::get;
         ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = enableToxinHudOverlay::get;
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
+        ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
+        ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
+        ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
     }
 

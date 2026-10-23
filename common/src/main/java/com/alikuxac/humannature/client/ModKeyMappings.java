@@ -10,4 +10,11 @@ public class ModKeyMappings {
             InputConstants.KEY_H,
             "key.categories.humannature"
     );
+
+    public static final KeyMapping CYCLE_HUD = new KeyMapping(
+            "key.humannature.cycle_hud",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_K,
+            "key.categories.humannature"
+    );
 }
