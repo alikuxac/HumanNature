@@ -74,7 +74,7 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onLivingHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (InjuryEventHandler.shouldCancelNaturalRegen(player)) {
+            if (InjuryEventHandler.shouldCancelNaturalRegen(player, event.getAmount())) {
                 event.setCanceled(true);
             }
         }
@@ -129,6 +129,17 @@ public class NeoForgeEvents {
                 PhysiologyEventHandler.onPlayerRespawn(player);
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        Player player = event.getEntity();
+        UUID playerId = player.getUUID();
+        WAS_SLEEPING.remove(playerId);
+        CONSECUTIVE_SLEEP_TICKS.remove(playerId);
+        PREV_POS.remove(playerId);
+        PREV_WALK_DIST.remove(playerId);
+        PhysiologyEventHandler.onPlayerLoggedOut(player);
     }
 
     private static final Map<UUID, Boolean> WAS_SLEEPING = new HashMap<>();
@@ -193,13 +204,27 @@ public class NeoForgeEvents {
 
                 if (canHeal) {
                     int reductionAmount = isResting ? 2 : 1;
-                    InjuryEventHandler.reduceFractureTimer(player, reductionAmount);
+                    InjuryEventHandler.reduceFractureTimer(player, reductionAmount, true);
                 }
             }
         }
 
         PREV_WALK_DIST.put(playerId, currentWalkDist);
         PREV_POS.put(playerId, currentPos);
+    }
+
+    @SubscribeEvent
+    public static void onItemUseStart(LivingEntityUseItemEvent.Start event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        PhysiologyEventHandler.onItemUseStart(player, event.getItem());
+    }
+
+    @SubscribeEvent
+    public static void onItemUseStop(LivingEntityUseItemEvent.Stop event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        PhysiologyEventHandler.onItemUseStop(player);
     }
 
     @SubscribeEvent

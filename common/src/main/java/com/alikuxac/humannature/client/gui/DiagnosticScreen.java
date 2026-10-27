@@ -150,6 +150,7 @@ public class DiagnosticScreen extends Screen {
         List<Component> toxinTooltip = null;
         List<Component> exertionTooltip = null;
         List<Component> heartRateTooltip = null;
+        List<Component> metabolismTooltip = null;
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
@@ -381,7 +382,87 @@ public class DiagnosticScreen extends Screen {
                     double fatigueBpm = physData.getFatigueScore() * 15.0;
                     heartRateTooltip.add(Component.literal(String.format("§6• Fatigue Stress: +%.0f BPM", fatigueBpm)));
                 }
+                if (physData.isPanicking()) {
+                    heartRateTooltip.add(Component.literal("§c• Underground Claustrophobia: +45 BPM"));
+                }
+                if (physData.isAdrenalineActive()) {
+                    heartRateTooltip.add(Component.literal("§c• Adrenaline Surge: +60 BPM"));
+                }
+                if (physData.getIndigestionBuildup() >= 50.0f) {
+                    heartRateTooltip.add(Component.literal("§6• Gut Discomfort / Indigestion: +10 BPM"));
+                }
                 heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
+            }
+
+            // Compact metabolic and mental indicators
+            List<String> tags = new ArrayList<>();
+            if (physData.isAdrenalineActive()) {
+                tags.add("§c⚡ Adrenaline (" + String.format("%.1fs", physData.getAdrenalineTicks() / 20.0) + ")");
+            } else if (physData.isPanicking()) {
+                tags.add("§c⚠ Panic (0 Lux)");
+            }
+            if (physData.getPendingNutrition() > 0.0f) {
+                tags.add("§aDigesting (+" + String.format("%.0f", physData.getPendingNutrition()) + "🍗)");
+            }
+            if (physData.getIndigestionBuildup() > 0.0f) {
+                tags.add("§6Indigestion (" + String.format("%.0f%%", physData.getIndigestionBuildup()) + ")");
+            }
+            if (physData.hasCalciumBuff()) {
+                long cSec = physData.getCalciumAbsorptionTicks() / 20;
+                tags.add("§bCalcium (" + (cSec / 60) + "m " + (cSec % 60) + "s)");
+            }
+
+            int tagStartY = curY;
+            if (!tags.isEmpty() && curY < topPos + 118) {
+                for (String tag : tags) {
+                    if (curY + 9 > topPos + 120) break;
+                    guiGraphics.drawString(this.font, tag, infoX, curY, 0xFFFFFF, false);
+                    curY += 9;
+                }
+            } else if (curY < topPos + 118) {
+                guiGraphics.drawString(this.font, "§8Metabolism: Normal (Resting)", infoX, curY, 0x888888, false);
+                curY += 9;
+            }
+
+            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= tagStartY && mouseY <= Math.max(curY, tagStartY + 9)) {
+                metabolismTooltip = new ArrayList<>();
+                metabolismTooltip.add(Component.literal("§6Metabolic & Sensory Vitals"));
+                if (physData.getPendingNutrition() > 0.0f || physData.getPendingSaturation() > 0.0f) {
+                    metabolismTooltip.add(Component.literal(String.format("§a• Digestion Buffer: +%.0f Nutrition / +%.1f Saturation",
+                            physData.getPendingNutrition(), physData.getPendingSaturation())));
+                    metabolismTooltip.add(Component.literal("§7  Absorption ticks in every 1.5s to prevent meal spam."));
+                } else {
+                    metabolismTooltip.add(Component.literal("§a• Digestion: Clear / Resting"));
+                }
+
+                if (physData.hasCalciumBuff()) {
+                    long calSec = physData.getCalciumAbsorptionTicks() / 20;
+                    metabolismTooltip.add(Component.literal(String.format("§b• Calcium Absorption: %02d:%02d remaining", calSec / 60, calSec % 60)));
+                    metabolismTooltip.add(Component.literal("§7  Doubles natural fracture healing speed during rest & sleep."));
+                } else {
+                    metabolismTooltip.add(Component.literal("§8• Calcium Buff: Inactive (Drink Hot Bone Broth or Milk)"));
+                }
+
+                if (physData.getIndigestionBuildup() > 0.0f) {
+                    String crampTxt = physData.getIndigestionBuildup() >= 50.0f ? "§c[CRAMPING ACTIVE]" : "§6[Mild Discomfort]";
+                    metabolismTooltip.add(Component.literal(String.format("§6• Indigestion Buildup: %.0f%% %s", physData.getIndigestionBuildup(), crampTxt)));
+                    metabolismTooltip.add(Component.literal("§7  Caused by raw chicken/spoiled meat. Remedy with milk or honey."));
+                }
+
+                if (physData.isAdrenalineActive()) {
+                    float remSec = physData.getAdrenalineTicks() / 20.0f;
+                    metabolismTooltip.add(Component.literal(String.format("§c• Adrenaline Rush: %.1fs remaining", remSec)));
+                    metabolismTooltip.add(Component.literal("§a  +35% Speed Burst & Sprint Unlocked overriding fractures."));
+                    metabolismTooltip.add(Component.literal("§c⚠ Pain Shock collapse occurs immediately upon rush expiry!"));
+                }
+
+                if (physData.isPanicking() || physData.getClaustrophobiaTicks() > 0) {
+                    int pThresh = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
+                    int pPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) pThresh) * 100.0f));
+                    metabolismTooltip.add(Component.literal(String.format("§c• Underground Claustrophobia: %d%% %s", pPct,
+                            physData.isPanicking() ? "§c[PANIC - AIM TREMORS]" : "§e[Building]")));
+                    metabolismTooltip.add(Component.literal("§7  Triggers at Y < 0 in pitch black. Calm near torches, fires, music, or pets."));
+                }
             }
         }
 
@@ -442,6 +523,8 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
         } else if (heartRateTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, heartRateTooltip, mouseX, mouseY);
+        } else if (metabolismTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, metabolismTooltip, mouseX, mouseY);
         }
 
         RenderSystem.enableDepthTest();
@@ -463,7 +546,19 @@ public class DiagnosticScreen extends Screen {
         bpm += (Math.min(100.0f, physData.getToxinBuildup()) / 100.0) * 25.0;
         bpm += physData.getFatigueScore() * 15.0;
 
-        return (int) Math.round(Math.max(55.0, Math.min(195.0, bpm)));
+        if (physData.isPanicking()) {
+            bpm += 45.0;
+        }
+
+        if (physData.isAdrenalineActive()) {
+            bpm += 60.0;
+        }
+
+        if (physData.getIndigestionBuildup() >= 50.0f) {
+            bpm += 10.0;
+        }
+
+        return (int) Math.round(Math.max(55.0, Math.min(205.0, bpm)));
     }
 
     private static String getSeverityColor(int sev) {

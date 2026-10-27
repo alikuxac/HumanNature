@@ -128,6 +128,37 @@ public class NeoForgeConfig {
         ModConfigSpec.IntValue swimmingCrampRecoveryTicks = serverBuilder
                 .comment("Ticks resting on land or boat to recover from leg cramp (60 ticks = 3s)")
                 .defineInRange("swimmingCrampRecoveryTicks", 60, 10, 1200);
+
+        ModConfigSpec.BooleanValue enableDigestionWindow = serverBuilder
+                .comment("Enable gradual digestion absorption window for eaten food")
+                .define("enableDigestionWindow", true);
+        ModConfigSpec.IntValue digestionIntervalTicks = serverBuilder
+                .comment("Interval in ticks between digestion nutrition absorption (30 ticks = 1.5s)")
+                .defineInRange("digestionIntervalTicks", 30, 5, 200);
+        ModConfigSpec.BooleanValue enableOvereatingReflex = serverBuilder
+                .comment("Enable overeating hiccups, speed debuff, and vomiting reflex when gorging food")
+                .define("enableOvereatingReflex", true);
+        ModConfigSpec.BooleanValue enableIndigestion = serverBuilder
+                .comment("Enable indigestion accumulation and stomach ache from raw/rotten meat")
+                .define("enableIndigestion", true);
+        ModConfigSpec.BooleanValue enableCalciumHealing = serverBuilder
+                .comment("Enable calcium absorption from bone broth and milk accelerating bone healing")
+                .define("enableCalciumHealing", true);
+        ModConfigSpec.DoubleValue calciumHealingMultiplier = serverBuilder
+                .comment("Healing rate multiplier for Tier 1 fractures with active calcium buff")
+                .defineInRange("calciumHealingMultiplier", 2.0, 1.0, 5.0);
+        ModConfigSpec.BooleanValue enableClaustrophobiaPanic = serverBuilder
+                .comment("Enable underground claustrophobia panic, heart rate spike, and aim tremor in dark caves (Y < 0, 0 lux)")
+                .define("enableClaustrophobiaPanic", true);
+        ModConfigSpec.IntValue panicThresholdTicks = serverBuilder
+                .comment("Ticks in pitch dark deep underground before panic triggers (100 ticks = 5s)")
+                .defineInRange("panicThresholdTicks", 100, 20, 1200);
+        ModConfigSpec.BooleanValue enableAdrenalineSurge = serverBuilder
+                .comment("Enable 4-second adrenaline surge burst upon severe bone fracture")
+                .define("enableAdrenalineSurge", true);
+        ModConfigSpec.IntValue adrenalineSurgeDurationTicks = serverBuilder
+                .comment("Duration in ticks of the adrenaline surge (80 ticks = 4.0s)")
+                .defineInRange("adrenalineSurgeDurationTicks", 80, 20, 400);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
@@ -167,6 +198,17 @@ public class NeoForgeConfig {
         ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY = swimmingCrampSpeedPenalty::get;
         ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS = swimmingCrampRecoveryTicks::get;
 
+        ServerConfig.ENABLE_DIGESTION_WINDOW = enableDigestionWindow::get;
+        ServerConfig.DIGESTION_INTERVAL_TICKS = digestionIntervalTicks::get;
+        ServerConfig.ENABLE_OVEREATING_REFLEX = enableOvereatingReflex::get;
+        ServerConfig.ENABLE_INDIGESTION = enableIndigestion::get;
+        ServerConfig.ENABLE_CALCIUM_HEALING = enableCalciumHealing::get;
+        ServerConfig.CALCIUM_HEALING_MULTIPLIER = calciumHealingMultiplier::get;
+        ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC = enableClaustrophobiaPanic::get;
+        ServerConfig.PANIC_THRESHOLD_TICKS = panicThresholdTicks::get;
+        ServerConfig.ENABLE_ADRENALINE_SURGE = enableAdrenalineSurge::get;
+        ServerConfig.ADRENALINE_SURGE_DURATION_TICKS = adrenalineSurgeDurationTicks::get;
+
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 
         clientBuilder.comment("HUD overlay settings").push("hud");
@@ -188,12 +230,21 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
+        ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
+                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, INJURY, COMBINED)")
+                .define("defaultHudMode", "COMBINED");
         ModConfigSpec.IntValue swappableHudX = clientBuilder
                 .comment("Screen X position of the swappable HUD mini box")
                 .defineInRange("swappableHudX", 10, 0, 10000);
         ModConfigSpec.IntValue swappableHudY = clientBuilder
                 .comment("Screen Y position of the swappable HUD mini box")
                 .defineInRange("swappableHudY", 10, 0, 10000);
+        ModConfigSpec.BooleanValue showMetabolicDetails = clientBuilder
+                .comment("Show detailed rows for digestion buffer, calcium bone healing, and cramps")
+                .define("showMetabolicDetails", true);
+        ModConfigSpec.BooleanValue showCardiacHud = clientBuilder
+                .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
+                .define("showCardiacHud", true);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
@@ -210,8 +261,11 @@ public class NeoForgeConfig {
         ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = enableToxinHudOverlay::get;
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
         ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
+        ClientConfig.DEFAULT_HUD_MODE = defaultHudMode::get;
         ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
         ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;
+        ClientConfig.SHOW_METABOLIC_DETAILS = showMetabolicDetails::get;
+        ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
     }
 

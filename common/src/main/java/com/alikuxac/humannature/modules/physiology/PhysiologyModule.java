@@ -38,6 +38,30 @@ public class PhysiologyModule implements IHumanModule {
         return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_SWIMMING_CRAMPS.get();
     }
 
+    public static boolean isDigestionEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_DIGESTION_WINDOW.get();
+    }
+
+    public static boolean isOvereatingEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_OVEREATING_REFLEX.get();
+    }
+
+    public static boolean isIndigestionEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_INDIGESTION.get();
+    }
+
+    public static boolean isCalciumHealingEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CALCIUM_HEALING.get();
+    }
+
+    public static boolean isClaustrophobiaEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC.get();
+    }
+
+    public static boolean isAdrenalineEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_ADRENALINE_SURGE.get();
+    }
+
     public static boolean isErupting(UUID playerId) {
         return ERUPTING_PLAYERS.contains(playerId);
     }
@@ -149,6 +173,36 @@ public class PhysiologyModule implements IHumanModule {
                 ? (ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER != null ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER.get() : 1.5)
                 : 1.0;
         return (float) ((1.0f + fatigueScore) * fractureMultiplier);
+    }
+
+    public static float getPendingNutrition(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getPendingNutrition() : 0.0f;
+    }
+
+    public static float getPendingSaturation(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getPendingSaturation() : 0.0f;
+    }
+
+    public static float getIndigestionBuildup(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getIndigestionBuildup() : 0.0f;
+    }
+
+    public static boolean hasCalciumBuff(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null && data.hasCalciumBuff();
+    }
+
+    public static boolean isPanicking(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null && data.isPanicking();
+    }
+
+    public static boolean isAdrenalineActive(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null && data.isAdrenalineActive();
     }
 
     public static void clearData(UUID playerId) {

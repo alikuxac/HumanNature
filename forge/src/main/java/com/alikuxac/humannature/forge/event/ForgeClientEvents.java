@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
@@ -28,8 +29,10 @@ public class ForgeClientEvents {
         if (event.getCamera().getEntity() instanceof Player player) {
             float partialTick = (float) event.getPartialTick();
             CameraLimpingHandler.CameraOffset offset = CameraLimpingHandler.calculateCameraOffset(player, partialTick);
-            event.setPitch(event.getPitch() + offset.pitch);
+            AimTremorHandler.AimOffset aimOffset = AimTremorHandler.calculateAimOffset(player, partialTick);
+            event.setPitch(event.getPitch() + offset.pitch + aimOffset.pitch());
             event.setRoll(event.getRoll() + offset.roll);
+            event.setYaw(event.getYaw() + aimOffset.yaw());
         }
     }
 

@@ -4,8 +4,10 @@
   "item.humannature.golden_splint": "Nẹp Vàng",
   "item.humannature.diamond_splint": "Nẹp Kim Cương",
   "item.humannature.netherite_splint": "Nẹp Netherite",
+  "item.humannature.bone_broth": "Súp Xương Nóng",
   "key.humannature.open_diagnostics": "Mở Bảng Chẩn Đoán Cơ Thể",
   "key.humannature.cycle_hud": "Đổi Chế Độ HUD",
   "key.categories.humannature": "Human Nature",
-  "itemGroup.humannature": "Human Nature"
+  "itemGroup.humannature": "Human Nature",
+  "message.humannature.stomach_full": "§6⚠ Dạ dày đã quá no! Ăn thêm sẽ bị nôn mửa..."
 }

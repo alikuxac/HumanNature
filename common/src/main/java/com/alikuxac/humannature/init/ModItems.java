@@ -17,6 +17,8 @@ public class ModItems {
     public static final DeferredItem<Item> DIAMOND_SPLINT = ITEMS.register("diamond_splint", () -> new SplintItem(SplintTier.DIAMOND));
     public static final DeferredItem<Item> NETHERITE_SPLINT = ITEMS.register("netherite_splint", () -> new SplintItem(SplintTier.NETHERITE));
 
+    public static final DeferredItem<Item> BONE_BROTH = ITEMS.register("bone_broth", () -> new com.alikuxac.humannature.item.BoneBrothItem(new Item.Properties()));
+
     // Legacy fallback alias
     public static final DeferredItem<Item> SPLINT = WOODEN_SPLINT;
 

@@ -25,6 +25,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.GOLDEN_SPLINT.get());
                         output.accept(ModItems.DIAMOND_SPLINT.get());
                         output.accept(ModItems.NETHERITE_SPLINT.get());
+                        output.accept(ModItems.BONE_BROTH.get());
                     })
                     .build());
 
@@ -39,6 +40,8 @@ public class ModCreativeTabs {
             event.accept(ModItems.GOLDEN_SPLINT.get());
             event.accept(ModItems.DIAMOND_SPLINT.get());
             event.accept(ModItems.NETHERITE_SPLINT.get());
+        } else if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+            event.accept(ModItems.BONE_BROTH.get());
         }
     }
 }

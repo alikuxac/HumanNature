@@ -42,4 +42,17 @@ public class ServerConfig {
     public static Supplier<Integer> SWIMMING_CRAMP_THRESHOLD_TICKS = () -> 600;
     public static Supplier<Double> SWIMMING_CRAMP_SPEED_PENALTY = () -> 0.40;
     public static Supplier<Integer> SWIMMING_CRAMP_RECOVERY_TICKS = () -> 60;
+
+    public static Supplier<Boolean> ENABLE_DIGESTION_WINDOW = () -> true;
+    public static Supplier<Integer> DIGESTION_INTERVAL_TICKS = () -> 30;
+    public static Supplier<Boolean> ENABLE_OVEREATING_REFLEX = () -> true;
+    public static Supplier<Boolean> ENABLE_INDIGESTION = () -> true;
+    public static Supplier<Boolean> ENABLE_CALCIUM_HEALING = () -> true;
+    public static Supplier<Double> CALCIUM_HEALING_MULTIPLIER = () -> 2.0;
+
+    public static Supplier<Boolean> ENABLE_CLAUSTROPHOBIA_PANIC = () -> true;
+    public static Supplier<Integer> PANIC_THRESHOLD_TICKS = () -> 100;
+
+    public static Supplier<Boolean> ENABLE_ADRENALINE_SURGE = () -> true;
+    public static Supplier<Integer> ADRENALINE_SURGE_DURATION_TICKS = () -> 80;
 }

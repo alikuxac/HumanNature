@@ -1,8 +1,11 @@
 package com.alikuxac.humannature.modules.injury;
 
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
+import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
+import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
@@ -214,14 +217,20 @@ public class InjuryEventHandler {
         boolean isBothLegsBroken = (leftLeg >= 2 && rightLeg >= 2) || (leftLeg >= 1 && rightLeg >= 2) || (leftLeg >= 2 && rightLeg >= 1);
         boolean isAnyLegBroken = leftLeg > 0 || rightLeg > 0;
 
-        if (isAnyLegBroken) {
+        boolean isAdrenalineSurge = PhysiologyModule.isAdrenalineActive(player.getUUID());
+
+        if (isAnyLegBroken && !isAdrenalineSurge) {
             player.setSprinting(false);
         }
 
         if (isBothLegsBroken) {
             speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
-            if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID)) {
-                speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG2);
+            if (!isAdrenalineSurge) {
+                if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID)) {
+                    speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG2);
+                }
+            } else {
+                speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG2_ID);
             }
             if (jumpAttr != null && !jumpAttr.hasModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID)) {
                 jumpAttr.addTransientModifier(FRACTURE_JUMP_MODIFIER_LEG2);
@@ -231,8 +240,12 @@ public class InjuryEventHandler {
             if (jumpAttr != null) {
                 jumpAttr.removeModifier(FRACTURE_JUMP_MODIFIER_LEG2_ID);
             }
-            if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID)) {
-                speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG1);
+            if (!isAdrenalineSurge) {
+                if (!speedAttr.hasModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID)) {
+                    speedAttr.addTransientModifier(FRACTURE_SPEED_MODIFIER_LEG1);
+                }
+            } else {
+                speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
             }
         } else {
             speedAttr.removeModifier(FRACTURE_SPEED_MODIFIER_LEG1_ID);
@@ -243,11 +256,22 @@ public class InjuryEventHandler {
         }
     }
 
-    public static void reduceFractureTimer(Player player, int amount) {
+    public static void reduceFractureTimer(Player player, int amount, boolean isNaturalRestHeal) {
+        if (isNaturalRestHeal && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
+            InjuryTier tier = InjuryModule.getFractureTier(player.getUUID());
+            if (tier == InjuryTier.TIER_1_SINGLE_LEG) {
+                double multiplier = ServerConfig.CALCIUM_HEALING_MULTIPLIER != null ? ServerConfig.CALCIUM_HEALING_MULTIPLIER.get() : 2.0;
+                amount = (int) Math.round(amount * multiplier);
+            }
+        }
         InjuryModule.reduceFractureTimer(player.getUUID(), amount);
         if (!InjuryModule.isFractureActive(player.getUUID())) {
             clearFractureTimer(player);
         }
+    }
+
+    public static void reduceFractureTimer(Player player, int amount) {
+        reduceFractureTimer(player, amount, false);
     }
 
     public static int getRemainingFractureTime(Player player) {
@@ -369,6 +393,8 @@ public class InjuryEventHandler {
 
         if (stack.is(Items.MILK_BUCKET)) {
             reductionPercent = 0.50;
+        } else if (stack.is(ModItems.BONE_BROTH.get())) {
+            reductionPercent = 0.35;
         } else if (stack.is(Items.RABBIT_STEW) ||
                  stack.is(Items.MUSHROOM_STEW) ||
                  stack.is(Items.BEETROOT_SOUP) ||
@@ -424,6 +450,7 @@ public class InjuryEventHandler {
                 InjuryModule.setInjuryData(player.getUUID(), data);
                 updatePlayerAttributesAndPose(player);
                 playBoneCrackSound(player, 0.6F);
+                PhysiologyEventHandler.triggerAdrenalineSurge(player);
             } else {
                 boolean pickLeft = RANDOM.nextBoolean();
                 LimbType targetLeg = pickLeft ? LimbType.LEFT_LEG : LimbType.RIGHT_LEG;
@@ -508,6 +535,7 @@ public class InjuryEventHandler {
                 data.setSeverity(LimbType.RIGHT_LEG, 2);
                 stateChanged = true;
                 playBoneCrackSound(player, 0.6F);
+                PhysiologyEventHandler.triggerAdrenalineSurge(player);
 
                 dropHeldFireworks(player);
             } else if (isModerateImpact) {
@@ -531,6 +559,7 @@ public class InjuryEventHandler {
                 data.setSeverity(LimbType.TORSO, 2);
                 stateChanged = true;
                 playBoneCrackSound(player, 0.6F);
+                PhysiologyEventHandler.triggerAdrenalineSurge(player);
             } else if (!isDiamondOrNetheriteChest && currentSev == 0) {
                 data.setSeverity(LimbType.TORSO, 1);
                 stateChanged = true;
@@ -843,8 +872,16 @@ public class InjuryEventHandler {
         return ItemStack.EMPTY;
     }
 
+    public static boolean shouldCancelNaturalRegen(Player player, float amount) {
+        if (!ServerConfig.ENABLE_INJURY.get()) return false;
+        if (amount > 1.0F) return false;
+        if (player.hasEffect(MobEffects.REGENERATION) || player.hasEffect(MobEffects.HEAL)) return false;
+        if (player.isSleeping() || player.isCrouching()) return false;
+        return InjuryModule.isFractureActive(player.getUUID());
+    }
+
     public static boolean shouldCancelNaturalRegen(Player player) {
-        return ServerConfig.ENABLE_INJURY.get() && isFractureActive(player);
+        return shouldCancelNaturalRegen(player, 1.0F);
     }
 
     public static void onLivingUseTotem(Player player, DamageSource damageSource, ItemStack totem, InteractionHand hand) {

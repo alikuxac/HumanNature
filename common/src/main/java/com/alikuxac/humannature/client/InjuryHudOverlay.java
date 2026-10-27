@@ -8,7 +8,12 @@ import com.alikuxac.humannature.modules.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class InjuryHudOverlay {
 
@@ -32,16 +37,12 @@ public class InjuryHudOverlay {
         boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
 
         String statusText;
-        int statusColor;
         if (isMoving) {
-            statusText = String.format("Healing: %02d:%02d (Paused)", minutes, seconds);
-            statusColor = 0xFFFF5555;
+            statusText = String.format("§cHealing: %02d:%02d (Paused)", minutes, seconds);
         } else if (isResting) {
-            statusText = String.format("Healing: %02d:%02d (Resting 2x)", minutes, seconds);
-            statusColor = 0xFFFFFF55;
+            statusText = String.format("§eHealing: %02d:%02d (Resting 2x)", minutes, seconds);
         } else {
-            statusText = String.format("Healing: %02d:%02d (Standing Still)", minutes, seconds);
-            statusColor = 0xFF55FFFF;
+            statusText = String.format("§bHealing: %02d:%02d (Standing Still)", minutes, seconds);
         }
 
         StringBuilder injuredLimbs = new StringBuilder();
@@ -53,16 +54,53 @@ public class InjuryHudOverlay {
             }
         }
 
-        String limbsTitle = injuredLimbs.isEmpty() ? "Trauma Status" : "Injured: " + injuredLimbs;
+        String limbsTitle = injuredLimbs.isEmpty() ? "§6Trauma Status" : "§cInjured: §f" + injuredLimbs;
 
+        int screenWidth = guiGraphics.guiWidth();
+        int screenHeight = guiGraphics.guiHeight();
         int x = ClientConfig.HUD_X.get();
         int y = ClientConfig.HUD_Y.get();
-        int boxWidth = Math.max(170, mc.font.width(limbsTitle) + 12);
 
-        guiGraphics.fill(x - 4, y - 4, x + boxWidth, y + 26, 0x90000000);
-        guiGraphics.renderOutline(x - 4, y - 4, boxWidth + 4, 30, 0xFF444444);
+        if (x < 4) x = 4;
+        if (x > screenWidth - 100) x = Math.max(4, screenWidth - 100);
 
-        guiGraphics.drawString(mc.font, limbsTitle, x, y, 0xFFFFAA00, true);
-        guiGraphics.drawString(mc.font, statusText, x, y + 12, statusColor, true);
+        int maxWrapWidth = Math.max(120, Math.min(240, screenWidth - x - 16));
+        List<FormattedCharSequence> wrappedLines = new ArrayList<>();
+        if (mc.font.width(limbsTitle) <= maxWrapWidth) {
+            wrappedLines.add(Component.literal(limbsTitle).getVisualOrderText());
+        } else {
+            wrappedLines.addAll(mc.font.split(Component.literal(limbsTitle), maxWrapWidth));
+        }
+
+        if (mc.font.width(statusText) <= maxWrapWidth) {
+            wrappedLines.add(Component.literal(statusText).getVisualOrderText());
+        } else {
+            wrappedLines.addAll(mc.font.split(Component.literal(statusText), maxWrapWidth));
+        }
+
+        int maxLineWidth = 0;
+        for (FormattedCharSequence fcs : wrappedLines) {
+            int w = mc.font.width(fcs);
+            if (w > maxLineWidth) maxLineWidth = w;
+        }
+
+        int boxWidth = Math.max(120, maxLineWidth + 8);
+        int boxHeight = wrappedLines.size() * 11 + 6;
+
+        if (x + boxWidth > screenWidth - 4) {
+            x = Math.max(4, screenWidth - boxWidth - 4);
+        }
+        if (y + boxHeight > screenHeight - 4) {
+            y = Math.max(4, screenHeight - boxHeight - 4);
+        }
+
+        guiGraphics.fill(x - 4, y - 4, x + boxWidth, y + boxHeight, 0x90000000);
+        guiGraphics.renderOutline(x - 4, y - 4, boxWidth + 4, boxHeight + 4, 0xFF444444);
+
+        int curLineY = y;
+        for (FormattedCharSequence fcs : wrappedLines) {
+            guiGraphics.drawString(mc.font, fcs, x + 2, curLineY, 0xFFFFFF, false);
+            curLineY += 11;
+        }
     }
 }

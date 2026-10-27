@@ -1,0 +1,184 @@
+{
+  "credit": "Made by Human Nature Mod - Hot Bone Broth 3D Model",
+  "texture_size": [16, 16],
+  "textures": {
+    "bowl": "minecraft:block/stripped_spruce_log",
+    "bowl_rim": "minecraft:block/spruce_planks",
+    "broth": "minecraft:block/ochre_froglight_top",
+    "bone": "minecraft:block/bone_block_side",
+    "marrow": "minecraft:block/bone_block_top",
+    "herb": "minecraft:block/moss_block"
+  },
+  "elements": [
+    {
+      "name": "bowl_base",
+      "from": [5, 1, 5],
+      "to": [11, 2, 11],
+      "faces": {
+        "north": {"uv": [5, 14, 11, 15], "texture": "#bowl"},
+        "east":  {"uv": [5, 14, 11, 15], "texture": "#bowl"},
+        "south": {"uv": [5, 14, 11, 15], "texture": "#bowl"},
+        "west":  {"uv": [5, 14, 11, 15], "texture": "#bowl"},
+        "up":    {"uv": [5, 5, 11, 11], "texture": "#bowl"},
+        "down":  {"uv": [5, 5, 11, 11], "texture": "#bowl"}
+      }
+    },
+    {
+      "name": "bowl_wall_north",
+      "from": [3, 2, 3],
+      "to": [13, 6, 4],
+      "faces": {
+        "north": {"uv": [3, 10, 13, 14], "texture": "#bowl"},
+        "east":  {"uv": [3, 10, 4, 14], "texture": "#bowl"},
+        "south": {"uv": [3, 10, 13, 14], "texture": "#bowl"},
+        "west":  {"uv": [12, 10, 13, 14], "texture": "#bowl"},
+        "up":    {"uv": [3, 3, 13, 4], "texture": "#bowl_rim"},
+        "down":  {"uv": [3, 3, 13, 4], "texture": "#bowl"}
+      }
+    },
+    {
+      "name": "bowl_wall_south",
+      "from": [3, 2, 12],
+      "to": [13, 6, 13],
+      "faces": {
+        "north": {"uv": [3, 10, 13, 14], "texture": "#bowl"},
+        "east":  {"uv": [12, 10, 13, 14], "texture": "#bowl"},
+        "south": {"uv": [3, 10, 13, 14], "texture": "#bowl"},
+        "west":  {"uv": [3, 10, 4, 14], "texture": "#bowl"},
+        "up":    {"uv": [3, 12, 13, 13], "texture": "#bowl_rim"},
+        "down":  {"uv": [3, 12, 13, 13], "texture": "#bowl"}
+      }
+    },
+    {
+      "name": "bowl_wall_west",
+      "from": [3, 2, 4],
+      "to": [4, 6, 12],
+      "faces": {
+        "north": {"uv": [3, 10, 4, 14], "texture": "#bowl"},
+        "east":  {"uv": [4, 10, 12, 14], "texture": "#bowl"},
+        "south": {"uv": [12, 10, 13, 14], "texture": "#bowl"},
+        "west":  {"uv": [4, 10, 12, 14], "texture": "#bowl"},
+        "up":    {"uv": [3, 4, 4, 12], "texture": "#bowl_rim"},
+        "down":  {"uv": [3, 4, 4, 12], "texture": "#bowl"}
+      }
+    },
+    {
+      "name": "bowl_wall_east",
+      "from": [12, 2, 4],
+      "to": [13, 6, 12],
+      "faces": {
+        "north": {"uv": [12, 10, 13, 14], "texture": "#bowl"},
+        "east":  {"uv": [4, 10, 12, 14], "texture": "#bowl"},
+        "south": {"uv": [3, 10, 4, 14], "texture": "#bowl"},
+        "west":  {"uv": [4, 10, 12, 14], "texture": "#bowl"},
+        "up":    {"uv": [12, 4, 13, 12], "texture": "#bowl_rim"},
+        "down":  {"uv": [12, 4, 13, 12], "texture": "#bowl"}
+      }
+    },
+    {
+      "name": "broth_surface",
+      "from": [4, 4.5, 4],
+      "to": [12, 5, 12],
+      "faces": {
+        "north": {"uv": [4, 7, 12, 8], "texture": "#broth"},
+        "east":  {"uv": [4, 7, 12, 8], "texture": "#broth"},
+        "south": {"uv": [4, 7, 12, 8], "texture": "#broth"},
+        "west":  {"uv": [4, 7, 12, 8], "texture": "#broth"},
+        "up":    {"uv": [4, 4, 12, 12], "texture": "#broth"},
+        "down":  {"uv": [4, 4, 12, 12], "texture": "#broth"}
+      }
+    },
+    {
+      "name": "bone_marrow_main",
+      "from": [6.8, 3.5, 6.8],
+      "to": [9.2, 10.5, 9.2],
+      "rotation": {"origin": [8, 4, 8], "axis": "z", "angle": -22.5},
+      "faces": {
+        "north": {"uv": [2, 1, 5, 14], "texture": "#bone"},
+        "east":  {"uv": [6, 1, 9, 14], "texture": "#bone"},
+        "south": {"uv": [2, 1, 5, 14], "texture": "#bone"},
+        "west":  {"uv": [6, 1, 9, 14], "texture": "#bone"},
+        "up":    {"uv": [6, 6, 10, 10], "texture": "#marrow"},
+        "down":  {"uv": [6, 6, 10, 10], "texture": "#marrow"}
+      }
+    },
+    {
+      "name": "bone_marrow_side",
+      "from": [7.8, 3.2, 5.8],
+      "to": [9.8, 8.8, 7.8],
+      "rotation": {"origin": [8.8, 4, 6.8], "axis": "x", "angle": 22.5},
+      "faces": {
+        "north": {"uv": [1, 3, 4, 13], "texture": "#bone"},
+        "east":  {"uv": [5, 3, 8, 13], "texture": "#bone"},
+        "south": {"uv": [1, 3, 4, 13], "texture": "#bone"},
+        "west":  {"uv": [5, 3, 8, 13], "texture": "#bone"},
+        "up":    {"uv": [6, 6, 9, 9], "texture": "#marrow"},
+        "down":  {"uv": [6, 6, 9, 9], "texture": "#marrow"}
+      }
+    },
+    {
+      "name": "herb_scallion_1",
+      "from": [5, 5.05, 5],
+      "to": [7, 5.05, 7],
+      "faces": {
+        "up":   {"uv": [4, 4, 8, 8], "texture": "#herb"},
+        "down": {"uv": [4, 4, 8, 8], "texture": "#herb"}
+      }
+    },
+    {
+      "name": "herb_scallion_2",
+      "from": [9.5, 5.05, 8.5],
+      "to": [11, 5.05, 10],
+      "faces": {
+        "up":   {"uv": [2, 2, 5, 5], "texture": "#herb"},
+        "down": {"uv": [2, 2, 5, 5], "texture": "#herb"}
+      }
+    },
+    {
+      "name": "herb_scallion_3",
+      "from": [5.5, 5.05, 8.5],
+      "to": [7, 5.05, 10],
+      "faces": {
+        "up":   {"uv": [6, 6, 9, 9], "texture": "#herb"},
+        "down": {"uv": [6, 6, 9, 9], "texture": "#herb"}
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [20, -45, 0],
+      "translation": [0, 2, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [20, 45, 0],
+      "translation": [0, 2, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "firstperson_righthand": {
+      "rotation": [12, -35, 10],
+      "translation": [1.2, 3.2, 0],
+      "scale": [0.65, 0.65, 0.65]
+    },
+    "firstperson_lefthand": {
+      "rotation": [12, 35, -10],
+      "translation": [1.2, 3.2, 0],
+      "scale": [0.65, 0.65, 0.65]
+    },
+    "ground": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 2, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "gui": {
+      "rotation": [30, 225, 0],
+      "translation": [0, -0.5, 0],
+      "scale": [0.72, 0.72, 0.72]
+    },
+    "fixed": {
+      "rotation": [0, 180, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.65, 0.65, 0.65]
+    }
+  }
+}

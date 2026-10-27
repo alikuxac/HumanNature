@@ -26,6 +26,23 @@ public class PlayerPhysiologyData {
     private boolean swimmingCramped;
     private int crampRestTicks;
 
+    private float pendingNutrition;
+    private float pendingSaturation;
+    private int digestionTickCounter;
+    private int recentEatsWhenFull;
+    private long lastFullEatGameTime;
+    private float indigestionBuildup;
+    private int indigestionTickCounter;
+    private int calciumAbsorptionTicks;
+
+    private int claustrophobiaTicks;
+    private boolean panicking;
+    private int panicSoundCooldown;
+
+    private int adrenalineTicks;
+    private boolean adrenalineActive;
+    private int adrenalineCooldownTicks;
+
     public PlayerPhysiologyData() {
         this.awakeTicks = 0L;
         this.blinkCooldown = 0;
@@ -48,6 +65,23 @@ public class PlayerPhysiologyData {
         this.continuousSwimmingTicks = 0;
         this.swimmingCramped = false;
         this.crampRestTicks = 0;
+
+        this.pendingNutrition = 0.0f;
+        this.pendingSaturation = 0.0f;
+        this.digestionTickCounter = 0;
+        this.recentEatsWhenFull = 0;
+        this.lastFullEatGameTime = -1L;
+        this.indigestionBuildup = 0.0f;
+        this.indigestionTickCounter = 0;
+        this.calciumAbsorptionTicks = 0;
+
+        this.claustrophobiaTicks = 0;
+        this.panicking = false;
+        this.panicSoundCooldown = 0;
+
+        this.adrenalineTicks = 0;
+        this.adrenalineActive = false;
+        this.adrenalineCooldownTicks = 0;
     }
 
     public PlayerPhysiologyData(long initialAwakeTicks) {
@@ -115,6 +149,11 @@ public class PlayerPhysiologyData {
         resetToxin();
         resetExertion();
         resetSwimmingCramps();
+        resetDigestion();
+        resetIndigestion();
+        resetCalcium();
+        resetPanic();
+        resetAdrenaline();
     }
 
     public float getToxinBuildup() {
@@ -388,5 +427,243 @@ public class PlayerPhysiologyData {
         this.continuousSwimmingTicks = 0;
         this.swimmingCramped = false;
         this.crampRestTicks = 0;
+    }
+
+    // --- AIO-529: Digestion & Gut Reflex ---
+
+    public float getPendingNutrition() {
+        return pendingNutrition;
+    }
+
+    public void setPendingNutrition(float pendingNutrition) {
+        this.pendingNutrition = Math.max(0.0f, pendingNutrition);
+    }
+
+    public float getPendingSaturation() {
+        return pendingSaturation;
+    }
+
+    public void setPendingSaturation(float pendingSaturation) {
+        this.pendingSaturation = Math.max(0.0f, pendingSaturation);
+    }
+
+    public void addDigestionBuffer(float nutrition, float saturation) {
+        this.pendingNutrition += Math.max(0.0f, nutrition);
+        this.pendingSaturation += Math.max(0.0f, saturation);
+    }
+
+    public void consumeDigestionStep(float nutritionAmount, float saturationAmount) {
+        this.pendingNutrition = Math.max(0.0f, this.pendingNutrition - nutritionAmount);
+        this.pendingSaturation = Math.max(0.0f, this.pendingSaturation - saturationAmount);
+    }
+
+    public int getDigestionTickCounter() {
+        return digestionTickCounter;
+    }
+
+    public void setDigestionTickCounter(int digestionTickCounter) {
+        this.digestionTickCounter = Math.max(0, digestionTickCounter);
+    }
+
+    public void incrementDigestionTickCounter() {
+        if (this.digestionTickCounter < Integer.MAX_VALUE) {
+            this.digestionTickCounter++;
+        }
+    }
+
+    public void resetDigestionTickCounter() {
+        this.digestionTickCounter = 0;
+    }
+
+    public int getRecentEatsWhenFull() {
+        return recentEatsWhenFull;
+    }
+
+    public void setRecentEatsWhenFull(int recentEatsWhenFull) {
+        this.recentEatsWhenFull = Math.max(0, recentEatsWhenFull);
+    }
+
+    public void incrementRecentEatsWhenFull() {
+        if (this.recentEatsWhenFull < Integer.MAX_VALUE) {
+            this.recentEatsWhenFull++;
+        }
+    }
+
+    public void resetRecentEatsWhenFull() {
+        this.recentEatsWhenFull = 0;
+    }
+
+    public long getLastFullEatGameTime() {
+        return lastFullEatGameTime;
+    }
+
+    public void setLastFullEatGameTime(long lastFullEatGameTime) {
+        this.lastFullEatGameTime = lastFullEatGameTime;
+    }
+
+    public void resetDigestion() {
+        this.pendingNutrition = 0.0f;
+        this.pendingSaturation = 0.0f;
+        this.digestionTickCounter = 0;
+        this.recentEatsWhenFull = 0;
+        this.lastFullEatGameTime = -1L;
+    }
+
+    public float getIndigestionBuildup() {
+        return indigestionBuildup;
+    }
+
+    public void setIndigestionBuildup(float indigestionBuildup) {
+        this.indigestionBuildup = Math.max(0.0f, Math.min(100.0f, indigestionBuildup));
+    }
+
+    public void addIndigestion(float amount) {
+        setIndigestionBuildup(this.indigestionBuildup + Math.max(0.0f, amount));
+    }
+
+    public void decayIndigestion(float amount) {
+        setIndigestionBuildup(this.indigestionBuildup - Math.max(0.0f, amount));
+    }
+
+    public void resetIndigestion() {
+        this.indigestionBuildup = 0.0f;
+        this.indigestionTickCounter = 0;
+    }
+
+    public int getIndigestionTickCounter() {
+        return indigestionTickCounter;
+    }
+
+    public void setIndigestionTickCounter(int indigestionTickCounter) {
+        this.indigestionTickCounter = Math.max(0, indigestionTickCounter);
+    }
+
+    public void incrementIndigestionTickCounter() {
+        if (this.indigestionTickCounter < Integer.MAX_VALUE) {
+            this.indigestionTickCounter++;
+        }
+    }
+
+    public void resetIndigestionTickCounter() {
+        this.indigestionTickCounter = 0;
+    }
+
+    public int getCalciumAbsorptionTicks() {
+        return calciumAbsorptionTicks;
+    }
+
+    public void setCalciumAbsorptionTicks(int calciumAbsorptionTicks) {
+        this.calciumAbsorptionTicks = Math.max(0, calciumAbsorptionTicks);
+    }
+
+    public void decrementCalciumAbsorptionTicks() {
+        if (this.calciumAbsorptionTicks > 0) {
+            this.calciumAbsorptionTicks--;
+        }
+    }
+
+    public boolean hasCalciumBuff() {
+        return this.calciumAbsorptionTicks > 0;
+    }
+
+    public void resetCalcium() {
+        this.calciumAbsorptionTicks = 0;
+    }
+
+    // --- AIO-530: Claustrophobia Panic & Sensory Cues ---
+
+    public int getClaustrophobiaTicks() {
+        return claustrophobiaTicks;
+    }
+
+    public void setClaustrophobiaTicks(int claustrophobiaTicks) {
+        this.claustrophobiaTicks = Math.max(0, claustrophobiaTicks);
+    }
+
+    public void incrementClaustrophobiaTicks() {
+        if (this.claustrophobiaTicks < Integer.MAX_VALUE) {
+            this.claustrophobiaTicks++;
+        }
+    }
+
+    public void resetClaustrophobiaTicks() {
+        this.claustrophobiaTicks = 0;
+    }
+
+    public boolean isPanicking() {
+        return panicking;
+    }
+
+    public void setPanicking(boolean panicking) {
+        this.panicking = panicking;
+    }
+
+    public int getPanicSoundCooldown() {
+        return panicSoundCooldown;
+    }
+
+    public void setPanicSoundCooldown(int panicSoundCooldown) {
+        this.panicSoundCooldown = Math.max(0, panicSoundCooldown);
+    }
+
+    public void decrementPanicSoundCooldown() {
+        if (this.panicSoundCooldown > 0) {
+            this.panicSoundCooldown--;
+        }
+    }
+
+    public void resetPanic() {
+        this.claustrophobiaTicks = 0;
+        this.panicking = false;
+        this.panicSoundCooldown = 0;
+    }
+
+    // --- AIO-531: Adrenaline Surge & Pain Shock ---
+
+    public int getAdrenalineTicks() {
+        return adrenalineTicks;
+    }
+
+    public void setAdrenalineTicks(int adrenalineTicks) {
+        this.adrenalineTicks = Math.max(0, adrenalineTicks);
+    }
+
+    public void decrementAdrenalineTicks() {
+        if (this.adrenalineTicks > 0) {
+            this.adrenalineTicks--;
+        }
+    }
+
+    public boolean isAdrenalineActive() {
+        return adrenalineActive;
+    }
+
+    public void setAdrenalineActive(boolean adrenalineActive) {
+        this.adrenalineActive = adrenalineActive;
+    }
+
+    public int getAdrenalineCooldownTicks() {
+        return adrenalineCooldownTicks;
+    }
+
+    public void setAdrenalineCooldownTicks(int adrenalineCooldownTicks) {
+        this.adrenalineCooldownTicks = Math.max(0, adrenalineCooldownTicks);
+    }
+
+    public void decrementAdrenalineCooldownTicks() {
+        if (this.adrenalineCooldownTicks > 0) {
+            this.adrenalineCooldownTicks--;
+        }
+    }
+
+    public void triggerAdrenaline(int durationTicks) {
+        this.adrenalineTicks = Math.max(0, durationTicks);
+        this.adrenalineActive = true;
+    }
+
+    public void resetAdrenaline() {
+        this.adrenalineTicks = 0;
+        this.adrenalineActive = false;
+        this.adrenalineCooldownTicks = 0;
     }
 }

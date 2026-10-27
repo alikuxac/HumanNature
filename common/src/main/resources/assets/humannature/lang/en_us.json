@@ -4,8 +4,10 @@
   "item.humannature.golden_splint": "Golden Splint",
   "item.humannature.diamond_splint": "Diamond Splint",
   "item.humannature.netherite_splint": "Netherite Splint",
+  "item.humannature.bone_broth": "Hot Bone Broth",
   "key.humannature.open_diagnostics": "Open Body Diagnostics",
   "key.humannature.cycle_hud": "Cycle HUD Mode",
   "key.categories.humannature": "Human Nature",
-  "itemGroup.humannature": "Human Nature"
+  "itemGroup.humannature": "Human Nature",
+  "message.humannature.stomach_full": "§6⚠ Stomach completely full! Eating again will cause vomiting..."
 }
