@@ -11,7 +11,11 @@ import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
 import com.alikuxac.humannature.modules.physiology.ToxinType;
+import com.alikuxac.humannature.modules.temperature.PlayerTemperatureData;
+import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
+import com.alikuxac.humannature.modules.temperature.TemperatureModule;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -412,6 +416,19 @@ public class DiagnosticScreen extends Screen {
                 tags.add("§bCalcium (" + (cSec / 60) + "m " + (cSec % 60) + "s)");
             }
 
+            if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+                PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+                if (tempData.getWetnessBuffer() > 0.0f) {
+                    tags.add("§bWet (" + String.format("%.0f%%", tempData.getWetnessBuffer() * 100.0f) + ")");
+                }
+                if (tempData.isNearHeatSource()) {
+                    tags.add("§6Near Heat (Rewarming)");
+                }
+                if (player.getTicksFrozen() > 0) {
+                    tags.add("§c❄ Freezing (" + player.getTicksFrozen() + "t)");
+                }
+            }
+
             int tagStartY = curY;
             if (!tags.isEmpty() && curY < topPos + 118) {
                 for (String tag : tags) {
@@ -462,6 +479,24 @@ public class DiagnosticScreen extends Screen {
                     metabolismTooltip.add(Component.literal(String.format("§c• Underground Claustrophobia: %d%% %s", pPct,
                             physData.isPanicking() ? "§c[PANIC - AIM TREMORS]" : "§e[Building]")));
                     metabolismTooltip.add(Component.literal("§7  Triggers at Y < 0 in pitch black. Calm near torches, fires, music, or pets."));
+                }
+
+                if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+                    PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+                    float wetness = tempData.getWetnessBuffer();
+                    int ticksFrozen = player.getTicksFrozen();
+                    boolean isNearHeat = tempData.isNearHeatSource();
+                    String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§b%.0f%%", wetness * 100.0f) : "§a0% (Dry)");
+                    metabolismTooltip.add(Component.literal("§b• Wetness: " + wStatus));
+                    if (isNearHeat) {
+                        metabolismTooltip.add(Component.literal("§6  ↳ Near Heat Source: Rapid drying (~12.5s) & 5x thaw"));
+                    }
+                    if (ticksFrozen > 0) {
+                        metabolismTooltip.add(Component.literal(String.format("§c  ↳ Freezing Ticks: %d / %d (Hypothermia)", ticksFrozen, player.getTicksRequiredToFreeze())));
+                    }
+                    float red = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
+                    boolean noHelm = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+                    metabolismTooltip.add(Component.literal(String.format("§7  ↳ Insulation: %.0f%% reduction | Head: %s", red * 100.0f, noHelm ? "§cMissing (2x Soak)" : "§aProtected")));
                 }
             }
         }

@@ -161,6 +161,39 @@ public class ForgeConfig {
                 .defineInRange("adrenalineSurgeDurationTicks", 80, 20, 400);
         serverBuilder.pop();
 
+        serverBuilder.comment("Temperature & hypothermia mechanics").push("temperature");
+        ModConfigSpec.BooleanValue enableWetnessAccumulation = serverBuilder
+                .comment("Enable rain soaking and water wetness accumulation")
+                .define("enableWetnessAccumulation", true);
+        ModConfigSpec.DoubleValue wetnessRainAccumulationRate = serverBuilder
+                .comment("Base wetness accumulation per tick when soaking under rain")
+                .defineInRange("wetnessRainAccumulationRate", 0.0025, 0.0001, 1.0);
+        ModConfigSpec.DoubleValue wetnessWaterAccumulationRate = serverBuilder
+                .comment("Wetness accumulation per tick when submerged in water")
+                .defineInRange("wetnessWaterAccumulationRate", 0.015, 0.0001, 1.0);
+        ModConfigSpec.DoubleValue wetnessNoHelmetMultiplier = serverBuilder
+                .comment("Multiplier applied to rain soaking rate when no helmet is equipped")
+                .defineInRange("wetnessNoHelmetMultiplier", 2.0, 1.0, 10.0);
+        ModConfigSpec.DoubleValue wetnessFreezeImmuneReduction = serverBuilder
+                .comment("Wetness accumulation reduction when wearing freeze-immune wearables (leather armor)")
+                .defineInRange("wetnessFreezeImmuneReduction", 0.65, 0.0, 1.0);
+        ModConfigSpec.BooleanValue enableHeatRewarming = serverBuilder
+                .comment("Enable heat source detection, drying, and rapid thawing")
+                .define("enableHeatRewarming", true);
+        ModConfigSpec.DoubleValue heatSourceRadius = serverBuilder
+                .comment("Radius in blocks to detect heat sources (campfires, lit furnaces, lava, fire)")
+                .defineInRange("heatSourceRadius", 3.0, 1.0, 10.0);
+        ModConfigSpec.DoubleValue heatDryingTimeSeconds = serverBuilder
+                .comment("Time in seconds to completely dry full wetness near heat sources")
+                .defineInRange("heatDryingTimeSeconds", 12.5, 1.0, 300.0);
+        ModConfigSpec.DoubleValue heatThawMultiplier = serverBuilder
+                .comment("Multiplier for thawing frozen ticks when near heat sources")
+                .defineInRange("heatThawMultiplier", 5.0, 1.0, 20.0);
+        ModConfigSpec.BooleanValue enableHypothermia = serverBuilder
+                .comment("Enable hypothermia freeze ticks, screen frost, and stumbling when fully soaked")
+                .define("enableHypothermia", true);
+        serverBuilder.pop();
+
         SERVER_SPEC = serverBuilder.build();
 
         ServerConfig.ENABLE_INJURY = enableInjury::get;
@@ -209,6 +242,17 @@ public class ForgeConfig {
         ServerConfig.ENABLE_ADRENALINE_SURGE = enableAdrenalineSurge::get;
         ServerConfig.ADRENALINE_SURGE_DURATION_TICKS = adrenalineSurgeDurationTicks::get;
 
+        ServerConfig.ENABLE_WETNESS_ACCUMULATION = enableWetnessAccumulation::get;
+        ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE = wetnessRainAccumulationRate::get;
+        ServerConfig.WETNESS_WATER_ACCUMULATION_RATE = wetnessWaterAccumulationRate::get;
+        ServerConfig.WETNESS_NO_HELMET_MULTIPLIER = wetnessNoHelmetMultiplier::get;
+        ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION = wetnessFreezeImmuneReduction::get;
+        ServerConfig.ENABLE_HEAT_REWARMING = enableHeatRewarming::get;
+        ServerConfig.HEAT_SOURCE_RADIUS = heatSourceRadius::get;
+        ServerConfig.HEAT_DRYING_TIME_SECONDS = heatDryingTimeSeconds::get;
+        ServerConfig.HEAT_THAW_MULTIPLIER = heatThawMultiplier::get;
+        ServerConfig.ENABLE_HYPOTHERMIA = enableHypothermia::get;
+
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 
         clientBuilder.comment("HUD overlay settings").push("hud");
@@ -231,7 +275,7 @@ public class ForgeConfig {
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
         ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
-                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, INJURY, COMBINED)")
+                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, TEMPERATURE, INJURY, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
         ModConfigSpec.IntValue swappableHudX = clientBuilder
                 .comment("Screen X position of the swappable HUD mini box")

@@ -55,4 +55,17 @@ public class ServerConfig {
 
     public static Supplier<Boolean> ENABLE_ADRENALINE_SURGE = () -> true;
     public static Supplier<Integer> ADRENALINE_SURGE_DURATION_TICKS = () -> 80;
+
+    public static Supplier<Boolean> ENABLE_WETNESS_ACCUMULATION = () -> true;
+    public static Supplier<Double> WETNESS_RAIN_ACCUMULATION_RATE = () -> 0.0025;
+    public static Supplier<Double> WETNESS_WATER_ACCUMULATION_RATE = () -> 0.015;
+    public static Supplier<Double> WETNESS_NO_HELMET_MULTIPLIER = () -> 2.0;
+    public static Supplier<Double> WETNESS_FREEZE_IMMUNE_REDUCTION = () -> 0.65;
+
+    public static Supplier<Boolean> ENABLE_HEAT_REWARMING = () -> true;
+    public static Supplier<Double> HEAT_SOURCE_RADIUS = () -> 3.0;
+    public static Supplier<Double> HEAT_DRYING_TIME_SECONDS = () -> 12.5;
+    public static Supplier<Double> HEAT_THAW_MULTIPLIER = () -> 5.0;
+
+    public static Supplier<Boolean> ENABLE_HYPOTHERMIA = () -> true;
 }

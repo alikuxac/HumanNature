@@ -10,10 +10,14 @@ import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
 import com.alikuxac.humannature.modules.physiology.ToxinType;
+import com.alikuxac.humannature.modules.temperature.PlayerTemperatureData;
+import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
+import com.alikuxac.humannature.modules.temperature.TemperatureModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
@@ -24,6 +28,7 @@ public class SwappableHudOverlay {
     public enum HudMode {
         OFF("OFF", "§7"),
         PHYSIOLOGY("PHYSIOLOGY", "§a"),
+        TEMPERATURE("TEMPERATURE", "§b"),
         INJURY("INJURY", "§c"),
         COMBINED("COMBINED", "§e");
 
@@ -89,145 +94,235 @@ public class SwappableHudOverlay {
 
         HudMode mode = getCurrentMode();
         if (mode == HudMode.OFF || mode == HudMode.INJURY) return;
-        if (!ServerConfig.ENABLE_PHYSIOLOGY.get()) return;
 
-        PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        boolean enablePhys = ServerConfig.ENABLE_PHYSIOLOGY.get();
+        boolean enableTemp = ServerConfig.ENABLE_TEMPERATURE.get();
+        boolean enableInj = ServerConfig.ENABLE_INJURY.get();
+
+        if (mode == HudMode.PHYSIOLOGY && !enablePhys) return;
+        if (mode == HudMode.TEMPERATURE && !enableTemp) return;
+        if (mode == HudMode.COMBINED && !enablePhys && !enableTemp && !enableInj) return;
+
         List<String> lines = new ArrayList<>();
 
-        if (physData.isAdrenalineActive()) {
-            lines.add("§c§l⚡ ADRENALINE SURGE ⚡");
-        } else if (physData.isPanicking()) {
-            lines.add("§c§l⚠ SENSORY PANIC (0 LUX) ⚠");
-        }
+        if (mode == HudMode.TEMPERATURE) {
+            PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+            float wetness = tempData.getWetnessBuffer();
+            int ticksFrozen = player.getTicksFrozen();
+            boolean isNearHeat = tempData.isNearHeatSource();
+            boolean inWater = player.isInWater() || player.isUnderWater();
+            boolean inRain = player.level().isRainingAt(player.blockPosition());
 
-        if (mode == HudMode.COMBINED && ServerConfig.ENABLE_INJURY.get()) {
-            PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
-            boolean hasTrauma = InjuryEventHandler.isFractureActive(player) || injuryData.hasAnyInjury();
-            if (hasTrauma) {
-                StringBuilder injuredLimbs = new StringBuilder();
-                for (LimbType limb : LimbType.values()) {
-                    byte sev = injuryData.getSeverity(limb);
-                    if (sev > 0) {
-                        if (!injuredLimbs.isEmpty()) injuredLimbs.append(", ");
-                        injuredLimbs.append(limb.getDisplayName()).append(" (T").append(sev).append(")");
-                    }
-                }
-                String limbsTitle = injuredLimbs.isEmpty() ? "Trauma: Stabilized" : "§cInjured: §f" + injuredLimbs;
-                lines.add(limbsTitle);
-
-                int remainingTicks = InjuryEventHandler.getRemainingFractureTime(player);
-                if (remainingTicks > 0) {
-                    int totalSeconds = remainingTicks / 20;
-                    int minutes = totalSeconds / 60;
-                    int seconds = totalSeconds % 60;
-                    boolean isMoving = player.walkDist - player.walkDistO > 0.001F;
-                    boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
-                    String healRate = isResting ? (physData.hasCalciumBuff() ? "§bResting 4x (Calcium)" : "§aResting 2x") :
-                            (isMoving ? "§cPaused" : "§eStanding 1x");
-                    lines.add(String.format("§7Fracture Healing: §f%02d:%02d §8(%s§8)", minutes, seconds, healRate));
-                }
-            }
-        }
-
-        long awakeTicks = physData.getAwakeTicks();
-        long awakeHours = awakeTicks / 1000L;
-        float fatigueScore = physData.getFatigueScore();
-        String fatigueLabel;
-        String fatigueColor;
-        if (fatigueScore >= 0.80f) {
-            fatigueColor = "§c";
-            fatigueLabel = "Drowsy";
-        } else if (fatigueScore >= 0.50f) {
-            fatigueColor = "§6";
-            fatigueLabel = "Tired";
-        } else if (fatigueScore >= 0.20f) {
-            fatigueColor = "§e";
-            fatigueLabel = "Mild";
-        } else {
-            fatigueColor = "§a";
-            fatigueLabel = "Rested";
-        }
-        lines.add("§7Fatigue: §f" + awakeHours + "h awake " + fatigueColor + "(" + fatigueLabel + " " + String.format("%.0f%%", fatigueScore * 100.0f) + "§8)");
-
-        if (PhysiologyModule.isToxinBuildupEnabled()) {
-            float toxinBuildup = physData.getToxinBuildup();
-            ToxinType toxinType = physData.getLastToxinType();
-            int filledSegments = Math.max(0, Math.min(10, Math.round(toxinBuildup / 10.0f)));
+            int filledSegments = Math.max(0, Math.min(10, Math.round(wetness * 10.0f)));
             StringBuilder barBuilder = new StringBuilder();
             for (int i = 0; i < 10; i++) {
                 barBuilder.append(i < filledSegments ? "█" : "░");
             }
-            String stateLabel;
-            if (toxinBuildup <= 0.0f) {
-                stateLabel = "Clear";
+            String statusLabel;
+            if (isNearHeat) {
+                statusLabel = "§6Drying (Heat)";
+            } else if (inWater) {
+                statusLabel = "§9Submerged";
+            } else if (inRain) {
+                statusLabel = "§9Rain Soaking";
+            } else if (ticksFrozen > 0) {
+                statusLabel = "§bFreezing!";
+            } else if (wetness > 0.0f) {
+                statusLabel = "§7Drying";
             } else {
-                int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
-                if (physData.getTicksSinceLastExposure() >= delayTicks) {
-                    boolean isNearHeat = com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler.isNearHeatSource(player);
-                    boolean isResting = player.isSleeping() || (player.isCrouching() && (player.walkDist - player.walkDistO <= 0.001F));
-                    stateLabel = (isNearHeat || isResting) ? "Decaying 3x" : "Decaying";
-                } else {
-                    stateLabel = "Active";
+                statusLabel = "§aDry";
+            }
+            String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : (wetness > 0.0f ? "§b" : "§a"));
+            lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
+
+            String exposure = inWater ? "§9Submerged in Water" : (inRain ? "§9Outdoor Rain" : "§aSheltered / Indoors");
+            lines.add("§7Exposure: " + exposure);
+
+            String heatDesc = isNearHeat ? "§6Active Nearby (~5x Thaw)" : "§8None";
+            lines.add("§7Heat Source: " + heatDesc);
+
+            if (ticksFrozen > 0) {
+                int maxFrozen = player.getTicksRequiredToFreeze();
+                lines.add(String.format("§c❄ Core Temp: Hypothermia! (%d/%d ticks)", ticksFrozen, maxFrozen));
+            } else {
+                lines.add("§7Core Temp: §aNormal (Warm)");
+            }
+
+            float reduction = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
+            boolean noHelmet = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+            String helmetStr = noHelmet ? "§cMissing (2x Soak)" : "§aProtected";
+            lines.add(String.format("§7Insulation: §e%.0f%% §8(Leather) §7| Head: %s", reduction * 100.0f, helmetStr));
+        } else {
+            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+
+            if (enablePhys) {
+                if (physData.isAdrenalineActive()) {
+                    lines.add("§c§l⚡ ADRENALINE SURGE ⚡");
+                } else if (physData.isPanicking()) {
+                    lines.add("§c§l⚠ SENSORY PANIC (0 LUX) ⚠");
                 }
             }
-            String toxinColor = toxinBuildup <= 0.0f ? "§a" : toxinType.getColorCode();
-            lines.add("§7Toxicity: " + toxinColor + "[" + barBuilder + "] §f" + String.format("%.0f%%", toxinBuildup) + " §8(" + stateLabel + "§8)");
-        }
 
-        if (ClientConfig.SHOW_CARDIAC_HUD != null && ClientConfig.SHOW_CARDIAC_HUD.get()) {
-            int bpm = DiagnosticScreen.calculateHeartRateBpm(player, physData);
-            String bpmColor = bpm >= 140 ? "§c" : (bpm >= 110 ? "§6" : (bpm >= 80 ? "§e" : "§a"));
-            String bpmLabel = bpm >= 140 ? "Tachycardia" : (bpm >= 110 ? "Elevated" : (bpm >= 80 ? "Moderate" : "Normal"));
-            lines.add("§7Heart Rate: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)");
-        }
+            if (mode == HudMode.COMBINED && enableInj) {
+                PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
+                boolean hasTrauma = InjuryEventHandler.isFractureActive(player) || injuryData.hasAnyInjury();
+                if (hasTrauma) {
+                    StringBuilder injuredLimbs = new StringBuilder();
+                    for (LimbType limb : LimbType.values()) {
+                        byte sev = injuryData.getSeverity(limb);
+                        if (sev > 0) {
+                            if (!injuredLimbs.isEmpty()) injuredLimbs.append(", ");
+                            injuredLimbs.append(limb.getDisplayName()).append(" (T").append(sev).append(")");
+                        }
+                    }
+                    String limbsTitle = injuredLimbs.isEmpty() ? "Trauma: Stabilized" : "§cInjured: §f" + injuredLimbs;
+                    lines.add(limbsTitle);
 
-        float exertion = physData.getExertionScore();
-        boolean isFailure = physData.isMuscleFailure();
-        boolean isCramped = physData.isSwimmingCramped();
-        String exertionStr = isFailure ? "§cFailure" : (isCramped ? "§cCramp" : (exertion >= 50.0f ? "§6Strained" : "§aNormal"));
-        lines.add("§7Stamina: " + (isFailure ? "§c" : (exertion >= 50.0f ? "§6" : "§a")) + String.format("%.0f%%", 100.0f - exertion) + " §8(" + exertionStr + "§8)");
-
-        boolean showMetabolic = ClientConfig.SHOW_METABOLIC_DETAILS == null || ClientConfig.SHOW_METABOLIC_DETAILS.get();
-        if (showMetabolic) {
-            float pendingNutr = physData.getPendingNutrition();
-            float pendingSat = physData.getPendingSaturation();
-            if (pendingNutr > 0.0f || pendingSat > 0.0f) {
-                lines.add(String.format("§aDigestion Buffer: +%.0f🍗 / +%.1f sat §8(Absorbing...)", pendingNutr, pendingSat));
+                    int remainingTicks = InjuryEventHandler.getRemainingFractureTime(player);
+                    if (remainingTicks > 0) {
+                        int totalSeconds = remainingTicks / 20;
+                        int minutes = totalSeconds / 60;
+                        int seconds = totalSeconds % 60;
+                        boolean isMoving = player.walkDist - player.walkDistO > 0.001F;
+                        boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
+                        String healRate = isResting ? (physData.hasCalciumBuff() ? "§bResting 4x (Calcium)" : "§aResting 2x") :
+                                (isMoving ? "§cPaused" : "§eStanding 1x");
+                        lines.add(String.format("§7Fracture Healing: §f%02d:%02d §8(%s§8)", minutes, seconds, healRate));
+                    }
+                }
             }
 
-            float indigestion = physData.getIndigestionBuildup();
-            if (indigestion > 0.0f) {
-                String crampNotice = indigestion >= 50.0f ? " §c(Cramps Active!)" : " §6(Upset)";
-                lines.add("§6Indigestion: §e" + String.format("%.0f%%", indigestion) + crampNotice);
+            if (enablePhys) {
+                long awakeTicks = physData.getAwakeTicks();
+                long awakeHours = awakeTicks / 1000L;
+                float fatigueScore = physData.getFatigueScore();
+                String fatigueLabel;
+                String fatigueColor;
+                if (fatigueScore >= 0.80f) {
+                    fatigueColor = "§c";
+                    fatigueLabel = "Drowsy";
+                } else if (fatigueScore >= 0.50f) {
+                    fatigueColor = "§6";
+                    fatigueLabel = "Tired";
+                } else if (fatigueScore >= 0.20f) {
+                    fatigueColor = "§e";
+                    fatigueLabel = "Mild";
+                } else {
+                    fatigueColor = "§a";
+                    fatigueLabel = "Rested";
+                }
+                lines.add("§7Fatigue: §f" + awakeHours + "h awake " + fatigueColor + "(" + fatigueLabel + " " + String.format("%.0f%%", fatigueScore * 100.0f) + "§8)");
+
+                if (PhysiologyModule.isToxinBuildupEnabled()) {
+                    float toxinBuildup = physData.getToxinBuildup();
+                    ToxinType toxinType = physData.getLastToxinType();
+                    int filledSegments = Math.max(0, Math.min(10, Math.round(toxinBuildup / 10.0f)));
+                    StringBuilder barBuilder = new StringBuilder();
+                    for (int i = 0; i < 10; i++) {
+                        barBuilder.append(i < filledSegments ? "█" : "░");
+                    }
+                    String stateLabel;
+                    if (toxinBuildup <= 0.0f) {
+                        stateLabel = "Clear";
+                    } else {
+                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
+                        if (physData.getTicksSinceLastExposure() >= delayTicks) {
+                            boolean isNearHeat = com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler.isNearHeatSource(player);
+                            boolean isResting = player.isSleeping() || (player.isCrouching() && (player.walkDist - player.walkDistO <= 0.001F));
+                            stateLabel = (isNearHeat || isResting) ? "Decaying 3x" : "Decaying";
+                        } else {
+                            stateLabel = "Active";
+                        }
+                    }
+                    String toxinColor = toxinBuildup <= 0.0f ? "§a" : toxinType.getColorCode();
+                    lines.add("§7Toxicity: " + toxinColor + "[" + barBuilder + "] §f" + String.format("%.0f%%", toxinBuildup) + " §8(" + stateLabel + "§8)");
+                }
+
+                if (ClientConfig.SHOW_CARDIAC_HUD != null && ClientConfig.SHOW_CARDIAC_HUD.get()) {
+                    int bpm = DiagnosticScreen.calculateHeartRateBpm(player, physData);
+                    String bpmColor = bpm >= 140 ? "§c" : (bpm >= 110 ? "§6" : (bpm >= 80 ? "§e" : "§a"));
+                    String bpmLabel = bpm >= 140 ? "Tachycardia" : (bpm >= 110 ? "Elevated" : (bpm >= 80 ? "Moderate" : "Normal"));
+                    lines.add("§7Heart Rate: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)");
+                }
+
+                float exertion = physData.getExertionScore();
+                boolean isFailure = physData.isMuscleFailure();
+                boolean isCramped = physData.isSwimmingCramped();
+                String exertionStr = isFailure ? "§cFailure" : (isCramped ? "§cCramp" : (exertion >= 50.0f ? "§6Strained" : "§aNormal"));
+                lines.add("§7Stamina: " + (isFailure ? "§c" : (exertion >= 50.0f ? "§6" : "§a")) + String.format("%.0f%%", 100.0f - exertion) + " §8(" + exertionStr + "§8)");
+
+                boolean showMetabolic = ClientConfig.SHOW_METABOLIC_DETAILS == null || ClientConfig.SHOW_METABOLIC_DETAILS.get();
+                if (showMetabolic) {
+                    float pendingNutr = physData.getPendingNutrition();
+                    float pendingSat = physData.getPendingSaturation();
+                    if (pendingNutr > 0.0f || pendingSat > 0.0f) {
+                        lines.add(String.format("§aDigestion Buffer: +%.0f🍗 / +%.1f sat §8(Absorbing...)", pendingNutr, pendingSat));
+                    }
+
+                    float indigestion = physData.getIndigestionBuildup();
+                    if (indigestion > 0.0f) {
+                        String crampNotice = indigestion >= 50.0f ? " §c(Cramps Active!)" : " §6(Upset)";
+                        lines.add("§6Indigestion: §e" + String.format("%.0f%%", indigestion) + crampNotice);
+                    }
+
+                    if (physData.hasCalciumBuff()) {
+                        long calSec = physData.getCalciumAbsorptionTicks() / 20;
+                        lines.add(String.format("§bBone Calcium: %02d:%02d §a(2x Bone Heal)", calSec / 60, calSec % 60));
+                    }
+
+                    if (pendingNutr <= 0.0f && indigestion <= 0.0f && !physData.hasCalciumBuff()) {
+                        var foodData = player.getFoodData();
+                        String digestionState = (foodData.getSaturationLevel() > 0.0f || (player.isHurt() && foodData.getFoodLevel() >= 18)) ? "§aActive" :
+                                (foodData.getFoodLevel() > 6 ? "§7Resting" : "§cHungry");
+                        lines.add("§7Digestion: " + digestionState);
+                    }
+                }
+
+                if (physData.isAdrenalineActive()) {
+                    float remRush = physData.getAdrenalineTicks() / 20.0f;
+                    lines.add(String.format("§c⚡ Rush Duration: §f%.1fs §a(+35%% Spd, Sprinting)", remRush));
+                    lines.add("§c  ↳ Pain shock collapse imminent upon expiry");
+                } else if (physData.getAdrenalineCooldownTicks() > 0) {
+                    int remCooldown = physData.getAdrenalineCooldownTicks() / 20;
+                    lines.add("§8⚡ Adrenaline Cooldown: " + remCooldown + "s");
+                }
+
+                if (physData.getClaustrophobiaTicks() > 0 || physData.isPanicking()) {
+                    int panicThreshold = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
+                    int panicPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) panicThreshold) * 100.0f));
+                    String panicDesc = physData.isPanicking() ? "§c§l100% Aim Tremors & Palpitations!" : "§e" + panicPct + "% (Seek Light/Heat/Pet)";
+                    lines.add("§c⚠ Claustrophobia: " + panicDesc);
+                }
             }
 
-            if (physData.hasCalciumBuff()) {
-                long calSec = physData.getCalciumAbsorptionTicks() / 20;
-                lines.add(String.format("§bBone Calcium: %02d:%02d §a(2x Bone Heal)", calSec / 60, calSec % 60));
+            if (mode == HudMode.COMBINED && enableTemp) {
+                PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+                float wetness = tempData.getWetnessBuffer();
+                int ticksFrozen = player.getTicksFrozen();
+                if (wetness > 0.0f || ticksFrozen > 0 || tempData.isNearHeatSource()) {
+                    int filledSegments = Math.max(0, Math.min(10, Math.round(wetness * 10.0f)));
+                    StringBuilder barBuilder = new StringBuilder();
+                    for (int i = 0; i < 10; i++) {
+                        barBuilder.append(i < filledSegments ? "█" : "░");
+                    }
+                    String statusLabel;
+                    if (tempData.isNearHeatSource()) {
+                        statusLabel = "§6Drying (Heat)";
+                    } else if (player.isInWater() || player.isUnderWater()) {
+                        statusLabel = "§9Submerged";
+                    } else if (player.level().isRainingAt(player.blockPosition())) {
+                        statusLabel = "§9Rain Soaking";
+                    } else if (ticksFrozen > 0) {
+                        statusLabel = "§bFreezing!";
+                    } else {
+                        statusLabel = "§7Drying";
+                    }
+                    String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : "§b");
+                    lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
+                } else {
+                    lines.add("§7Temperature: §aWarm §8(Dry)");
+                }
             }
-
-            if (pendingNutr <= 0.0f && indigestion <= 0.0f && !physData.hasCalciumBuff()) {
-                var foodData = player.getFoodData();
-                String digestionState = (foodData.getSaturationLevel() > 0.0f || (player.isHurt() && foodData.getFoodLevel() >= 18)) ? "§aActive" :
-                        (foodData.getFoodLevel() > 6 ? "§7Resting" : "§cHungry");
-                lines.add("§7Digestion: " + digestionState);
-            }
-        }
-
-        if (physData.isAdrenalineActive()) {
-            float remRush = physData.getAdrenalineTicks() / 20.0f;
-            lines.add(String.format("§c⚡ Rush Duration: §f%.1fs §a(+35%% Spd, Sprinting)", remRush));
-            lines.add("§c  ↳ Pain shock collapse imminent upon expiry");
-        } else if (physData.getAdrenalineCooldownTicks() > 0) {
-            int remCooldown = physData.getAdrenalineCooldownTicks() / 20;
-            lines.add("§8⚡ Adrenaline Cooldown: " + remCooldown + "s");
-        }
-
-        if (physData.getClaustrophobiaTicks() > 0 || physData.isPanicking()) {
-            int panicThreshold = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
-            int panicPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) panicThreshold) * 100.0f));
-            String panicDesc = physData.isPanicking() ? "§c§l100% Aim Tremors & Palpitations!" : "§e" + panicPct + "% (Seek Light/Heat/Pet)";
-            lines.add("§c⚠ Claustrophobia: " + panicDesc);
         }
 
         int screenWidth = guiGraphics.guiWidth();

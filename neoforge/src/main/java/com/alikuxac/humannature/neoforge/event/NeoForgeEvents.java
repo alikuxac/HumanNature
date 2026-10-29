@@ -4,6 +4,7 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
+import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -113,6 +114,9 @@ public class NeoForgeEvents {
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PhysiologyEventHandler.onPlayerRespawn(player);
         }
+        if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+            TemperatureEventHandler.onPlayerRespawn(player);
+        }
     }
 
     @SubscribeEvent
@@ -128,6 +132,9 @@ public class NeoForgeEvents {
             if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
                 PhysiologyEventHandler.onPlayerRespawn(player);
             }
+            if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+                TemperatureEventHandler.onPlayerRespawn(player);
+            }
         }
     }
 
@@ -140,6 +147,7 @@ public class NeoForgeEvents {
         PREV_POS.remove(playerId);
         PREV_WALK_DIST.remove(playerId);
         PhysiologyEventHandler.onPlayerLoggedOut(player);
+        TemperatureEventHandler.onPlayerLoggedOut(player);
     }
 
     private static final Map<UUID, Boolean> WAS_SLEEPING = new HashMap<>();
@@ -190,6 +198,10 @@ public class NeoForgeEvents {
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PhysiologyEventHandler.onPlayerTick(player, isMoving, isSleeping);
+        }
+
+        if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+            TemperatureEventHandler.onPlayerTick(player);
         }
 
         if (ServerConfig.ENABLE_INJURY.get()) {
