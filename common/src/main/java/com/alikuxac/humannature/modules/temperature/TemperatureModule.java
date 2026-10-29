@@ -34,6 +34,11 @@ public class TemperatureModule implements IHumanModule {
         return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_HYPOTHERMIA.get();
     }
 
+    public static boolean isInternalWarmingActive(UUID playerId) {
+        PlayerTemperatureData data = TEMPERATURE_DATA.get(playerId);
+        return data != null && data.hasInternalWarming();
+    }
+
     public static PlayerTemperatureData getOrCreateTemperatureData(UUID playerId) {
         return TEMPERATURE_DATA.computeIfAbsent(playerId, k -> new PlayerTemperatureData());
     }

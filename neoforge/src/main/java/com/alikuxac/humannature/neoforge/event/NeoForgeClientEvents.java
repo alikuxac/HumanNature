@@ -6,6 +6,8 @@ import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
 import com.alikuxac.humannature.client.ModKeyMappings;
+import com.alikuxac.humannature.client.ShiveringCameraHandler;
+import com.alikuxac.humannature.client.SwappableHudOverlay;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
 import com.alikuxac.humannature.client.gui.DiagnosticTabButton;
 import com.alikuxac.humannature.modules.injury.CameraLimpingHandler;
@@ -16,7 +18,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
@@ -30,9 +31,10 @@ public class NeoForgeClientEvents {
             float partialTick = (float) event.getPartialTick();
             CameraLimpingHandler.CameraOffset offset = CameraLimpingHandler.calculateCameraOffset(player, partialTick);
             AimTremorHandler.AimOffset aimOffset = AimTremorHandler.calculateAimOffset(player, partialTick);
-            event.setPitch(event.getPitch() + offset.pitch + aimOffset.pitch());
-            event.setRoll(event.getRoll() + offset.roll);
-            event.setYaw(event.getYaw() + aimOffset.yaw());
+            ShiveringCameraHandler.ShiveringOffset shiver = ShiveringCameraHandler.calculateShiveringOffset(player, partialTick);
+            event.setPitch(event.getPitch() + offset.pitch + aimOffset.pitch() + shiver.pitch());
+            event.setRoll(event.getRoll() + offset.roll + shiver.roll());
+            event.setYaw(event.getYaw() + aimOffset.yaw() + shiver.yaw());
         }
     }
 
@@ -42,7 +44,7 @@ public class NeoForgeClientEvents {
         InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
         ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
         StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
-        com.alikuxac.humannature.client.SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
+        SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
     }
 
     private static DiagnosticTabButton tabButton = null;
@@ -77,7 +79,8 @@ public class NeoForgeClientEvents {
             }
         }
         while (ModKeyMappings.CYCLE_HUD.consumeClick()) {
-            com.alikuxac.humannature.client.SwappableHudOverlay.cycleHudMode(mc.player);
+            SwappableHudOverlay.cycleHudMode(mc.player);
         }
+        SwappableHudOverlay.onClientTick(mc.player);
     }
 }

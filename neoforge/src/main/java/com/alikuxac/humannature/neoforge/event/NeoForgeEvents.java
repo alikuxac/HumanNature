@@ -246,6 +246,7 @@ public class NeoForgeEvents {
 
         InjuryEventHandler.handleItemConsumption(player, event.getItem());
         PhysiologyEventHandler.handleItemConsumption(player, event.getItem());
+        TemperatureEventHandler.handleItemConsumption(player, event.getItem());
     }
 
     @SubscribeEvent

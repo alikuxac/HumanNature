@@ -68,4 +68,9 @@ public class ServerConfig {
     public static Supplier<Double> HEAT_THAW_MULTIPLIER = () -> 5.0;
 
     public static Supplier<Boolean> ENABLE_HYPOTHERMIA = () -> true;
+    public static Supplier<Integer> INTERNAL_WARMING_DURATION_TICKS = () -> 1600;
+    public static Supplier<Double> HYPOTHERMIA_PENALTY_THRESHOLD = () -> 0.60;
+    public static Supplier<Boolean> HYPOTHERMIA_MINING_FATIGUE = () -> true;
+    public static Supplier<Double> HYPOTHERMIA_ATTACK_SPEED_PENALTY = () -> 0.35;
+    public static Supplier<Double> HYPOTHERMIA_INTERACTION_RANGE_PENALTY = () -> 1.0;
 }

@@ -28,7 +28,7 @@ public class SwappableHudOverlay {
     public enum HudMode {
         OFF("OFF", "§7"),
         PHYSIOLOGY("PHYSIOLOGY", "§a"),
-        TEMPERATURE("TEMPERATURE", "§b"),
+        ENVIRONMENT("ENVIRONMENT", "§b"),
         INJURY("INJURY", "§c"),
         COMBINED("COMBINED", "§e");
 
@@ -55,8 +55,12 @@ public class SwappableHudOverlay {
 
         public static HudMode fromString(String str) {
             if (str == null) return COMBINED;
+            String trimmed = str.trim();
+            if (trimmed.equalsIgnoreCase("TEMPERATURE")) {
+                return ENVIRONMENT;
+            }
             for (HudMode mode : values()) {
-                if (mode.name().equalsIgnoreCase(str.trim())) {
+                if (mode.name().equalsIgnoreCase(trimmed)) {
                     return mode;
                 }
             }
@@ -65,6 +69,7 @@ public class SwappableHudOverlay {
     }
 
     private static HudMode currentMode = null;
+    private static int actionBarCooldown = 0;
 
     public static HudMode getCurrentMode() {
         if (currentMode == null) {
@@ -83,7 +88,61 @@ public class SwappableHudOverlay {
         if (player != null) {
             Component message = Component.literal("§8[§6HUD Mode§8]: " + currentMode.getColorCode() + currentMode.getDisplayName());
             player.displayClientMessage(message, true);
+            actionBarCooldown = 50;
         }
+    }
+
+    public static void onClientTick(Player player) {
+        if (player == null || !ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES.get()) return;
+        if (getCurrentMode() != HudMode.ENVIRONMENT) return;
+        if (!ServerConfig.ENABLE_TEMPERATURE.get()) return;
+
+        if (--actionBarCooldown > 0) return;
+
+        PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+        float wetness = tempData.getWetnessBuffer();
+        int ticksFrozen = player.getTicksFrozen();
+        boolean hasBuff = tempData.hasInternalWarming();
+        boolean nearHeat = tempData.isNearHeatSource();
+
+        boolean isNormal = (wetness <= 0.0f && ticksFrozen <= 0 && !hasBuff && !nearHeat);
+        if (isNormal) {
+            actionBarCooldown = 20;
+            return;
+        }
+
+        actionBarCooldown = 70;
+
+        String wetLabel;
+        if (wetness >= 1.0f) {
+            wetLabel = "100% (Soaked)";
+        } else if (wetness >= 0.5f) {
+            wetLabel = String.format("%.0f%% (Damp)", wetness * 100.0f);
+        } else if (wetness > 0.0f) {
+            wetLabel = String.format("%.0f%% (Damp)", wetness * 100.0f);
+        } else {
+            wetLabel = "Dry";
+        }
+
+        String tempLabel;
+        int freezeThresh = (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get());
+        if (hasBuff) {
+            tempLabel = "Warm (Stew Buff)";
+        } else if (ticksFrozen >= freezeThresh) {
+            tempLabel = "Freezing";
+        } else if (ticksFrozen > 0) {
+            tempLabel = "Chilly";
+        } else if (nearHeat) {
+            tempLabel = "Rewarming";
+        } else {
+            tempLabel = "Normal";
+        }
+
+        String wetColor = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : (wetness > 0.0f ? "§b" : "§a"));
+        String tempColor = ticksFrozen >= freezeThresh ? "§c" : (ticksFrozen > 0 ? "§b" : (hasBuff ? "§6" : "§a"));
+
+        Component cue = Component.literal("§7Wetness: " + wetColor + wetLabel + " §7| Temp: " + tempColor + tempLabel);
+        player.displayClientMessage(cue, true);
     }
 
     public static void render(GuiGraphics guiGraphics, float partialTick) {
@@ -93,67 +152,18 @@ public class SwappableHudOverlay {
         if (!ClientConfig.ENABLE_SWAPPABLE_HUD.get()) return;
 
         HudMode mode = getCurrentMode();
-        if (mode == HudMode.OFF || mode == HudMode.INJURY) return;
+        if (mode == HudMode.OFF || mode == HudMode.INJURY || mode == HudMode.ENVIRONMENT) return;
 
         boolean enablePhys = ServerConfig.ENABLE_PHYSIOLOGY.get();
         boolean enableTemp = ServerConfig.ENABLE_TEMPERATURE.get();
         boolean enableInj = ServerConfig.ENABLE_INJURY.get();
 
         if (mode == HudMode.PHYSIOLOGY && !enablePhys) return;
-        if (mode == HudMode.TEMPERATURE && !enableTemp) return;
         if (mode == HudMode.COMBINED && !enablePhys && !enableTemp && !enableInj) return;
 
         List<String> lines = new ArrayList<>();
 
-        if (mode == HudMode.TEMPERATURE) {
-            PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
-            float wetness = tempData.getWetnessBuffer();
-            int ticksFrozen = player.getTicksFrozen();
-            boolean isNearHeat = tempData.isNearHeatSource();
-            boolean inWater = player.isInWater() || player.isUnderWater();
-            boolean inRain = player.level().isRainingAt(player.blockPosition());
-
-            int filledSegments = Math.max(0, Math.min(10, Math.round(wetness * 10.0f)));
-            StringBuilder barBuilder = new StringBuilder();
-            for (int i = 0; i < 10; i++) {
-                barBuilder.append(i < filledSegments ? "█" : "░");
-            }
-            String statusLabel;
-            if (isNearHeat) {
-                statusLabel = "§6Drying (Heat)";
-            } else if (inWater) {
-                statusLabel = "§9Submerged";
-            } else if (inRain) {
-                statusLabel = "§9Rain Soaking";
-            } else if (ticksFrozen > 0) {
-                statusLabel = "§bFreezing!";
-            } else if (wetness > 0.0f) {
-                statusLabel = "§7Drying";
-            } else {
-                statusLabel = "§aDry";
-            }
-            String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : (wetness > 0.0f ? "§b" : "§a"));
-            lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
-
-            String exposure = inWater ? "§9Submerged in Water" : (inRain ? "§9Outdoor Rain" : "§aSheltered / Indoors");
-            lines.add("§7Exposure: " + exposure);
-
-            String heatDesc = isNearHeat ? "§6Active Nearby (~5x Thaw)" : "§8None";
-            lines.add("§7Heat Source: " + heatDesc);
-
-            if (ticksFrozen > 0) {
-                int maxFrozen = player.getTicksRequiredToFreeze();
-                lines.add(String.format("§c❄ Core Temp: Hypothermia! (%d/%d ticks)", ticksFrozen, maxFrozen));
-            } else {
-                lines.add("§7Core Temp: §aNormal (Warm)");
-            }
-
-            float reduction = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
-            boolean noHelmet = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
-            String helmetStr = noHelmet ? "§cMissing (2x Soak)" : "§aProtected";
-            lines.add(String.format("§7Insulation: §e%.0f%% §8(Leather) §7| Head: %s", reduction * 100.0f, helmetStr));
-        } else {
-            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
 
             if (enablePhys) {
                 if (physData.isAdrenalineActive()) {
@@ -319,11 +329,13 @@ public class SwappableHudOverlay {
                     }
                     String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : "§b");
                     lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
+                } else if (tempData.hasInternalWarming()) {
+                    int remSec = tempData.getInternalWarmingTicks() / 20;
+                    lines.add(String.format("§6♨ Internal Warming: %ds §8(Warm)", remSec));
                 } else {
                     lines.add("§7Temperature: §aWarm §8(Dry)");
                 }
             }
-        }
 
         int screenWidth = guiGraphics.guiWidth();
         int screenHeight = guiGraphics.guiHeight();

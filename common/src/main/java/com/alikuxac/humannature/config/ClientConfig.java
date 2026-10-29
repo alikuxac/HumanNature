@@ -16,4 +16,6 @@ public class ClientConfig {
     public static Supplier<Boolean> SHOW_CARDIAC_HUD = () -> true;
 
     public static Supplier<Boolean> ENABLE_CAMERA_LIMPING = () -> true;
+    public static Supplier<Boolean> ENABLE_SHIVERING_CAMERA = () -> true;
+    public static Supplier<Boolean> SHOW_ACTIONBAR_ENVIRONMENT_CUES = () -> true;
 }

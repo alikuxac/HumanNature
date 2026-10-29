@@ -6,6 +6,8 @@ public class PlayerTemperatureData {
     private int heatScanCooldown;
     private int steamSoundCooldown;
     private int stumbleCooldown;
+    private int internalWarmingTicks;
+    private boolean hypothermiaDebuffActive;
 
     public PlayerTemperatureData() {
         this.wetnessBuffer = 0.0f;
@@ -13,6 +15,8 @@ public class PlayerTemperatureData {
         this.heatScanCooldown = 0;
         this.steamSoundCooldown = 0;
         this.stumbleCooldown = 0;
+        this.internalWarmingTicks = 0;
+        this.hypothermiaDebuffActive = false;
     }
 
     public float getWetnessBuffer() {
@@ -81,11 +85,39 @@ public class PlayerTemperatureData {
         }
     }
 
+    public int getInternalWarmingTicks() {
+        return internalWarmingTicks;
+    }
+
+    public void setInternalWarmingTicks(int internalWarmingTicks) {
+        this.internalWarmingTicks = Math.max(0, internalWarmingTicks);
+    }
+
+    public boolean hasInternalWarming() {
+        return internalWarmingTicks > 0;
+    }
+
+    public void decrementInternalWarmingTicks() {
+        if (this.internalWarmingTicks > 0) {
+            this.internalWarmingTicks--;
+        }
+    }
+
+    public boolean isHypothermiaDebuffActive() {
+        return hypothermiaDebuffActive;
+    }
+
+    public void setHypothermiaDebuffActive(boolean active) {
+        this.hypothermiaDebuffActive = active;
+    }
+
     public void reset() {
         this.wetnessBuffer = 0.0f;
         this.nearHeatSource = false;
         this.heatScanCooldown = 0;
         this.steamSoundCooldown = 0;
         this.stumbleCooldown = 0;
+        this.internalWarmingTicks = 0;
+        this.hypothermiaDebuffActive = false;
     }
 }

@@ -418,14 +418,27 @@ public class DiagnosticScreen extends Screen {
 
             if (ServerConfig.ENABLE_TEMPERATURE.get()) {
                 PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
-                if (tempData.getWetnessBuffer() > 0.0f) {
-                    tags.add("§bWet (" + String.format("%.0f%%", tempData.getWetnessBuffer() * 100.0f) + ")");
+                float wetness = tempData.getWetnessBuffer();
+                int ticksFrozen = player.getTicksFrozen();
+                boolean hasBuff = tempData.hasInternalWarming();
+                boolean nearHeat = tempData.isNearHeatSource();
+
+                if (hasBuff) {
+                    tags.add("§6♨ Internal Warming (" + (tempData.getInternalWarmingTicks() / 20) + "s)");
+                } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
+                    tags.add("§c❄ Freezing (Hypothermia)");
+                } else if (ticksFrozen > 0) {
+                    tags.add("§b❄ Chilly");
                 }
-                if (tempData.isNearHeatSource()) {
+
+                if (wetness >= 1.0f) {
+                    tags.add("§cWetness: Soaked (100%)");
+                } else if (wetness > 0.0f) {
+                    tags.add(String.format("§bWetness: Damp (%.0f%%)", wetness * 100.0f));
+                }
+
+                if (nearHeat) {
                     tags.add("§6Near Heat (Rewarming)");
-                }
-                if (player.getTicksFrozen() > 0) {
-                    tags.add("§c❄ Freezing (" + player.getTicksFrozen() + "t)");
                 }
             }
 
@@ -486,8 +499,26 @@ public class DiagnosticScreen extends Screen {
                     float wetness = tempData.getWetnessBuffer();
                     int ticksFrozen = player.getTicksFrozen();
                     boolean isNearHeat = tempData.isNearHeatSource();
-                    String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§b%.0f%%", wetness * 100.0f) : "§a0% (Dry)");
+
+                    String tempStatus;
+                    if (tempData.hasInternalWarming()) {
+                        tempStatus = "§6Warm (Stew)";
+                    } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
+                        tempStatus = "§cFreezing (Hypothermia)";
+                    } else if (ticksFrozen > 0 || (wetness >= 0.5f && !isNearHeat)) {
+                        tempStatus = "§bChilly";
+                    } else {
+                        tempStatus = "§aNormal (37°C)";
+                    }
+
+                    String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§bDamp (%.0f%%)", wetness * 100.0f) : "§a0% (Dry)");
+                    metabolismTooltip.add(Component.literal("§6• Body Temp: " + tempStatus));
                     metabolismTooltip.add(Component.literal("§b• Wetness: " + wStatus));
+
+                    if (tempData.hasInternalWarming()) {
+                        int remSec = tempData.getInternalWarmingTicks() / 20;
+                        metabolismTooltip.add(Component.literal(String.format("§6  ↳ Internal Warming Buff: %ds remaining (Freeze Immune)", remSec)));
+                    }
                     if (isNearHeat) {
                         metabolismTooltip.add(Component.literal("§6  ↳ Near Heat Source: Rapid drying (~12.5s) & 5x thaw"));
                     }

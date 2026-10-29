@@ -1,86 +1,89 @@
 # Temperature & Moisture System
 
-Tracks wetness accumulation from rain and water, applies clothing insulation, detects nearby heat sources for rapid drying, and drives vanilla freezing when soaked.
+Tracks wetness from rain and water, gear insulation, nearby heat sources, and freezing penalties.
 
 ---
 
 ## Mechanics
 
-### 1. Rain Soaking & Wetness Accumulation
+### 1. Wetness Accumulation
 
-The server tracks moisture each tick on a hidden `wetnessBuffer` gauge (0.0 to 1.0).
+The server tracks moisture per tick on `wetnessBuffer` (0.0 to 1.0).
 
-| Exposure Type | Condition | Rate | Time to 100% |
+| Exposure | Condition | Rate | Time to 100% |
 | :--- | :--- | :--- | :--- |
-| **Water Submersion** | `player.isInWater()` or `player.isUnderWater()` | +0.015 / tick | ~3.3 seconds (67 ticks) |
-| **Rain (Helmet Equipped)** | `level.isRainingAt(pos)` | +0.0025 / tick | 20.0 seconds (400 ticks) |
-| **Rain (No Helmet)** | `level.isRainingAt(pos)` with empty `HEAD` slot | +0.0050 / tick (2.0x) | 10.0 seconds (200 ticks) |
+| **Water Submersion** | `player.isInWater()` or `player.isUnderWater()` | +0.015 / tick | ~3.3s (67 ticks) |
+| **Rain (Helmet Equipped)** | `level.isRainingAt(pos)` | +0.0025 / tick | 20.0s (400 ticks) |
+| **Rain (No Helmet)** | `level.isRainingAt(pos)` with empty `HEAD` slot | +0.0050 / tick (2.0x) | 10.0s (200 ticks) |
 
 #### Helmet Protection
-- An empty helmet slot doubles (2.0x) rain accumulation.
-- Any helmet or wearable in the `HEAD` slot negates this penalty.
+An empty helmet slot doubles rain accumulation (2.0x). Any helmet or wearable in the `HEAD` slot prevents this penalty.
 
 #### Leather Armor Insulation
-- Items tagged `#minecraft:freeze_immune_wearables` cut wetness accumulation by up to 65%.
-- Each equipped piece (helmet, chestplate, leggings, boots) grants a flat 16.25% reduction:
-  $$\text{Reduction} = \text{equippedPieces} \times 16.25\%$$
-- Wearing full leather armor extends rain soaking time from 20 seconds to ~57 seconds.
+Items tagged `#minecraft:freeze_immune_wearables` reduce wetness accumulation up to 65%. Each equipped piece grants 16.25% reduction:
+$$\text{Reduction} = \text{equippedPieces} \times 16.25\%$$
+Full leather armor extends rain soaking time from 20 seconds to ~57 seconds.
 
 ---
 
 ### 2. Heat Sources & Drying
 
-The server scans blocks within 2 to 3 blocks of the player once every 20 ticks (1 second).
+The server scans blocks within 3 blocks of the player every 20 ticks (1 second).
 
-#### Recognized Heat Sources
-- **Campfires**: Any block tagged `#minecraft:campfires` with `lit=true`.
-- **Active Furnaces**: Furnace, blast furnace, or smoker with `lit=true`.
+#### Heat Sources
+- **Campfires**: Block tagged `#minecraft:campfires` with `lit=true`.
+- **Furnaces**: Furnace, blast furnace, or smoker with `lit=true`.
 - **Lava**: Lava source or flowing blocks (`Blocks.LAVA` or fluid tag `#minecraft:lava`).
 - **Fire**: Fire and Soul Fire (`Blocks.FIRE`, `Blocks.SOUL_FIRE`).
 - **Magma Blocks**: `Blocks.MAGMA_BLOCK`.
-- **Direct Burning**: Player on fire (`player.isOnFire()`) or submerged in lava (`player.isInLava()`).
+- **Direct Burning**: `player.isOnFire()` or `player.isInLava()`.
 
 #### Rewarming Rates
-- **Fast Drying**: Standing within radius drains `wetnessBuffer` at ~0.004 / tick, clearing 100% wetness in 12.5 seconds (250 ticks).
-- **Rapid Thaw**: Decrements vanilla `ticksFrozen` by 10 ticks per tick (5x the natural thaw rate of 2 ticks/tick).
-- **Evaporation Sound**: Plays `SoundEvents.FIRE_EXTINGUISH` (volume 0.2, pitch 1.1) every 35 ticks while drying or thawing.
-
-#### Natural Air Drying
-Sheltered players out of rain and water dry passively at 0.0005 / tick (~100 seconds to clear full wetness).
+- **Heat Drying**: Drains `wetnessBuffer` at ~0.004 / tick (12.5 seconds to dry 100%).
+- **Rapid Thaw**: Decrements vanilla `ticksFrozen` by 10 ticks per tick (5x natural thaw rate).
+- **Sound**: Plays `SoundEvents.FIRE_EXTINGUISH` every 35 ticks while drying or thawing near heat.
+- **Air Drying**: Sheltered players out of rain and water dry passively at 0.0005 / tick (~100s for full drying).
 
 ---
 
-### 3. Hypothermia & Freezing
+### 3. Hot Stews & Internal Warming
 
-When `wetnessBuffer` reaches 1.0 (100% soaked) away from heat sources, hypothermia begins:
-
-#### Vanilla Freezing Integration
-- Adds +3 to `player.setTicksFrozen(...)` each tick, capping at `ticksRequiredToFreeze + 80` (220 ticks).
-- Triggers vanilla freezing cues:
-  - Frosted screen vignette at `ticksFrozen > 0`.
-  - Shivering model animation.
-  - Frozen hearts and 1 point of freeze damage every 40 ticks once `ticksFrozen >= 140`.
-
-#### Sluggish Stumbling
-- When `ticksFrozen >= 70` and moving on ground, the player stumbles every 80 to 120 ticks.
-- Applies `Slowness I` (`MobEffects.MOVEMENT_SLOWDOWN`) for 1.25 seconds (25 ticks).
+Eating hot stew (`Mushroom Stew`, `Rabbit Stew`, `Beetroot Soup`, `Suspicious Stew`, or items tagged `#c:foods/soups` and `#humannature:hot_stews`):
+- Cuts `wetnessBuffer` by 50% immediately.
+- Clears all `ticksFrozen` (`player.setTicksFrozen(0)`).
+- Grants `Internal Warming` for 80 seconds (1600 ticks).
+- Blocks freeze accumulation while exposed to rain during the buff duration.
 
 ---
 
-### 4. HUD & Diagnostics
+### 4. Hypothermia & Freezing Penalties
+
+When `wetnessBuffer` reaches 1.0 (100% soaked) away from heat sources, hypothermia accumulates vanilla `ticksFrozen` (+3 per tick, capped at `ticksRequiredToFreeze + 80`).
+
+Once `ticksFrozen` reaches 60% of `ticksRequiredToFreeze` (84/140 ticks by default):
+- **Mining Fatigue I**: Applied continuously while hypothermic.
+- **Physical Penalties**: -35% attack speed (`Attributes.ATTACK_SPEED`) and -1.0 block interaction range (`Attributes.BLOCK_INTERACTION_RANGE`).
+- **Camera Tremor**: High-frequency screen shivering on client (`enableShiveringCamera`).
+- **Cold Stumble**: Periodic stumble every 15 to 20 seconds while walking on ground (brief `Slowness I` and freeze sound).
+
+Penalties clear as soon as `ticksFrozen` drops below 60%.
+
+---
+
+### 5. HUD & Diagnostics
 
 #### Swappable HUD Modes
-Toggle with the HUD cycle key:
-- **`TEMPERATURE` Mode**: Displays dedicated wetness gauge, exposure state (Submerged, Outdoor Rain, Sheltered), heat source proximity, core freezing ticks, and gear insulation percentages.
-- **`COMBINED` Mode**: Displays active wetness and drying status alongside physiology and trauma lines. Displays `Temperature: Warm (Dry)` when dry.
+- **`ENVIRONMENT` Mode**: Minimalist Action Bar cue. Shows `[HUD Mode]: ENVIRONMENT` on switch, then outputs `Wetness: X% | Temp: Normal/Chilly/Freezing` only when wet, cold, or buffed. Auto-hides when dry and warm.
+- **`COMBINED` Mode**: Displays active wetness progress bar and temperature state inside the top-left HUD box alongside physiology and trauma lines.
+- **`OFF` / `PHYSIOLOGY` / `INJURY`**: Hides temperature lines.
 
 #### Diagnostic Screen (`H` Key)
-- Lists active temperature tags (`Wet (X%)`, `Near Heat`, `❄ Freezing`).
-- Hovering the status row shows detailed tooltip data: current wetness percentage, heat proximity, freeze progress, and armor insulation values.
+- Quick overview panel displays warning tags (`Wetness: Damp/Soaked`, `Freezing`, `Internal Warming`) when abnormal.
+- Detailed temperature and wetness rows with exact percentages and stage indicators appear in the body metrics breakdown.
 
 ---
 
-### 5. Configuration Options
+### 6. Configuration Options
 
 Configured in `humannature-server.toml` under `[temperature]`:
 
@@ -89,10 +92,23 @@ Configured in `humannature-server.toml` under `[temperature]`:
 | `enableWetnessAccumulation` | Boolean | `true` | Enables rain soaking and water wetness accumulation |
 | `wetnessRainAccumulationRate` | Double | `0.0025` | Base wetness added per tick under rain |
 | `wetnessWaterAccumulationRate` | Double | `0.015` | Wetness added per tick while in water |
-| `wetnessNoHelmetMultiplier` | Double | `2.0` | Multiplier for rain soaking with an empty helmet slot |
+| `wetnessNoHelmetMultiplier` | Double | `2.0` | Multiplier for rain soaking with empty helmet slot |
 | `wetnessFreezeImmuneReduction` | Double | `0.65` | Maximum wetness reduction from full freeze-immune gear |
-| `enableHeatRewarming` | Double | `true` | Enables heat source detection and accelerated drying |
+| `enableHeatRewarming` | Boolean | `true` | Enables heat source detection and rapid drying |
 | `heatSourceRadius` | Double | `3.0` | Search radius in blocks for active heat sources |
 | `heatDryingTimeSeconds` | Double | `12.5` | Seconds required to dry 100% wetness near heat |
 | `heatThawMultiplier` | Double | `5.0` | Thaw rate multiplier for frozen ticks near heat |
-| `enableHypothermia` | Boolean | `true` | Enables freeze damage and stumbling at 100% wetness |
+| `enableHypothermia` | Boolean | `true` | Enables freeze accumulation when 100% soaked |
+| `internalWarmingDurationTicks` | Integer | `1600` | Duration of internal warming buff from hot stews (80s) |
+| `hypothermiaPenaltyThreshold` | Double | `0.60` | Fraction of max freeze ticks triggering debuffs |
+| `hypothermiaMiningFatigue` | Boolean | `true` | Applies Mining Fatigue I during hypothermia |
+| `hypothermiaAttackSpeedPenalty` | Double | `0.35` | Attack speed penalty fraction during hypothermia |
+| `hypothermiaInteractionRangePenalty` | Double | `1.0` | Block reach penalty during hypothermia (blocks) |
+
+Configured in `humannature-client.toml` under `[hud]` and `[camera]`:
+
+| Setting | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enableShiveringCamera` | Boolean | `true` | Enables screen shivering tremor during hypothermia |
+| `showActionBarEnvironmentCues` | Boolean | `true` | Enables action bar cues in ENVIRONMENT mode |
+| `defaultHudMode` | String | `"COMBINED"` | Initial HUD mode (`OFF`, `PHYSIOLOGY`, `ENVIRONMENT`, `INJURY`, `COMBINED`) |

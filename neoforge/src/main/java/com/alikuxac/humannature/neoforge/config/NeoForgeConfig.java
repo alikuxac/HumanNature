@@ -192,6 +192,21 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue enableHypothermia = serverBuilder
                 .comment("Enable hypothermia freeze ticks, screen frost, and stumbling when fully soaked")
                 .define("enableHypothermia", true);
+        ModConfigSpec.IntValue internalWarmingDurationTicks = serverBuilder
+                .comment("Duration in ticks of internal warming buff granted by hot soups/stews (1600 ticks = 80s)")
+                .defineInRange("internalWarmingDurationTicks", 1600, 20, 72000);
+        ModConfigSpec.DoubleValue hypothermiaPenaltyThreshold = serverBuilder
+                .comment("Fraction of required freeze ticks to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
+                .defineInRange("hypothermiaPenaltyThreshold", 0.60, 0.1, 1.0);
+        ModConfigSpec.BooleanValue hypothermiaMiningFatigue = serverBuilder
+                .comment("Enable Mining Fatigue I debuff when suffering from severe hypothermia")
+                .define("hypothermiaMiningFatigue", true);
+        ModConfigSpec.DoubleValue hypothermiaAttackSpeedPenalty = serverBuilder
+                .comment("Attack speed penalty fraction during hypothermia (0.35 = -35%)")
+                .defineInRange("hypothermiaAttackSpeedPenalty", 0.35, 0.0, 1.0);
+        ModConfigSpec.DoubleValue hypothermiaInteractionRangePenalty = serverBuilder
+                .comment("Block interaction range penalty in blocks during hypothermia (1.0 = -1.0 block)")
+                .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
@@ -252,6 +267,11 @@ public class NeoForgeConfig {
         ServerConfig.HEAT_DRYING_TIME_SECONDS = heatDryingTimeSeconds::get;
         ServerConfig.HEAT_THAW_MULTIPLIER = heatThawMultiplier::get;
         ServerConfig.ENABLE_HYPOTHERMIA = enableHypothermia::get;
+        ServerConfig.INTERNAL_WARMING_DURATION_TICKS = internalWarmingDurationTicks::get;
+        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = hypothermiaPenaltyThreshold::get;
+        ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
+        ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
+        ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
 
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 
@@ -275,7 +295,7 @@ public class NeoForgeConfig {
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
         ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
-                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, TEMPERATURE, INJURY, COMBINED)")
+                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
         ModConfigSpec.IntValue swappableHudX = clientBuilder
                 .comment("Screen X position of the swappable HUD mini box")
@@ -289,12 +309,18 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue showCardiacHud = clientBuilder
                 .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
                 .define("showCardiacHud", true);
+        ModConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
+                .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
+                .define("showActionBarEnvironmentCues", true);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
         ModConfigSpec.BooleanValue enableCameraLimping = clientBuilder
                 .comment("Enable camera wobble/tilt effect when walking with fractured leg(s)")
                 .define("enableCameraLimping", true);
+        ModConfigSpec.BooleanValue enableShiveringCamera = clientBuilder
+                .comment("Enable subtle shivering screen tremor when suffering from hypothermia")
+                .define("enableShiveringCamera", true);
         clientBuilder.pop();
 
         CLIENT_SPEC = clientBuilder.build();
@@ -311,6 +337,8 @@ public class NeoForgeConfig {
         ClientConfig.SHOW_METABOLIC_DETAILS = showMetabolicDetails::get;
         ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
+        ClientConfig.ENABLE_SHIVERING_CAMERA = enableShiveringCamera::get;
+        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
     }
 
     public static void register(ModContainer container) {
