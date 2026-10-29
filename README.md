@@ -1,12 +1,12 @@
 # Human Nature
 
 [![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen.svg?style=flat-square)](https://minecraft.net/)
-[![NeoForge](https://img.shields.io/badge/Loader-NeoForge-orange.svg?style=flat-square)](https://neoforged.net/)
-[![Forge](https://img.shields.io/badge/Loader-Forge-blue.svg?style=flat-square)](https://files.minecraftforge.net/)
+[![NeoForge 21.1.77+](https://img.shields.io/badge/NeoForge-21.1.77+-orange.svg?style=flat-square)](https://neoforged.net/)
+[![Forge 52.1.20+](https://img.shields.io/badge/Forge-52.1.20+-blue.svg?style=flat-square)](https://files.minecraftforge.net/)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/Models-CC%20BY--NC--ND%204.0-yellow.svg?style=flat-square)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-**Human Nature** is a survival-realism mod for Forge and NeoForge (Minecraft 1.21.1). It adds localized skeletal injuries, environmental temperature, inventory encumbrance, and metabolic recovery.
+**Human Nature** is a survival-realism mod for Minecraft 1.21.1 supporting both **NeoForge (21.1.77+)** and **Minecraft Forge (52.1.20+)**. It adds localized skeletal injuries, environmental temperature, inventory encumbrance, and metabolic recovery.
 
 > [!CAUTION]
 > **Mechanics First**: Core gameplay systems, mechanics, and balance take priority over visual polish. Textures, icons, and models remain minimal or placeholders while features are actively being built.
@@ -73,8 +73,10 @@ For detailed module specifications, refer to:
 
 ### Requirements
 - **JDK**: 21+
-- **Gradle**: 8.x+ (via Gradle Wrapper `gradlew`)
-- **Supported Loaders**: NeoForge & Forge (Minecraft 1.21.1)
+- **Gradle**: 8.x+ / 9.x (via Gradle Wrapper `gradlew`)
+- **Supported Loaders & Versions**:
+  - **NeoForge**: `21.1.77+` (Minecraft `1.21.1`)
+  - **Minecraft Forge**: `52.1.20+` (Minecraft `1.21.1`)
 
 ### Building from Source
 ```bash

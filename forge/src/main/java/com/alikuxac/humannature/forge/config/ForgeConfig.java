@@ -2,347 +2,354 @@ package com.alikuxac.humannature.forge.config;
 
 import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+import java.util.function.Supplier;
 
 public class ForgeConfig {
 
-    private static final ModConfigSpec SERVER_SPEC;
-    private static final ModConfigSpec CLIENT_SPEC;
+    private static final ForgeConfigSpec SERVER_SPEC;
+    private static final ForgeConfigSpec CLIENT_SPEC;
 
     static {
-        ModConfigSpec.Builder serverBuilder = new ModConfigSpec.Builder();
+        ForgeConfigSpec.Builder serverBuilder = new ForgeConfigSpec.Builder();
 
         serverBuilder.comment("Module master toggles").push("modules");
-        ModConfigSpec.BooleanValue enableInjury = serverBuilder
+        ForgeConfigSpec.BooleanValue enableInjury = serverBuilder
                 .comment("Enable injury & trauma module")
                 .define("enableInjury", true);
-        ModConfigSpec.BooleanValue enableTemperature = serverBuilder
+        ForgeConfigSpec.BooleanValue enableTemperature = serverBuilder
                 .comment("Enable body temperature module")
                 .define("enableTemperature", true);
-        ModConfigSpec.BooleanValue enableWeight = serverBuilder
+        ForgeConfigSpec.BooleanValue enableWeight = serverBuilder
                 .comment("Enable inventory weight & encumbrance module")
                 .define("enableWeight", true);
-        ModConfigSpec.BooleanValue enablePhysiology = serverBuilder
+        ForgeConfigSpec.BooleanValue enablePhysiology = serverBuilder
                 .comment("Enable physiology module")
                 .define("enablePhysiology", true);
         serverBuilder.pop();
 
         serverBuilder.comment("Splint & limb stabilization mechanics").push("splint");
-        ModConfigSpec.BooleanValue enableSplint = serverBuilder
+        ForgeConfigSpec.BooleanValue enableSplint = serverBuilder
                 .comment("Enable splint mechanics")
                 .define("enableSplint", true);
-        ModConfigSpec.DoubleValue splintSpeedReduction = serverBuilder
+        ForgeConfigSpec.DoubleValue splintSpeedReduction = serverBuilder
                 .comment("Movement speed penalty when wearing a splint")
                 .defineInRange("splintSpeedReduction", 0.10, 0.0, 1.0);
-        ModConfigSpec.IntValue splintDurabilityPer50Steps = serverBuilder
+        ForgeConfigSpec.IntValue splintDurabilityPer50Steps = serverBuilder
                 .comment("Durability consumed per 50 steps walked with active splint")
                 .defineInRange("splintDurabilityPer50Steps", 1, 0, 100);
         serverBuilder.pop();
 
         serverBuilder.comment("Bone fracture & trauma mechanics").push("fracture");
-        ModConfigSpec.IntValue boneFractureDuration = serverBuilder
+        ForgeConfigSpec.IntValue boneFractureDuration = serverBuilder
                 .comment("Base natural recovery duration in ticks (6000 ticks = 5 minutes)")
                 .defineInRange("boneFractureDurationTicks", 6000, 100, 72000);
-        ModConfigSpec.DoubleValue boneFractureCrouchMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue boneFractureCrouchMultiplier = serverBuilder
                 .comment("Movement speed multiplier when crouching with a fractured leg")
                 .defineInRange("boneFractureCrouchMultiplier", 0.5, 0.0, 1.0);
-        ModConfigSpec.BooleanValue enableTotemBypass = serverBuilder
+        ForgeConfigSpec.BooleanValue enableTotemBypass = serverBuilder
                 .comment("Enable trauma totem bypass on lethal fall / blunt trauma")
                 .define("enableTotemBypass", true);
-        ModConfigSpec.BooleanValue enableGForceBlackout = serverBuilder
+        ForgeConfigSpec.BooleanValue enableGForceBlackout = serverBuilder
                 .comment("Enable high G-force blackout on tight turns during high-speed elytra flight")
                 .define("enableGForceBlackout", true);
-        ModConfigSpec.BooleanValue enableKineticCrash = serverBuilder
+        ForgeConfigSpec.BooleanValue enableKineticCrash = serverBuilder
                 .comment("Enable kinetic crash trauma when impacting blocks at high speed with elytra")
                 .define("enableKineticCrash", true);
         serverBuilder.pop();
 
         serverBuilder.comment("Physiology & sleep deprivation mechanics").push("physiology");
-        ModConfigSpec.BooleanValue enableSleepDeprivation = serverBuilder
+        ForgeConfigSpec.BooleanValue enableSleepDeprivation = serverBuilder
                 .comment("Enable sleep deprivation and fatigue buildup")
                 .define("enableSleepDeprivation", true);
-        ModConfigSpec.IntValue sleepDeprivationFullFatigueTicks = serverBuilder
+        ForgeConfigSpec.IntValue sleepDeprivationFullFatigueTicks = serverBuilder
                 .comment("Ticks of being awake required to reach 100% fatigue (72000 ticks = 3 in-game days)")
                 .defineInRange("sleepDeprivationFullFatigueTicks", 72000, 20, 720000);
-        ModConfigSpec.DoubleValue sleepFatigueBlinkThreshold = serverBuilder
+        ForgeConfigSpec.DoubleValue sleepFatigueBlinkThreshold = serverBuilder
                 .comment("Fatigue score threshold (0.0 to 1.0) above which darkness blinks begin occurring")
                 .defineInRange("sleepFatigueBlinkThreshold", 0.80, 0.0, 1.0);
-        ModConfigSpec.IntValue sleepFatigueBlinkMinInterval = serverBuilder
+        ForgeConfigSpec.IntValue sleepFatigueBlinkMinInterval = serverBuilder
                 .comment("Minimum interval in ticks between darkness blinks (20 ticks = 1s)")
                 .defineInRange("sleepFatigueBlinkMinIntervalTicks", 300, 20, 72000);
-        ModConfigSpec.IntValue sleepFatigueBlinkMaxInterval = serverBuilder
+        ForgeConfigSpec.IntValue sleepFatigueBlinkMaxInterval = serverBuilder
                 .comment("Maximum interval in ticks between darkness blinks")
                 .defineInRange("sleepFatigueBlinkMaxIntervalTicks", 800, 40, 72000);
 
-        ModConfigSpec.BooleanValue enableToxinBuildup = serverBuilder
+        ForgeConfigSpec.BooleanValue enableToxinBuildup = serverBuilder
                 .comment("Enable soulslike bad effect (poison/wither) buildup and transient gauge")
                 .define("enableToxinBuildup", true);
-        ModConfigSpec.DoubleValue toxinBaseBuildupPerHit = serverBuilder
+        ForgeConfigSpec.DoubleValue toxinBaseBuildupPerHit = serverBuilder
                 .comment("Base minimum toxin buildup percentage added per exposure")
                 .defineInRange("toxinBaseBuildupPerHit", 25.0, 1.0, 100.0);
-        ModConfigSpec.IntValue toxinDecayDelayTicks = serverBuilder
+        ForgeConfigSpec.IntValue toxinDecayDelayTicks = serverBuilder
                 .comment("Ticks of delay without exposure before toxin buildup begins decaying (80 ticks = 4s)")
                 .defineInRange("toxinDecayDelayTicks", 80, 1, 72000);
-        ModConfigSpec.DoubleValue toxinDecayRatePerSecond = serverBuilder
+        ForgeConfigSpec.DoubleValue toxinDecayRatePerSecond = serverBuilder
                 .comment("Passive percentage decay of toxin buildup per second")
                 .defineInRange("toxinDecayRatePerSecond", 2.0, 0.1, 100.0);
-        ModConfigSpec.DoubleValue toxinRestingHeatDecayMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue toxinRestingHeatDecayMultiplier = serverBuilder
                 .comment("Toxin decay rate multiplier when near heat sources (campfires, lava) or resting")
                 .defineInRange("toxinRestingHeatDecayMultiplier", 3.0, 1.0, 20.0);
-        ModConfigSpec.BooleanValue enableToxinFatigueScaling = serverBuilder
+        ForgeConfigSpec.BooleanValue enableToxinFatigueScaling = serverBuilder
                 .comment("Whether sleep deprivation and fatigue score increase toxin buildup accumulation rate")
                 .define("enableToxinFatigueScaling", true);
-        ModConfigSpec.DoubleValue toxinFractureBuildupMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue toxinFractureBuildupMultiplier = serverBuilder
                 .comment("Toxin buildup multiplier when suffering from bone fractures or active trauma")
                 .defineInRange("toxinFractureBuildupMultiplier", 1.5, 1.0, 5.0);
 
-        ModConfigSpec.BooleanValue enablePhysicalExertion = serverBuilder
+        ForgeConfigSpec.BooleanValue enablePhysicalExertion = serverBuilder
                 .comment("Enable physical exertion and muscle failure")
                 .define("enablePhysicalExertion", true);
-        ModConfigSpec.IntValue exertionContinuousMiningTicks = serverBuilder
+        ForgeConfigSpec.IntValue exertionContinuousMiningTicks = serverBuilder
                 .comment("Ticks of continuous chopping or mining required to trigger muscle failure (200 ticks = 10s)")
                 .defineInRange("exertionContinuousMiningTicks", 200, 20, 72000);
-        ModConfigSpec.IntValue exertionRestRecoveryTicks = serverBuilder
+        ForgeConfigSpec.IntValue exertionRestRecoveryTicks = serverBuilder
                 .comment("Ticks standing still without actions to recover 100% muscle capacity (70 ticks = 3.5s)")
                 .defineInRange("exertionRestRecoveryTicks", 70, 10, 1200);
-        ModConfigSpec.DoubleValue exertionAttackSpeedPenalty = serverBuilder
+        ForgeConfigSpec.DoubleValue exertionAttackSpeedPenalty = serverBuilder
                 .comment("Attack speed penalty fraction during muscle failure (0.50 = -50%)")
                 .defineInRange("exertionAttackSpeedPenalty", 0.50, 0.0, 1.0);
-        ModConfigSpec.DoubleValue exertionMiningSpeedPenalty = serverBuilder
+        ForgeConfigSpec.DoubleValue exertionMiningSpeedPenalty = serverBuilder
                 .comment("Mining break speed penalty fraction during muscle failure (0.50 = -50%)")
                 .defineInRange("exertionMiningSpeedPenalty", 0.50, 0.0, 1.0);
-        ModConfigSpec.DoubleValue exertionSprintDrainPerTick = serverBuilder
+        ForgeConfigSpec.DoubleValue exertionSprintDrainPerTick = serverBuilder
                 .comment("Stamina / exertion drain per tick while sprinting (0.08 = ~1.6% per sec, ~60s to deplete)")
                 .defineInRange("exertionSprintDrainPerTick", 0.08, 0.001, 10.0);
-        ModConfigSpec.BooleanValue enableSwimmingCramps = serverBuilder
+        ForgeConfigSpec.BooleanValue enableSwimmingCramps = serverBuilder
                 .comment("Enable temporary swimming cramps from prolonged continuous swimming/diving")
                 .define("enableSwimmingCramps", true);
-        ModConfigSpec.IntValue swimmingCrampThresholdTicks = serverBuilder
+        ForgeConfigSpec.IntValue swimmingCrampThresholdTicks = serverBuilder
                 .comment("Ticks of continuous swimming before leg cramp occurs (600 ticks = 30s)")
                 .defineInRange("swimmingCrampThresholdTicks", 600, 40, 72000);
-        ModConfigSpec.DoubleValue swimmingCrampSpeedPenalty = serverBuilder
+        ForgeConfigSpec.DoubleValue swimmingCrampSpeedPenalty = serverBuilder
                 .comment("Swimming speed penalty fraction during cramp (0.40 = -40%)")
                 .defineInRange("swimmingCrampSpeedPenalty", 0.40, 0.0, 1.0);
-        ModConfigSpec.IntValue swimmingCrampRecoveryTicks = serverBuilder
+        ForgeConfigSpec.IntValue swimmingCrampRecoveryTicks = serverBuilder
                 .comment("Ticks resting on land or boat to recover from leg cramp (60 ticks = 3s)")
                 .defineInRange("swimmingCrampRecoveryTicks", 60, 10, 1200);
 
-        ModConfigSpec.BooleanValue enableDigestionWindow = serverBuilder
+        ForgeConfigSpec.BooleanValue enableDigestionWindow = serverBuilder
                 .comment("Enable gradual digestion absorption window for eaten food")
                 .define("enableDigestionWindow", true);
-        ModConfigSpec.IntValue digestionIntervalTicks = serverBuilder
+        ForgeConfigSpec.IntValue digestionIntervalTicks = serverBuilder
                 .comment("Interval in ticks between digestion nutrition absorption (30 ticks = 1.5s)")
                 .defineInRange("digestionIntervalTicks", 30, 5, 200);
-        ModConfigSpec.BooleanValue enableOvereatingReflex = serverBuilder
+        ForgeConfigSpec.BooleanValue enableOvereatingReflex = serverBuilder
                 .comment("Enable overeating hiccups, speed debuff, and vomiting reflex when gorging food")
                 .define("enableOvereatingReflex", true);
-        ModConfigSpec.BooleanValue enableIndigestion = serverBuilder
+        ForgeConfigSpec.BooleanValue enableIndigestion = serverBuilder
                 .comment("Enable indigestion accumulation and stomach ache from raw/rotten meat")
                 .define("enableIndigestion", true);
-        ModConfigSpec.BooleanValue enableCalciumHealing = serverBuilder
+        ForgeConfigSpec.BooleanValue enableCalciumHealing = serverBuilder
                 .comment("Enable calcium absorption from bone broth and milk accelerating bone healing")
                 .define("enableCalciumHealing", true);
-        ModConfigSpec.DoubleValue calciumHealingMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue calciumHealingMultiplier = serverBuilder
                 .comment("Healing rate multiplier for Tier 1 fractures with active calcium buff")
                 .defineInRange("calciumHealingMultiplier", 2.0, 1.0, 5.0);
-        ModConfigSpec.BooleanValue enableClaustrophobiaPanic = serverBuilder
+        ForgeConfigSpec.BooleanValue enableClaustrophobiaPanic = serverBuilder
                 .comment("Enable underground claustrophobia panic, heart rate spike, and aim tremor in dark caves (Y < 0, 0 lux)")
                 .define("enableClaustrophobiaPanic", true);
-        ModConfigSpec.IntValue panicThresholdTicks = serverBuilder
+        ForgeConfigSpec.IntValue panicThresholdTicks = serverBuilder
                 .comment("Ticks in pitch dark deep underground before panic triggers (100 ticks = 5s)")
                 .defineInRange("panicThresholdTicks", 100, 20, 1200);
-        ModConfigSpec.BooleanValue enableAdrenalineSurge = serverBuilder
+        ForgeConfigSpec.BooleanValue enableAdrenalineSurge = serverBuilder
                 .comment("Enable 4-second adrenaline surge burst upon severe bone fracture")
                 .define("enableAdrenalineSurge", true);
-        ModConfigSpec.IntValue adrenalineSurgeDurationTicks = serverBuilder
+        ForgeConfigSpec.IntValue adrenalineSurgeDurationTicks = serverBuilder
                 .comment("Duration in ticks of the adrenaline surge (80 ticks = 4.0s)")
                 .defineInRange("adrenalineSurgeDurationTicks", 80, 20, 400);
         serverBuilder.pop();
 
         serverBuilder.comment("Temperature & hypothermia mechanics").push("temperature");
-        ModConfigSpec.BooleanValue enableWetnessAccumulation = serverBuilder
+        ForgeConfigSpec.BooleanValue enableWetnessAccumulation = serverBuilder
                 .comment("Enable rain soaking and water wetness accumulation")
                 .define("enableWetnessAccumulation", true);
-        ModConfigSpec.DoubleValue wetnessRainAccumulationRate = serverBuilder
+        ForgeConfigSpec.DoubleValue wetnessRainAccumulationRate = serverBuilder
                 .comment("Base wetness accumulation per tick when soaking under rain")
                 .defineInRange("wetnessRainAccumulationRate", 0.0025, 0.0001, 1.0);
-        ModConfigSpec.DoubleValue wetnessWaterAccumulationRate = serverBuilder
+        ForgeConfigSpec.DoubleValue wetnessWaterAccumulationRate = serverBuilder
                 .comment("Wetness accumulation per tick when submerged in water")
                 .defineInRange("wetnessWaterAccumulationRate", 0.015, 0.0001, 1.0);
-        ModConfigSpec.DoubleValue wetnessNoHelmetMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue wetnessNoHelmetMultiplier = serverBuilder
                 .comment("Multiplier applied to rain soaking rate when no helmet is equipped")
                 .defineInRange("wetnessNoHelmetMultiplier", 2.0, 1.0, 10.0);
-        ModConfigSpec.DoubleValue wetnessFreezeImmuneReduction = serverBuilder
+        ForgeConfigSpec.DoubleValue wetnessFreezeImmuneReduction = serverBuilder
                 .comment("Wetness accumulation reduction when wearing freeze-immune wearables (leather armor)")
                 .defineInRange("wetnessFreezeImmuneReduction", 0.65, 0.0, 1.0);
-        ModConfigSpec.BooleanValue enableHeatRewarming = serverBuilder
+        ForgeConfigSpec.BooleanValue enableHeatRewarming = serverBuilder
                 .comment("Enable heat source detection, drying, and rapid thawing")
                 .define("enableHeatRewarming", true);
-        ModConfigSpec.DoubleValue heatSourceRadius = serverBuilder
+        ForgeConfigSpec.DoubleValue heatSourceRadius = serverBuilder
                 .comment("Radius in blocks to detect heat sources (campfires, lit furnaces, lava, fire)")
                 .defineInRange("heatSourceRadius", 3.0, 1.0, 10.0);
-        ModConfigSpec.DoubleValue heatDryingTimeSeconds = serverBuilder
+        ForgeConfigSpec.DoubleValue heatDryingTimeSeconds = serverBuilder
                 .comment("Time in seconds to completely dry full wetness near heat sources")
                 .defineInRange("heatDryingTimeSeconds", 12.5, 1.0, 300.0);
-        ModConfigSpec.DoubleValue heatThawMultiplier = serverBuilder
+        ForgeConfigSpec.DoubleValue heatThawMultiplier = serverBuilder
                 .comment("Multiplier for thawing frozen ticks when near heat sources")
                 .defineInRange("heatThawMultiplier", 5.0, 1.0, 20.0);
-        ModConfigSpec.BooleanValue enableHypothermia = serverBuilder
+        ForgeConfigSpec.BooleanValue enableHypothermia = serverBuilder
                 .comment("Enable hypothermia freeze ticks, screen frost, and stumbling when fully soaked")
                 .define("enableHypothermia", true);
-        ModConfigSpec.IntValue internalWarmingDurationTicks = serverBuilder
+        ForgeConfigSpec.IntValue internalWarmingDurationTicks = serverBuilder
                 .comment("Duration in ticks of internal warming buff granted by hot soups/stews (1600 ticks = 80s)")
                 .defineInRange("internalWarmingDurationTicks", 1600, 20, 72000);
-        ModConfigSpec.DoubleValue hypothermiaPenaltyThreshold = serverBuilder
+        ForgeConfigSpec.DoubleValue hypothermiaPenaltyThreshold = serverBuilder
                 .comment("Fraction of required freeze ticks to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
                 .defineInRange("hypothermiaPenaltyThreshold", 0.60, 0.1, 1.0);
-        ModConfigSpec.BooleanValue hypothermiaMiningFatigue = serverBuilder
+        ForgeConfigSpec.BooleanValue hypothermiaMiningFatigue = serverBuilder
                 .comment("Enable Mining Fatigue I debuff when suffering from severe hypothermia")
                 .define("hypothermiaMiningFatigue", true);
-        ModConfigSpec.DoubleValue hypothermiaAttackSpeedPenalty = serverBuilder
+        ForgeConfigSpec.DoubleValue hypothermiaAttackSpeedPenalty = serverBuilder
                 .comment("Attack speed penalty fraction during hypothermia (0.35 = -35%)")
                 .defineInRange("hypothermiaAttackSpeedPenalty", 0.35, 0.0, 1.0);
-        ModConfigSpec.DoubleValue hypothermiaInteractionRangePenalty = serverBuilder
+        ForgeConfigSpec.DoubleValue hypothermiaInteractionRangePenalty = serverBuilder
                 .comment("Block interaction range penalty in blocks during hypothermia (1.0 = -1.0 block)")
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
 
-        ServerConfig.ENABLE_INJURY = enableInjury::get;
-        ServerConfig.ENABLE_TEMPERATURE = enableTemperature::get;
-        ServerConfig.ENABLE_WEIGHT = enableWeight::get;
-        ServerConfig.ENABLE_PHYSIOLOGY = enablePhysiology::get;
-        ServerConfig.ENABLE_SPLINT = enableSplint::get;
-        ServerConfig.SPLINT_SPEED_REDUCTION = splintSpeedReduction::get;
-        ServerConfig.SPLINT_DURABILITY_PER_50_STEPS = splintDurabilityPer50Steps::get;
-        ServerConfig.BONE_FRACTURE_DURATION = boneFractureDuration::get;
-        ServerConfig.BONE_FRACTURE_CROUCH_MULTIPLIER = boneFractureCrouchMultiplier::get;
-        ServerConfig.ENABLE_TOTEM_BYPASS = enableTotemBypass::get;
-        ServerConfig.ENABLE_GFORCE_BLACKOUT = enableGForceBlackout::get;
-        ServerConfig.ENABLE_KINETIC_CRASH = enableKineticCrash::get;
-        ServerConfig.ENABLE_SLEEP_DEPRIVATION = enableSleepDeprivation::get;
-        ServerConfig.SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = sleepDeprivationFullFatigueTicks::get;
-        ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD = sleepFatigueBlinkThreshold::get;
-        ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL = sleepFatigueBlinkMinInterval::get;
-        ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL = sleepFatigueBlinkMaxInterval::get;
-        ServerConfig.ENABLE_TOXIN_BUILDUP = enableToxinBuildup::get;
-        ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT = toxinBaseBuildupPerHit::get;
-        ServerConfig.TOXIN_DECAY_DELAY_TICKS = toxinDecayDelayTicks::get;
-        ServerConfig.TOXIN_DECAY_RATE_PER_SECOND = toxinDecayRatePerSecond::get;
-        ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = toxinRestingHeatDecayMultiplier::get;
-        ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING = enableToxinFatigueScaling::get;
-        ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER = toxinFractureBuildupMultiplier::get;
-        ServerConfig.ENABLE_PHYSICAL_EXERTION = enablePhysicalExertion::get;
-        ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS = exertionContinuousMiningTicks::get;
-        ServerConfig.EXERTION_REST_RECOVERY_TICKS = exertionRestRecoveryTicks::get;
-        ServerConfig.EXERTION_ATTACK_SPEED_PENALTY = exertionAttackSpeedPenalty::get;
-        ServerConfig.EXERTION_MINING_SPEED_PENALTY = exertionMiningSpeedPenalty::get;
-        ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK = exertionSprintDrainPerTick::get;
-        ServerConfig.ENABLE_SWIMMING_CRAMPS = enableSwimmingCramps::get;
-        ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS = swimmingCrampThresholdTicks::get;
-        ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY = swimmingCrampSpeedPenalty::get;
-        ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS = swimmingCrampRecoveryTicks::get;
-
-        ServerConfig.ENABLE_DIGESTION_WINDOW = enableDigestionWindow::get;
-        ServerConfig.DIGESTION_INTERVAL_TICKS = digestionIntervalTicks::get;
-        ServerConfig.ENABLE_OVEREATING_REFLEX = enableOvereatingReflex::get;
-        ServerConfig.ENABLE_INDIGESTION = enableIndigestion::get;
-        ServerConfig.ENABLE_CALCIUM_HEALING = enableCalciumHealing::get;
-        ServerConfig.CALCIUM_HEALING_MULTIPLIER = calciumHealingMultiplier::get;
-        ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC = enableClaustrophobiaPanic::get;
-        ServerConfig.PANIC_THRESHOLD_TICKS = panicThresholdTicks::get;
-        ServerConfig.ENABLE_ADRENALINE_SURGE = enableAdrenalineSurge::get;
-        ServerConfig.ADRENALINE_SURGE_DURATION_TICKS = adrenalineSurgeDurationTicks::get;
-
-        ServerConfig.ENABLE_WETNESS_ACCUMULATION = enableWetnessAccumulation::get;
-        ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE = wetnessRainAccumulationRate::get;
-        ServerConfig.WETNESS_WATER_ACCUMULATION_RATE = wetnessWaterAccumulationRate::get;
-        ServerConfig.WETNESS_NO_HELMET_MULTIPLIER = wetnessNoHelmetMultiplier::get;
-        ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION = wetnessFreezeImmuneReduction::get;
-        ServerConfig.ENABLE_HEAT_REWARMING = enableHeatRewarming::get;
-        ServerConfig.HEAT_SOURCE_RADIUS = heatSourceRadius::get;
-        ServerConfig.HEAT_DRYING_TIME_SECONDS = heatDryingTimeSeconds::get;
-        ServerConfig.HEAT_THAW_MULTIPLIER = heatThawMultiplier::get;
-        ServerConfig.ENABLE_HYPOTHERMIA = enableHypothermia::get;
-        ServerConfig.INTERNAL_WARMING_DURATION_TICKS = internalWarmingDurationTicks::get;
-        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = hypothermiaPenaltyThreshold::get;
-        ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
-        ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
-        ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
-
-        ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
+        ForgeConfigSpec.Builder clientBuilder = new ForgeConfigSpec.Builder();
 
         clientBuilder.comment("HUD overlay settings").push("hud");
-        ModConfigSpec.BooleanValue enableHudOverlay = clientBuilder
+        ForgeConfigSpec.BooleanValue enableHudOverlay = clientBuilder
                 .comment("Show injury & trauma status HUD overlay on screen")
                 .define("enableHudOverlay", true);
-        ModConfigSpec.IntValue hudX = clientBuilder
+        ForgeConfigSpec.IntValue hudX = clientBuilder
                 .comment("Screen X position of the injury HUD overlay")
                 .defineInRange("hudX", 10, 0, 10000);
-        ModConfigSpec.IntValue hudY = clientBuilder
+        ForgeConfigSpec.IntValue hudY = clientBuilder
                 .comment("Screen Y position of the injury HUD overlay")
                 .defineInRange("hudY", 10, 0, 10000);
-        ModConfigSpec.BooleanValue enableToxinHudOverlay = clientBuilder
+        ForgeConfigSpec.BooleanValue enableToxinHudOverlay = clientBuilder
                 .comment("Show transient soulslike toxin buildup bar above hotbar")
                 .define("enableToxinHudOverlay", true);
-        ModConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
+        ForgeConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
                 .comment("Show transient stamina / exertion bar above hotbar")
                 .define("enableStaminaHudOverlay", true);
-        ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
+        ForgeConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
-        ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
+        ForgeConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
                 .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
-        ModConfigSpec.IntValue swappableHudX = clientBuilder
+        ForgeConfigSpec.IntValue swappableHudX = clientBuilder
                 .comment("Screen X position of the swappable HUD mini box")
                 .defineInRange("swappableHudX", 10, 0, 10000);
-        ModConfigSpec.IntValue swappableHudY = clientBuilder
+        ForgeConfigSpec.IntValue swappableHudY = clientBuilder
                 .comment("Screen Y position of the swappable HUD mini box")
                 .defineInRange("swappableHudY", 10, 0, 10000);
-        ModConfigSpec.BooleanValue showMetabolicDetails = clientBuilder
+        ForgeConfigSpec.BooleanValue showMetabolicDetails = clientBuilder
                 .comment("Show detailed rows for digestion buffer, calcium bone healing, and cramps")
                 .define("showMetabolicDetails", true);
-        ModConfigSpec.BooleanValue showCardiacHud = clientBuilder
+        ForgeConfigSpec.BooleanValue showCardiacHud = clientBuilder
                 .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
                 .define("showCardiacHud", true);
-        ModConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
+        ForgeConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
-        ModConfigSpec.BooleanValue enableCameraLimping = clientBuilder
+        ForgeConfigSpec.BooleanValue enableCameraLimping = clientBuilder
                 .comment("Enable camera wobble/tilt effect when walking with fractured leg(s)")
                 .define("enableCameraLimping", true);
-        ModConfigSpec.BooleanValue enableShiveringCamera = clientBuilder
+        ForgeConfigSpec.BooleanValue enableShiveringCamera = clientBuilder
                 .comment("Enable subtle shivering screen tremor when suffering from hypothermia")
                 .define("enableShiveringCamera", true);
         clientBuilder.pop();
 
         CLIENT_SPEC = clientBuilder.build();
 
-        ClientConfig.ENABLE_HUD_OVERLAY = enableHudOverlay::get;
-        ClientConfig.HUD_X = hudX::get;
-        ClientConfig.HUD_Y = hudY::get;
-        ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = enableToxinHudOverlay::get;
-        ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
-        ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
-        ClientConfig.DEFAULT_HUD_MODE = defaultHudMode::get;
-        ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
-        ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;
-        ClientConfig.SHOW_METABOLIC_DETAILS = showMetabolicDetails::get;
-        ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
-        ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
-        ClientConfig.ENABLE_SHIVERING_CAMERA = enableShiveringCamera::get;
-        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
+        ServerConfig.ENABLE_INJURY = safe(SERVER_SPEC, enableInjury, true);
+        ServerConfig.ENABLE_TEMPERATURE = safe(SERVER_SPEC, enableTemperature, true);
+        ServerConfig.ENABLE_WEIGHT = safe(SERVER_SPEC, enableWeight, true);
+        ServerConfig.ENABLE_PHYSIOLOGY = safe(SERVER_SPEC, enablePhysiology, true);
+        ServerConfig.ENABLE_SPLINT = safe(SERVER_SPEC, enableSplint, true);
+        ServerConfig.SPLINT_SPEED_REDUCTION = safe(SERVER_SPEC, splintSpeedReduction, 0.10);
+        ServerConfig.SPLINT_DURABILITY_PER_50_STEPS = safe(SERVER_SPEC, splintDurabilityPer50Steps, 1);
+        ServerConfig.BONE_FRACTURE_DURATION = safe(SERVER_SPEC, boneFractureDuration, 6000);
+        ServerConfig.BONE_FRACTURE_CROUCH_MULTIPLIER = safe(SERVER_SPEC, boneFractureCrouchMultiplier, 0.5);
+        ServerConfig.ENABLE_TOTEM_BYPASS = safe(SERVER_SPEC, enableTotemBypass, true);
+        ServerConfig.ENABLE_GFORCE_BLACKOUT = safe(SERVER_SPEC, enableGForceBlackout, true);
+        ServerConfig.ENABLE_KINETIC_CRASH = safe(SERVER_SPEC, enableKineticCrash, true);
+        ServerConfig.ENABLE_SLEEP_DEPRIVATION = safe(SERVER_SPEC, enableSleepDeprivation, true);
+        ServerConfig.SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = safe(SERVER_SPEC, sleepDeprivationFullFatigueTicks, 72000);
+        ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD = safe(SERVER_SPEC, sleepFatigueBlinkThreshold, 0.80);
+        ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL = safe(SERVER_SPEC, sleepFatigueBlinkMinInterval, 300);
+        ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL = safe(SERVER_SPEC, sleepFatigueBlinkMaxInterval, 800);
+        ServerConfig.ENABLE_TOXIN_BUILDUP = safe(SERVER_SPEC, enableToxinBuildup, true);
+        ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT = safe(SERVER_SPEC, toxinBaseBuildupPerHit, 25.0);
+        ServerConfig.TOXIN_DECAY_DELAY_TICKS = safe(SERVER_SPEC, toxinDecayDelayTicks, 80);
+        ServerConfig.TOXIN_DECAY_RATE_PER_SECOND = safe(SERVER_SPEC, toxinDecayRatePerSecond, 2.0);
+        ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER = safe(SERVER_SPEC, toxinRestingHeatDecayMultiplier, 3.0);
+        ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING = safe(SERVER_SPEC, enableToxinFatigueScaling, true);
+        ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER = safe(SERVER_SPEC, toxinFractureBuildupMultiplier, 1.5);
+        ServerConfig.ENABLE_PHYSICAL_EXERTION = safe(SERVER_SPEC, enablePhysicalExertion, true);
+        ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS = safe(SERVER_SPEC, exertionContinuousMiningTicks, 200);
+        ServerConfig.EXERTION_REST_RECOVERY_TICKS = safe(SERVER_SPEC, exertionRestRecoveryTicks, 70);
+        ServerConfig.EXERTION_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, exertionAttackSpeedPenalty, 0.50);
+        ServerConfig.EXERTION_MINING_SPEED_PENALTY = safe(SERVER_SPEC, exertionMiningSpeedPenalty, 0.50);
+        ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK = safe(SERVER_SPEC, exertionSprintDrainPerTick, 0.08);
+        ServerConfig.ENABLE_SWIMMING_CRAMPS = safe(SERVER_SPEC, enableSwimmingCramps, true);
+        ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS = safe(SERVER_SPEC, swimmingCrampThresholdTicks, 600);
+        ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY = safe(SERVER_SPEC, swimmingCrampSpeedPenalty, 0.40);
+        ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS = safe(SERVER_SPEC, swimmingCrampRecoveryTicks, 60);
+
+        ServerConfig.ENABLE_DIGESTION_WINDOW = safe(SERVER_SPEC, enableDigestionWindow, true);
+        ServerConfig.DIGESTION_INTERVAL_TICKS = safe(SERVER_SPEC, digestionIntervalTicks, 30);
+        ServerConfig.ENABLE_OVEREATING_REFLEX = safe(SERVER_SPEC, enableOvereatingReflex, true);
+        ServerConfig.ENABLE_INDIGESTION = safe(SERVER_SPEC, enableIndigestion, true);
+        ServerConfig.ENABLE_CALCIUM_HEALING = safe(SERVER_SPEC, enableCalciumHealing, true);
+        ServerConfig.CALCIUM_HEALING_MULTIPLIER = safe(SERVER_SPEC, calciumHealingMultiplier, 2.0);
+        ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC = safe(SERVER_SPEC, enableClaustrophobiaPanic, true);
+        ServerConfig.PANIC_THRESHOLD_TICKS = safe(SERVER_SPEC, panicThresholdTicks, 100);
+        ServerConfig.ENABLE_ADRENALINE_SURGE = safe(SERVER_SPEC, enableAdrenalineSurge, true);
+        ServerConfig.ADRENALINE_SURGE_DURATION_TICKS = safe(SERVER_SPEC, adrenalineSurgeDurationTicks, 80);
+
+        ServerConfig.ENABLE_WETNESS_ACCUMULATION = safe(SERVER_SPEC, enableWetnessAccumulation, true);
+        ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE = safe(SERVER_SPEC, wetnessRainAccumulationRate, 0.0025);
+        ServerConfig.WETNESS_WATER_ACCUMULATION_RATE = safe(SERVER_SPEC, wetnessWaterAccumulationRate, 0.015);
+        ServerConfig.WETNESS_NO_HELMET_MULTIPLIER = safe(SERVER_SPEC, wetnessNoHelmetMultiplier, 2.0);
+        ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION = safe(SERVER_SPEC, wetnessFreezeImmuneReduction, 0.65);
+        ServerConfig.ENABLE_HEAT_REWARMING = safe(SERVER_SPEC, enableHeatRewarming, true);
+        ServerConfig.HEAT_SOURCE_RADIUS = safe(SERVER_SPEC, heatSourceRadius, 3.0);
+        ServerConfig.HEAT_DRYING_TIME_SECONDS = safe(SERVER_SPEC, heatDryingTimeSeconds, 12.5);
+        ServerConfig.HEAT_THAW_MULTIPLIER = safe(SERVER_SPEC, heatThawMultiplier, 5.0);
+        ServerConfig.ENABLE_HYPOTHERMIA = safe(SERVER_SPEC, enableHypothermia, true);
+        ServerConfig.INTERNAL_WARMING_DURATION_TICKS = safe(SERVER_SPEC, internalWarmingDurationTicks, 1600);
+        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = safe(SERVER_SPEC, hypothermiaPenaltyThreshold, 0.60);
+        ServerConfig.HYPOTHERMIA_MINING_FATIGUE = safe(SERVER_SPEC, hypothermiaMiningFatigue, true);
+        ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, hypothermiaAttackSpeedPenalty, 0.35);
+        ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = safe(SERVER_SPEC, hypothermiaInteractionRangePenalty, 1.0);
+
+        ClientConfig.ENABLE_HUD_OVERLAY = safe(CLIENT_SPEC, enableHudOverlay, true);
+        ClientConfig.HUD_X = safe(CLIENT_SPEC, hudX, 10);
+        ClientConfig.HUD_Y = safe(CLIENT_SPEC, hudY, 10);
+        ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = safe(CLIENT_SPEC, enableToxinHudOverlay, true);
+        ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = safe(CLIENT_SPEC, enableStaminaHudOverlay, true);
+        ClientConfig.ENABLE_SWAPPABLE_HUD = safe(CLIENT_SPEC, enableSwappableHud, true);
+        ClientConfig.DEFAULT_HUD_MODE = safe(CLIENT_SPEC, defaultHudMode, "COMBINED");
+        ClientConfig.SWAPPABLE_HUD_X = safe(CLIENT_SPEC, swappableHudX, 10);
+        ClientConfig.SWAPPABLE_HUD_Y = safe(CLIENT_SPEC, swappableHudY, 10);
+        ClientConfig.SHOW_METABOLIC_DETAILS = safe(CLIENT_SPEC, showMetabolicDetails, true);
+        ClientConfig.SHOW_CARDIAC_HUD = safe(CLIENT_SPEC, showCardiacHud, true);
+        ClientConfig.ENABLE_CAMERA_LIMPING = safe(CLIENT_SPEC, enableCameraLimping, true);
+        ClientConfig.ENABLE_SHIVERING_CAMERA = safe(CLIENT_SPEC, enableShiveringCamera, true);
+        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = safe(CLIENT_SPEC, showActionBarEnvironmentCues, true);
     }
 
-    public static void register(ModContainer container) {
-        container.registerConfig(ModConfig.Type.SERVER, SERVER_SPEC);
-        container.registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
+    private static <T> Supplier<T> safe(ForgeConfigSpec spec, ForgeConfigSpec.ConfigValue<T> value, T fallback) {
+        return () -> spec.isLoaded() ? value.get() : fallback;
+    }
+
+    public static void register(FMLJavaModLoadingContext context) {
+        context.registerConfig(ModConfig.Type.COMMON, SERVER_SPEC);
+        context.registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
     }
 }
+

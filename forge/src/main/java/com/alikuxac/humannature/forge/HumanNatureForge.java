@@ -1,20 +1,22 @@
 package com.alikuxac.humannature.forge;
 
 import com.alikuxac.humannature.HumanNatureCommon;
-import com.alikuxac.humannature.init.ModCreativeTabs;
-import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.forge.config.ForgeConfig;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
+import com.alikuxac.humannature.forge.init.ForgeCreativeTabs;
+import com.alikuxac.humannature.forge.init.ForgeModItems;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(HumanNatureCommon.MOD_ID)
 public class HumanNatureForge {
-    public HumanNatureForge(IEventBus modBus, ModContainer container) {
-        ForgeConfig.register(container);
+    public HumanNatureForge(FMLJavaModLoadingContext context) {
+        IEventBus modBus = context.getModEventBus();
+        ForgeConfig.register(context);
         HumanNatureCommon.init();
-        ModItems.register(modBus);
-        ModCreativeTabs.register(modBus);
-        modBus.addListener(ModCreativeTabs::onBuildCreativeModeTabContents);
+        ForgeModItems.register(modBus);
+        ForgeCreativeTabs.register(modBus);
+        modBus.addListener(ForgeCreativeTabs::onBuildCreativeModeTabContents);
     }
 }
+

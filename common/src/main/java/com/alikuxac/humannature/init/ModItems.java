@@ -1,28 +1,17 @@
 package com.alikuxac.humannature.init;
 
-import com.alikuxac.humannature.HumanNatureCommon;
-import com.alikuxac.humannature.item.SplintItem;
-import com.alikuxac.humannature.item.SplintTier;
 import net.minecraft.world.item.Item;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.function.Supplier;
 
 public class ModItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(HumanNatureCommon.MOD_ID);
-
-    public static final DeferredItem<Item> WOODEN_SPLINT = ITEMS.register("wooden_splint", () -> new SplintItem(SplintTier.WOODEN));
-    public static final DeferredItem<Item> REINFORCED_SPLINT = ITEMS.register("reinforced_splint", () -> new SplintItem(SplintTier.REINFORCED));
-    public static final DeferredItem<Item> GOLDEN_SPLINT = ITEMS.register("golden_splint", () -> new SplintItem(SplintTier.GOLDEN));
-    public static final DeferredItem<Item> DIAMOND_SPLINT = ITEMS.register("diamond_splint", () -> new SplintItem(SplintTier.DIAMOND));
-    public static final DeferredItem<Item> NETHERITE_SPLINT = ITEMS.register("netherite_splint", () -> new SplintItem(SplintTier.NETHERITE));
-
-    public static final DeferredItem<Item> BONE_BROTH = ITEMS.register("bone_broth", () -> new com.alikuxac.humannature.item.BoneBrothItem(new Item.Properties()));
+    public static Supplier<Item> WOODEN_SPLINT = () -> null;
+    public static Supplier<Item> REINFORCED_SPLINT = () -> null;
+    public static Supplier<Item> GOLDEN_SPLINT = () -> null;
+    public static Supplier<Item> DIAMOND_SPLINT = () -> null;
+    public static Supplier<Item> NETHERITE_SPLINT = () -> null;
+    public static Supplier<Item> BONE_BROTH = () -> null;
 
     // Legacy fallback alias
-    public static final DeferredItem<Item> SPLINT = WOODEN_SPLINT;
-
-    public static void register(IEventBus eventBus) {
-        ITEMS.register(eventBus);
-    }
+    public static Supplier<Item> SPLINT = () -> WOODEN_SPLINT.get();
 }

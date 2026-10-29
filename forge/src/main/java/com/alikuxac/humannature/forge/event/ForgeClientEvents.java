@@ -2,9 +2,6 @@ package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
-import com.alikuxac.humannature.client.InjuryHudOverlay;
-import com.alikuxac.humannature.client.StaminaHudOverlay;
-import com.alikuxac.humannature.client.ToxinHudOverlay;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
@@ -14,15 +11,14 @@ import com.alikuxac.humannature.modules.injury.CameraLimpingHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.event.ViewportEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
 public class ForgeClientEvents {
 
     @SubscribeEvent
@@ -36,15 +32,6 @@ public class ForgeClientEvents {
             event.setRoll(event.getRoll() + offset.roll + shiver.roll());
             event.setYaw(event.getYaw() + aimOffset.yaw() + shiver.yaw());
         }
-    }
-
-    @SubscribeEvent
-    public static void onRenderGuiPost(RenderGuiEvent.Post event) {
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-        InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
-        ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
-        StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
-        SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
     }
 
     private static DiagnosticTabButton tabButton = null;
@@ -69,7 +56,8 @@ public class ForgeClientEvents {
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         while (ModKeyMappings.OPEN_DIAGNOSTICS.consumeClick()) {
             if (mc.screen == null) {
@@ -84,3 +72,4 @@ public class ForgeClientEvents {
         SwappableHudOverlay.onClientTick(mc.player);
     }
 }
+

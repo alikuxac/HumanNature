@@ -7,29 +7,30 @@ import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEvent;
-import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
-import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
-import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
-import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
-import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.living.LivingHealEvent;
+import net.minecraftforge.event.entity.living.ShieldBlockEvent;
+import net.minecraftforge.event.entity.living.LivingUseTotemEvent;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@EventBusSubscriber(modid = HumanNatureCommon.MOD_ID)
+@Mod.EventBusSubscriber(modid = HumanNatureCommon.MOD_ID)
 public class ForgeEvents {
 
     private static final Map<UUID, Float> PREV_WALK_DIST = new HashMap<>();
@@ -45,11 +46,11 @@ public class ForgeEvents {
     public static void onMobEffectApplicable(MobEffectEvent.Applicable event) {
         if (event.getEntity() instanceof Player player) {
             if (InjuryEventHandler.shouldDenyMobEffect(player, event.getEffectInstance())) {
-                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+                event.setResult(Event.Result.DENY);
                 return;
             }
             if (PhysiologyEventHandler.handleMobEffectApplicable(player, event.getEffectInstance())) {
-                event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
+                event.setResult(Event.Result.DENY);
             }
         }
     }
@@ -68,8 +69,8 @@ public class ForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onLivingDamage(LivingDamageEvent.Post event) {
-        InjuryEventHandler.onLivingDamage(event.getEntity(), event.getSource(), event.getNewDamage());
+    public static void onLivingDamage(LivingDamageEvent event) {
+        InjuryEventHandler.onLivingDamage(event.getEntity(), event.getSource(), event.getAmount());
     }
 
     @SubscribeEvent
@@ -155,8 +156,9 @@ public class ForgeEvents {
     private static final Map<UUID, Vec3> PREV_POS = new HashMap<>();
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        Player player = event.getEntity();
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
         if (player.level().isClientSide()) return;
         UUID playerId = player.getUUID();
 
@@ -277,17 +279,15 @@ public class ForgeEvents {
     }
 
     @SubscribeEvent
-    public static void onShieldBlock(LivingShieldBlockEvent event) {
+    public static void onShieldBlock(ShieldBlockEvent event) {
         if (event.getEntity() instanceof Player player) {
             InteractionHand hand = player.getUsedItemHand();
             boolean isOffHand = (hand == InteractionHand.OFF_HAND);
 
             if (isOffHand && InjuryEventHandler.isOffhandLocked(player)) {
-                event.setBlocked(false);
                 event.setCanceled(true);
                 return;
             } else if (!isOffHand && InjuryEventHandler.isMainArmBroken(player)) {
-                event.setBlocked(false);
                 event.setCanceled(true);
                 return;
             }
