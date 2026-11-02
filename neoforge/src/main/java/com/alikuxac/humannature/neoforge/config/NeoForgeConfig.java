@@ -209,6 +209,21 @@ public class NeoForgeConfig {
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
+        serverBuilder.comment("Inventory weight density settings").push("weight");
+        ModConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
+                .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
+                .defineInRange("weightHeavyBlockBase", 2.0, 0.0, 100.0);
+        ModConfigSpec.DoubleValue weightMetallicItemBase = serverBuilder
+                .comment("Base weight multiplier for metallic items (#c:metallic_items)")
+                .defineInRange("weightMetallicItemBase", 0.8, 0.0, 100.0);
+        ModConfigSpec.DoubleValue weightDefaultItemBase = serverBuilder
+                .comment("Base weight multiplier for uncategorized/standard items")
+                .defineInRange("weightDefaultItemBase", 0.2, 0.0, 100.0);
+        ModConfigSpec.DoubleValue weightLightItemBase = serverBuilder
+                .comment("Base weight multiplier for light items (#c:light_items)")
+                .defineInRange("weightLightItemBase", 0.02, 0.0, 100.0);
+        serverBuilder.pop();
+
         SERVER_SPEC = serverBuilder.build();
 
         ServerConfig.ENABLE_INJURY = enableInjury::get;
@@ -272,6 +287,10 @@ public class NeoForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
+        ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = weightHeavyBlockBase::get;
+        ServerConfig.WEIGHT_METALLIC_ITEM_BASE = weightMetallicItemBase::get;
+        ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = weightDefaultItemBase::get;
+        ServerConfig.WEIGHT_LIGHT_ITEM_BASE = weightLightItemBase::get;
 
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 

@@ -5,12 +5,15 @@ import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
+import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
@@ -18,6 +21,8 @@ import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -117,6 +122,9 @@ public class NeoForgeEvents {
         if (ServerConfig.ENABLE_TEMPERATURE.get()) {
             TemperatureEventHandler.onPlayerRespawn(player);
         }
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            WeightEventHandler.onPlayerRespawn(player);
+        }
     }
 
     @SubscribeEvent
@@ -135,6 +143,9 @@ public class NeoForgeEvents {
             if (ServerConfig.ENABLE_TEMPERATURE.get()) {
                 TemperatureEventHandler.onPlayerRespawn(player);
             }
+            if (ServerConfig.ENABLE_WEIGHT.get()) {
+                WeightEventHandler.onPlayerRespawn(player);
+            }
         }
     }
 
@@ -148,6 +159,36 @@ public class NeoForgeEvents {
         PREV_WALK_DIST.remove(playerId);
         PhysiologyEventHandler.onPlayerLoggedOut(player);
         TemperatureEventHandler.onPlayerLoggedOut(player);
+        WeightEventHandler.onPlayerLoggedOut(player);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        WeightEventHandler.onPlayerLoggedIn(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onItemPickup(ItemEntityPickupEvent.Post event) {
+        WeightEventHandler.onItemPickup(event.getPlayer());
+    }
+
+    @SubscribeEvent
+    public static void onItemToss(ItemTossEvent event) {
+        WeightEventHandler.onItemToss(event.getPlayer());
+    }
+
+    @SubscribeEvent
+    public static void onContainerClose(PlayerContainerEvent.Close event) {
+        if (event.getEntity() instanceof Player player) {
+            WeightEventHandler.onContainerClose(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            WeightEventHandler.onEquipmentChange(player);
+        }
     }
 
     private static final Map<UUID, Boolean> WAS_SLEEPING = new HashMap<>();

@@ -211,6 +211,21 @@ public class ForgeConfig {
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
+        serverBuilder.comment("Inventory weight density settings").push("weight");
+        ForgeConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
+                .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
+                .defineInRange("weightHeavyBlockBase", 2.0, 0.0, 100.0);
+        ForgeConfigSpec.DoubleValue weightMetallicItemBase = serverBuilder
+                .comment("Base weight multiplier for metallic items (#c:metallic_items)")
+                .defineInRange("weightMetallicItemBase", 0.8, 0.0, 100.0);
+        ForgeConfigSpec.DoubleValue weightDefaultItemBase = serverBuilder
+                .comment("Base weight multiplier for uncategorized/standard items")
+                .defineInRange("weightDefaultItemBase", 0.2, 0.0, 100.0);
+        ForgeConfigSpec.DoubleValue weightLightItemBase = serverBuilder
+                .comment("Base weight multiplier for light items (#c:light_items)")
+                .defineInRange("weightLightItemBase", 0.02, 0.0, 100.0);
+        serverBuilder.pop();
+
         SERVER_SPEC = serverBuilder.build();
 
         ForgeConfigSpec.Builder clientBuilder = new ForgeConfigSpec.Builder();
@@ -326,6 +341,10 @@ public class ForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = safe(SERVER_SPEC, hypothermiaMiningFatigue, true);
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, hypothermiaAttackSpeedPenalty, 0.35);
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = safe(SERVER_SPEC, hypothermiaInteractionRangePenalty, 1.0);
+        ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = safe(SERVER_SPEC, weightHeavyBlockBase, 2.0);
+        ServerConfig.WEIGHT_METALLIC_ITEM_BASE = safe(SERVER_SPEC, weightMetallicItemBase, 0.8);
+        ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = safe(SERVER_SPEC, weightDefaultItemBase, 0.2);
+        ServerConfig.WEIGHT_LIGHT_ITEM_BASE = safe(SERVER_SPEC, weightLightItemBase, 0.02);
 
         ClientConfig.ENABLE_HUD_OVERLAY = safe(CLIENT_SPEC, enableHudOverlay, true);
         ClientConfig.HUD_X = safe(CLIENT_SPEC, hudX, 10);

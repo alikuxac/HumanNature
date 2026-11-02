@@ -5,13 +5,16 @@ import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
+import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHealEvent;
@@ -19,6 +22,7 @@ import net.minecraftforge.event.entity.living.ShieldBlockEvent;
 import net.minecraftforge.event.entity.living.LivingUseTotemEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -118,6 +122,9 @@ public class ForgeEvents {
         if (ServerConfig.ENABLE_TEMPERATURE.get()) {
             TemperatureEventHandler.onPlayerRespawn(player);
         }
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            WeightEventHandler.onPlayerRespawn(player);
+        }
     }
 
     @SubscribeEvent
@@ -136,6 +143,9 @@ public class ForgeEvents {
             if (ServerConfig.ENABLE_TEMPERATURE.get()) {
                 TemperatureEventHandler.onPlayerRespawn(player);
             }
+            if (ServerConfig.ENABLE_WEIGHT.get()) {
+                WeightEventHandler.onPlayerRespawn(player);
+            }
         }
     }
 
@@ -149,6 +159,36 @@ public class ForgeEvents {
         PREV_WALK_DIST.remove(playerId);
         PhysiologyEventHandler.onPlayerLoggedOut(player);
         TemperatureEventHandler.onPlayerLoggedOut(player);
+        WeightEventHandler.onPlayerLoggedOut(player);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        WeightEventHandler.onPlayerLoggedIn(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onItemPickup(PlayerEvent.ItemPickupEvent event) {
+        WeightEventHandler.onItemPickup(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onItemToss(ItemTossEvent event) {
+        WeightEventHandler.onItemToss(event.getPlayer());
+    }
+
+    @SubscribeEvent
+    public static void onContainerClose(PlayerContainerEvent.Close event) {
+        if (event.getEntity() instanceof Player player) {
+            WeightEventHandler.onContainerClose(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            WeightEventHandler.onEquipmentChange(player);
+        }
     }
 
     private static final Map<UUID, Boolean> WAS_SLEEPING = new HashMap<>();

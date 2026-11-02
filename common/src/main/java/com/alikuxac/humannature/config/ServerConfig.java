@@ -73,4 +73,9 @@ public class ServerConfig {
     public static Supplier<Boolean> HYPOTHERMIA_MINING_FATIGUE = () -> true;
     public static Supplier<Double> HYPOTHERMIA_ATTACK_SPEED_PENALTY = () -> 0.35;
     public static Supplier<Double> HYPOTHERMIA_INTERACTION_RANGE_PENALTY = () -> 1.0;
+
+    public static Supplier<Double> WEIGHT_HEAVY_BLOCK_BASE = () -> 2.0;
+    public static Supplier<Double> WEIGHT_METALLIC_ITEM_BASE = () -> 0.8;
+    public static Supplier<Double> WEIGHT_DEFAULT_ITEM_BASE = () -> 0.2;
+    public static Supplier<Double> WEIGHT_LIGHT_ITEM_BASE = () -> 0.02;
 }
