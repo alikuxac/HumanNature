@@ -209,19 +209,69 @@ public class NeoForgeConfig {
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
-        serverBuilder.comment("Inventory weight density settings").push("weight");
+        serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
         ModConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
                 .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
-                .defineInRange("weightHeavyBlockBase", 2.0, 0.0, 100.0);
+                .defineInRange("weightHeavyBlockBase", 0.8, 0.0, 100.0);
         ModConfigSpec.DoubleValue weightMetallicItemBase = serverBuilder
                 .comment("Base weight multiplier for metallic items (#c:metallic_items)")
-                .defineInRange("weightMetallicItemBase", 0.8, 0.0, 100.0);
+                .defineInRange("weightMetallicItemBase", 0.4, 0.0, 100.0);
         ModConfigSpec.DoubleValue weightDefaultItemBase = serverBuilder
                 .comment("Base weight multiplier for uncategorized/standard items")
-                .defineInRange("weightDefaultItemBase", 0.2, 0.0, 100.0);
+                .defineInRange("weightDefaultItemBase", 0.05, 0.0, 100.0);
         ModConfigSpec.DoubleValue weightLightItemBase = serverBuilder
                 .comment("Base weight multiplier for light items (#c:light_items)")
-                .defineInRange("weightLightItemBase", 0.02, 0.0, 100.0);
+                .defineInRange("weightLightItemBase", 0.005, 0.0, 100.0);
+
+        ModConfigSpec.DoubleValue weightMaxCapacity = serverBuilder
+                .comment("Max weight carrying capacity baseline in kg")
+                .defineInRange("weightMaxCapacity", 500.0, 10.0, 10000.0);
+        ModConfigSpec.DoubleValue weightLightThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Light tier (0.50 = 50%)")
+                .defineInRange("weightLightThreshold", 0.50, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightMediumThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Medium tier (0.70 = 70%)")
+                .defineInRange("weightMediumThreshold", 0.70, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightOverburdenedThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Overburdened tier (0.85 = 85%)")
+                .defineInRange("weightOverburdenedThreshold", 0.85, 0.0, 1.0);
+
+        ModConfigSpec.DoubleValue weightLightSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Light tier (0.10 = -10%)")
+                .defineInRange("weightLightSpeedPenalty", 0.10, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightMediumSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Medium tier (0.25 = -25%)")
+                .defineInRange("weightMediumSpeedPenalty", 0.25, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightOverburdenedSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Overburdened tier (0.50 = -50%)")
+                .defineInRange("weightOverburdenedSpeedPenalty", 0.50, 0.0, 1.0);
+
+        ModConfigSpec.DoubleValue weightLightSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Light tier")
+                .defineInRange("weightLightSinkPull", 0.015, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightMediumSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Medium tier")
+                .defineInRange("weightMediumSinkPull", 0.035, 0.0, 1.0);
+        ModConfigSpec.DoubleValue weightOverburdenedSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Overburdened tier")
+                .defineInRange("weightOverburdenedSinkPull", 0.065, 0.0, 1.0);
+
+        ModConfigSpec.DoubleValue weightLightFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Light tier (1.25 = +25%)")
+                .defineInRange("weightLightFallDamageMultiplier", 1.25, 1.0, 10.0);
+        ModConfigSpec.DoubleValue weightMediumFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Medium tier (1.50 = +50%)")
+                .defineInRange("weightMediumFallDamageMultiplier", 1.50, 1.0, 10.0);
+        ModConfigSpec.DoubleValue weightOverburdenedFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Overburdened tier (2.00 = +100%)")
+                .defineInRange("weightOverburdenedFallDamageMultiplier", 2.00, 1.0, 10.0);
+
+        ModConfigSpec.DoubleValue burdenBearerCapacityBonus = serverBuilder
+                .comment("Carrying capacity bonus in kg per level of Burden Bearer potion effect")
+                .defineInRange("burdenBearerCapacityBonus", 150.0, 0.0, 10000.0);
+        ModConfigSpec.DoubleValue loadBearingCapacityBonus = serverBuilder
+                .comment("Carrying capacity bonus in kg per level of Load Bearing enchantment on equipped armor")
+                .defineInRange("loadBearingCapacityBonus", 50.0, 0.0, 10000.0);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
@@ -287,10 +337,26 @@ public class NeoForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
+
         ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = weightHeavyBlockBase::get;
         ServerConfig.WEIGHT_METALLIC_ITEM_BASE = weightMetallicItemBase::get;
         ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = weightDefaultItemBase::get;
         ServerConfig.WEIGHT_LIGHT_ITEM_BASE = weightLightItemBase::get;
+        ServerConfig.WEIGHT_MAX_CAPACITY = weightMaxCapacity::get;
+        ServerConfig.WEIGHT_LIGHT_THRESHOLD = weightLightThreshold::get;
+        ServerConfig.WEIGHT_MEDIUM_THRESHOLD = weightMediumThreshold::get;
+        ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD = weightOverburdenedThreshold::get;
+        ServerConfig.WEIGHT_LIGHT_SPEED_PENALTY = weightLightSpeedPenalty::get;
+        ServerConfig.WEIGHT_MEDIUM_SPEED_PENALTY = weightMediumSpeedPenalty::get;
+        ServerConfig.WEIGHT_OVERBURDENED_SPEED_PENALTY = weightOverburdenedSpeedPenalty::get;
+        ServerConfig.WEIGHT_LIGHT_SINK_PULL = weightLightSinkPull::get;
+        ServerConfig.WEIGHT_MEDIUM_SINK_PULL = weightMediumSinkPull::get;
+        ServerConfig.WEIGHT_OVERBURDENED_SINK_PULL = weightOverburdenedSinkPull::get;
+        ServerConfig.WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER = weightLightFallDamageMultiplier::get;
+        ServerConfig.WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER = weightMediumFallDamageMultiplier::get;
+        ServerConfig.WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER = weightOverburdenedFallDamageMultiplier::get;
+        ServerConfig.BURDEN_BEARER_CAPACITY_BONUS = burdenBearerCapacityBonus::get;
+        ServerConfig.LOAD_BEARING_CAPACITY_BONUS = loadBearingCapacityBonus::get;
 
         ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
 
@@ -310,11 +376,14 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
                 .comment("Show transient stamina / exertion bar above hotbar")
                 .define("enableStaminaHudOverlay", true);
+        ModConfigSpec.BooleanValue enableWeightTooltip = clientBuilder
+                .comment("Show individual and stack weight in item tooltips")
+                .define("enableWeightTooltip", true);
         ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
         ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
-                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, COMBINED)")
+                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
         ModConfigSpec.IntValue swappableHudX = clientBuilder
                 .comment("Screen X position of the swappable HUD mini box")
@@ -331,6 +400,9 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
+        ModConfigSpec.BooleanValue showActionBarWeightWarnings = clientBuilder
+                .comment("Show action bar warning when transitioning into Overburdened encumbrance")
+                .define("showActionBarWeightWarnings", true);
         clientBuilder.pop();
 
         clientBuilder.comment("Camera and visual effects").push("camera");
@@ -349,15 +421,17 @@ public class NeoForgeConfig {
         ClientConfig.HUD_Y = hudY::get;
         ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = enableToxinHudOverlay::get;
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
+        ClientConfig.ENABLE_WEIGHT_TOOLTIP = enableWeightTooltip::get;
         ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
         ClientConfig.DEFAULT_HUD_MODE = defaultHudMode::get;
         ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
         ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;
         ClientConfig.SHOW_METABOLIC_DETAILS = showMetabolicDetails::get;
         ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
+        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
+        ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = showActionBarWeightWarnings::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;
         ClientConfig.ENABLE_SHIVERING_CAMERA = enableShiveringCamera::get;
-        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
     }
 
     public static void register(ModContainer container) {

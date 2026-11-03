@@ -13,6 +13,10 @@ import com.alikuxac.humannature.modules.physiology.ToxinType;
 import com.alikuxac.humannature.modules.temperature.PlayerTemperatureData;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureModule;
+import com.alikuxac.humannature.modules.weight.EncumbranceTier;
+import com.alikuxac.humannature.modules.weight.PlayerWeightData;
+import com.alikuxac.humannature.modules.weight.WeightCalculator;
+import com.alikuxac.humannature.modules.weight.WeightModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -30,6 +34,7 @@ public class SwappableHudOverlay {
         PHYSIOLOGY("PHYSIOLOGY", "§a"),
         ENVIRONMENT("ENVIRONMENT", "§b"),
         INJURY("INJURY", "§c"),
+        WEIGHT("WEIGHT", "§6"),
         COMBINED("COMBINED", "§e");
 
         private final String displayName;
@@ -157,13 +162,68 @@ public class SwappableHudOverlay {
         boolean enablePhys = ServerConfig.ENABLE_PHYSIOLOGY.get();
         boolean enableTemp = ServerConfig.ENABLE_TEMPERATURE.get();
         boolean enableInj = ServerConfig.ENABLE_INJURY.get();
+        boolean enableWeight = ServerConfig.ENABLE_WEIGHT.get();
 
+        if (mode == HudMode.WEIGHT && !enableWeight) return;
         if (mode == HudMode.PHYSIOLOGY && !enablePhys) return;
-        if (mode == HudMode.COMBINED && !enablePhys && !enableTemp && !enableInj) return;
+        if (mode == HudMode.COMBINED && !enablePhys && !enableTemp && !enableInj && !enableWeight) return;
 
         List<String> lines = new ArrayList<>();
 
-        PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (mode == HudMode.WEIGHT) {
+            PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
+            float curWeight = weightData.getCachedWeight();
+            if (curWeight <= 0.0f) {
+                curWeight = WeightCalculator.calculateWeight(player);
+                weightData.setCachedWeight(curWeight);
+            }
+            float maxWeight = WeightCalculator.calculateMaxCapacity(player);
+            float ratio = maxWeight > 0 ? curWeight / maxWeight : 0.0f;
+            float weightPct = ratio * 100.0f;
+            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
+
+            lines.add("§6§l⚖ WEIGHT & ENCUMBRANCE");
+
+            int totalSegments = 12;
+            int filledSegments = Math.max(0, Math.min(totalSegments, Math.round(ratio * totalSegments)));
+            StringBuilder barBuilder = new StringBuilder();
+            for (int i = 0; i < totalSegments; i++) {
+                barBuilder.append(i < filledSegments ? "█" : "░");
+            }
+            lines.add(tier.getColorCode() + "[" + barBuilder + "] " + String.format("%.1f/%.0fkg §8(%.0f%%§8)", curWeight, maxWeight, weightPct));
+
+            lines.add("§7Tier: " + tier.getColorCode() + tier.getDisplayName());
+
+            if (tier == EncumbranceTier.NORMAL) {
+                lines.add("§a  ↳ Full Agility (No penalties)");
+            } else {
+                lines.add(String.format("§c  ↳ Speed: -%.0f%%", tier.getSpeedPenalty() * 100.0f));
+                if (tier.getSinkPull() > 0.0) {
+                    lines.add(String.format("§c  ↳ Sink Pull: +%.0f%%", tier.getSinkPull() * 1000.0f));
+                }
+                if (tier.getFallDamageMultiplier() > 1.0) {
+                    lines.add(String.format("§c  ↳ Fall Damage: %.2fx", tier.getFallDamageMultiplier()));
+                }
+            }
+
+            float armorWeight = 0.0f;
+            for (var stack : player.getInventory().armor) {
+                armorWeight += WeightCalculator.calculateStackWeight(stack);
+            }
+            float offhandWeight = 0.0f;
+            for (var stack : player.getInventory().offhand) {
+                offhandWeight += WeightCalculator.calculateStackWeight(stack);
+            }
+            float invWeight = Math.max(0.0f, curWeight - armorWeight - offhandWeight);
+
+            lines.add(String.format("§7Load: §fInv %.1fkg §8| §fArmor %.1fkg", invWeight, armorWeight));
+
+            double baseCap = ServerConfig.WEIGHT_MAX_CAPACITY != null ? ServerConfig.WEIGHT_MAX_CAPACITY.get() : 500.0;
+            if (maxWeight > baseCap) {
+                lines.add(String.format("§bBuffs: +%.0fkg bonus capacity", maxWeight - baseCap));
+            }
+        } else {
+            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
 
             if (enablePhys) {
                 if (physData.isAdrenalineActive()) {
@@ -252,7 +312,7 @@ public class SwappableHudOverlay {
                     int bpm = DiagnosticScreen.calculateHeartRateBpm(player, physData);
                     String bpmColor = bpm >= 140 ? "§c" : (bpm >= 110 ? "§6" : (bpm >= 80 ? "§e" : "§a"));
                     String bpmLabel = bpm >= 140 ? "Tachycardia" : (bpm >= 110 ? "Elevated" : (bpm >= 80 ? "Moderate" : "Normal"));
-                    lines.add("§7Heart Rate: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)");
+                    lines.add("§7Heart: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)");
                 }
 
                 float exertion = physData.getExertionScore();
@@ -336,6 +396,25 @@ public class SwappableHudOverlay {
                     lines.add("§7Temperature: §aWarm §8(Dry)");
                 }
             }
+
+            if (mode == HudMode.COMBINED && enableWeight) {
+                PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
+                float curWeight = weightData.getCachedWeight();
+                if (curWeight <= 0.0f) {
+                    curWeight = WeightCalculator.calculateWeight(player);
+                    weightData.setCachedWeight(curWeight);
+                }
+                float maxWeight = WeightCalculator.calculateMaxCapacity(player);
+                float ratio = maxWeight > 0 ? curWeight / maxWeight : 0.0f;
+                float weightPct = ratio * 100.0f;
+                EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
+
+                lines.add("§7Weight: " + tier.getColorCode() + String.format("%.1f/%.0fkg", curWeight, maxWeight) + " §8(" + tier.getColorCode() + tier.getDisplayName() + " " + String.format("%.0f%%", weightPct) + "§8)");
+                if (tier != EncumbranceTier.NORMAL) {
+                    lines.add(String.format("§c  ↳ -%.0f%% Spd, +%.0f%% Sink, %.2fx Fall", tier.getSpeedPenalty() * 100.0f, tier.getSinkPull() * 1000.0f, tier.getFallDamageMultiplier()));
+                }
+            }
+        }
 
         int screenWidth = guiGraphics.guiWidth();
         int screenHeight = guiGraphics.guiHeight();

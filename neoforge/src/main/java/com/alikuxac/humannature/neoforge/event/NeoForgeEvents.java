@@ -6,6 +6,10 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
+import com.alikuxac.humannature.neoforge.init.NeoForgeModPotions;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potions;
+import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -36,6 +40,14 @@ import java.util.UUID;
 
 @EventBusSubscriber(modid = HumanNatureCommon.MOD_ID)
 public class NeoForgeEvents {
+
+    @SubscribeEvent
+    public static void onRegisterBrewingRecipes(RegisterBrewingRecipesEvent event) {
+        event.getBuilder().addMix(Potions.AWKWARD, Items.ARMADILLO_SCUTE, NeoForgeModPotions.BURDEN_BEARER);
+        event.getBuilder().addMix(Potions.AWKWARD, Items.IRON_INGOT, NeoForgeModPotions.BURDEN_BEARER);
+        event.getBuilder().addMix(NeoForgeModPotions.BURDEN_BEARER, Items.REDSTONE, NeoForgeModPotions.LONG_BURDEN_BEARER);
+        event.getBuilder().addMix(NeoForgeModPotions.BURDEN_BEARER, Items.GLOWSTONE_DUST, NeoForgeModPotions.STRONG_BURDEN_BEARER);
+    }
 
     private static final Map<UUID, Float> PREV_WALK_DIST = new HashMap<>();
 
@@ -70,6 +82,12 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
         InjuryEventHandler.onLivingFall(event.getEntity(), event.getDistance(), event.getDamageMultiplier());
+        if (event.getEntity() instanceof Player player) {
+            float mult = WeightEventHandler.getFallDamageMultiplier(player);
+            if (mult > 1.0f) {
+                event.setDamageMultiplier(event.getDamageMultiplier() * mult);
+            }
+        }
     }
 
     @SubscribeEvent
@@ -243,6 +261,10 @@ public class NeoForgeEvents {
 
         if (ServerConfig.ENABLE_TEMPERATURE.get()) {
             TemperatureEventHandler.onPlayerTick(player);
+        }
+
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            WeightEventHandler.onPlayerTick(player);
         }
 
         if (ServerConfig.ENABLE_INJURY.get()) {

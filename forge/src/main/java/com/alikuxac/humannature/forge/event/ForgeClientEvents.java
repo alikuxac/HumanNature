@@ -5,6 +5,7 @@ import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
+import com.alikuxac.humannature.client.WeightTooltipHandler;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
 import com.alikuxac.humannature.client.gui.DiagnosticTabButton;
 import com.alikuxac.humannature.modules.injury.CameraLimpingHandler;
@@ -15,6 +16,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -56,6 +58,11 @@ public class ForgeClientEvents {
     }
 
     @SubscribeEvent
+    public static void onItemTooltip(ItemTooltipEvent event) {
+        WeightTooltipHandler.onTooltip(event.getItemStack(), event.getToolTip());
+    }
+
+    @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -72,4 +79,3 @@ public class ForgeClientEvents {
         SwappableHudOverlay.onClientTick(mc.player);
     }
 }
-

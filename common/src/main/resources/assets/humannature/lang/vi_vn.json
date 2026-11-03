@@ -9,5 +9,22 @@
   "key.humannature.cycle_hud": "Đổi Chế Độ HUD",
   "key.categories.humannature": "Human Nature",
   "itemGroup.humannature": "Human Nature",
-  "message.humannature.stomach_full": "§6⚠ Dạ dày đã quá no! Ăn thêm sẽ bị nôn mửa..."
+  "message.humannature.stomach_full": "§6⚠ Dạ dày đã quá no! Ăn thêm sẽ bị nôn mửa...",
+  "effect.humannature.burden_bearer": "Tải Trọng Vững Vàng",
+  "item.minecraft.potion.effect.humannature.burden_bearer": "Thuốc Tải Trọng Vững Vàng",
+  "item.minecraft.splash_potion.effect.humannature.burden_bearer": "Thuốc Ném Tải Trọng Vững Vàng",
+  "item.minecraft.lingering_potion.effect.humannature.burden_bearer": "Thuốc Kéo Dài Tải Trọng Vững Vàng",
+  "item.minecraft.tipped_arrow.effect.humannature.burden_bearer": "Mũi Tên Tải Trọng Vững Vàng",
+  "item.minecraft.potion.effect.humannature.long_burden_bearer": "Thuốc Tải Trọng Vững Vàng",
+  "item.minecraft.splash_potion.effect.humannature.long_burden_bearer": "Thuốc Ném Tải Trọng Vững Vàng",
+  "item.minecraft.lingering_potion.effect.humannature.long_burden_bearer": "Thuốc Kéo Dài Tải Trọng Vững Vàng",
+  "item.minecraft.tipped_arrow.effect.humannature.long_burden_bearer": "Mũi Tên Tải Trọng Vững Vàng",
+  "item.minecraft.potion.effect.humannature.strong_burden_bearer": "Thuốc Tải Trọng Vững Vàng",
+  "item.minecraft.splash_potion.effect.humannature.strong_burden_bearer": "Thuốc Ném Tải Trọng Vững Vàng",
+  "item.minecraft.lingering_potion.effect.humannature.strong_burden_bearer": "Thuốc Kéo Dài Tải Trọng Vững Vàng",
+  "item.minecraft.tipped_arrow.effect.humannature.strong_burden_bearer": "Mũi Tên Tải Trọng Vững Vàng",
+  "enchantment.humannature.load_bearing": "Tải Lực",
+  "tooltip.humannature.weight_single": "Khối lượng: %s kg",
+  "tooltip.humannature.weight_stack": "Khối lượng: %s kg (%s kg/cái)",
+  "tooltip.humannature.weight_container": "Khối lượng: %s kg (Vật phẩm: %s kg)"
 }

@@ -2,12 +2,23 @@ package com.alikuxac.humannature.modules.weight;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 public class WeightCalculator {
     public static final TagKey<Item> COMMON_HEAVY_BLOCKS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "heavy_blocks"));
@@ -43,19 +54,89 @@ public class WeightCalculator {
         return total;
     }
 
-    public static float calculateStackWeight(ItemStack stack) {
-        if (stack.isEmpty()) return 0.0f;
+    public static float getItemWeight(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0.0f;
 
         float baseWeight;
         if (stack.is(COMMON_HEAVY_BLOCKS) || stack.is(MOD_HEAVY_BLOCKS)) {
-            baseWeight = ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get().floatValue();
+            baseWeight = ServerConfig.WEIGHT_HEAVY_BLOCK_BASE != null ? ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get().floatValue() : 0.8f;
         } else if (stack.is(COMMON_METALLIC_ITEMS) || stack.is(MOD_METALLIC_ITEMS)) {
-            baseWeight = ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get().floatValue();
+            baseWeight = ServerConfig.WEIGHT_METALLIC_ITEM_BASE != null ? ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get().floatValue() : 0.4f;
         } else if (stack.is(COMMON_LIGHT_ITEMS) || stack.is(MOD_LIGHT_ITEMS)) {
-            baseWeight = ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get().floatValue();
+            baseWeight = ServerConfig.WEIGHT_LIGHT_ITEM_BASE != null ? ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get().floatValue() : 0.05f;
         } else {
-            baseWeight = ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get().floatValue();
+            baseWeight = ServerConfig.WEIGHT_DEFAULT_ITEM_BASE != null ? ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get().floatValue() : 0.1f;
         }
-        return stack.getCount() * baseWeight;
+        return baseWeight;
+    }
+
+    public static float getContentsWeight(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0.0f;
+        float contents = 0.0f;
+
+        ItemContainerContents container = stack.get(DataComponents.CONTAINER);
+        if (container != null) {
+            for (ItemStack content : container.nonEmptyItems()) {
+                contents += calculateStackWeight(content) * stack.getCount();
+            }
+        }
+
+        BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
+        if (bundle != null) {
+            for (ItemStack content : bundle.items()) {
+                contents += calculateStackWeight(content) * stack.getCount();
+            }
+        }
+
+        return contents;
+    }
+
+    public static float calculateStackWeight(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0.0f;
+        float total = stack.getCount() * getItemWeight(stack);
+        total += getContentsWeight(stack);
+        return total;
+    }
+
+    public static float calculateMaxCapacity(Player player) {
+        double base = ServerConfig.WEIGHT_MAX_CAPACITY != null ? ServerConfig.WEIGHT_MAX_CAPACITY.get() : 500.0;
+        if (player == null) return (float) base;
+
+        double bonus = 0.0;
+
+        if (com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER != null) {
+            Holder<net.minecraft.world.effect.MobEffect> burdenHolder = com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER.get();
+            if (burdenHolder != null) {
+                MobEffectInstance burden = player.getEffect(burdenHolder);
+                if (burden != null) {
+                    double perLvl = ServerConfig.BURDEN_BEARER_CAPACITY_BONUS != null ? ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get() : 150.0;
+                    bonus += (burden.getAmplifier() + 1) * perLvl;
+                }
+            }
+        }
+
+        double loadBearingBonus = ServerConfig.LOAD_BEARING_CAPACITY_BONUS != null ? ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get() : 50.0;
+        EquipmentSlot[] armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+        for (EquipmentSlot slot : armorSlots) {
+            ItemStack armor = player.getItemBySlot(slot);
+            int lvl = getEnchantmentLevel(armor, com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
+            if (lvl > 0) {
+                bonus += lvl * loadBearingBonus;
+            }
+        }
+
+        return (float) Math.max(50.0, base + bonus);
+    }
+
+    public static int getEnchantmentLevel(ItemStack stack, ResourceKey<Enchantment> enchantmentKey) {
+        if (stack == null || stack.isEmpty()) return 0;
+        ItemEnchantments enchantments = stack.get(DataComponents.ENCHANTMENTS);
+        if (enchantments == null) return 0;
+        for (Holder<Enchantment> holder : enchantments.keySet()) {
+            if (holder.is(enchantmentKey)) {
+                return enchantments.getLevel(holder);
+            }
+        }
+        return 0;
     }
 }

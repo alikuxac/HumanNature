@@ -14,6 +14,10 @@ import com.alikuxac.humannature.modules.physiology.ToxinType;
 import com.alikuxac.humannature.modules.temperature.PlayerTemperatureData;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureModule;
+import com.alikuxac.humannature.modules.weight.EncumbranceTier;
+import com.alikuxac.humannature.modules.weight.PlayerWeightData;
+import com.alikuxac.humannature.modules.weight.WeightCalculator;
+import com.alikuxac.humannature.modules.weight.WeightModule;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.client.Minecraft;
@@ -116,12 +120,9 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderOutline(bx, by, box.width(), box.height(), isHovered ? 0xFFFFFFFF : 0xFF222222);
         }
 
-        int infoX = leftPos + 88;
+        int infoX = leftPos + 84;
         int infoWidth = (leftPos + GUI_WIDTH - 12) - infoX;
         int curY = topPos + 30;
-
-        guiGraphics.drawString(this.font, "§7Status Overview:", infoX, curY, 0xAAAAAA, false);
-        curY += 13;
 
         int totalFractures = 0;
         for (LimbType limb : LimbType.values()) {
@@ -132,8 +133,6 @@ public class DiagnosticScreen extends Screen {
         if (totalFractures == 0) {
             guiGraphics.drawString(this.font, "§a✔ All limbs healthy", infoX, curY, 0x55FF55, false);
             curY += 12;
-            guiGraphics.drawString(this.font, "§8No fractures detected.", infoX, curY, 0x888888, false);
-            curY += 14;
         } else {
             guiGraphics.drawString(this.font, "§c⚠ " + totalFractures + " Fractured Limb(s)", infoX, curY, 0xFF5555, false);
             curY += 13;
@@ -155,13 +154,89 @@ public class DiagnosticScreen extends Screen {
         List<Component> exertionTooltip = null;
         List<Component> heartRateTooltip = null;
         List<Component> metabolismTooltip = null;
+        List<Component> weightTooltip = null;
+
+        if (ServerConfig.ENABLE_WEIGHT.get() || ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
+            curY += 3;
+        }
+
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
+            float curWeight = weightData.getCachedWeight();
+            if (curWeight <= 0.0f) {
+                curWeight = WeightCalculator.calculateWeight(player);
+                weightData.setCachedWeight(curWeight);
+            }
+            float maxWeight = WeightCalculator.calculateMaxCapacity(player);
+            float baseWeight = ServerConfig.WEIGHT_MAX_CAPACITY != null ? ServerConfig.WEIGHT_MAX_CAPACITY.get().floatValue() : 500.0f;
+            float ratio = maxWeight > 0 ? curWeight / maxWeight : 0.0f;
+            float weightPct = ratio * 100.0f;
+            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
+
+            String weightText = "§7Weight: " + tier.getColorCode() + String.format("%.1f/%.0fkg §8(%s)", curWeight, maxWeight, tier.getDisplayName());
+            int weightLabelY = curY;
+            guiGraphics.drawString(this.font, weightText, infoX, curY, 0xFFFFFF, false);
+            curY += 9;
+
+            int barHeight = 2;
+            int barY = curY;
+            int barWidth = infoWidth;
+            guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
+            guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
+
+            int filledWeightWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, ratio)));
+            int barColor = switch (tier) {
+                case OVERBURDENED -> 0xFFFF4444;
+                case MEDIUM -> 0xFFFFAA00;
+                case LIGHT -> 0xFFFFFF55;
+                default -> 0xFF55FF55;
+            };
+            if (filledWeightWidth > 0) {
+                guiGraphics.fill(infoX, barY, infoX + filledWeightWidth, barY + barHeight, barColor);
+            }
+            curY += barHeight + 3;
+
+            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= weightLabelY && mouseY <= barY + barHeight + 2) {
+                weightTooltip = new ArrayList<>();
+                weightTooltip.add(Component.literal("§6Inventory Weight: " + tier.getColorCode() + String.format("%.1f / %.1f kg (%.1f%%)", curWeight, maxWeight, weightPct)));
+                weightTooltip.add(Component.literal("§7Status: " + tier.getColorCode() + tier.getDisplayName()));
+
+                if (Math.abs(maxWeight - baseWeight) > 0.5f) {
+                    weightTooltip.add(Component.literal(String.format("§7Base Capacity: %.0f kg", baseWeight)));
+                    if (com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER != null) {
+                        var holder = com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER.get();
+                        if (holder != null) {
+                            var burden = player.getEffect(holder);
+                            if (burden != null) {
+                                double bonus = (burden.getAmplifier() + 1) * (ServerConfig.BURDEN_BEARER_CAPACITY_BONUS != null ? ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get() : 150.0);
+                                weightTooltip.add(Component.literal(String.format("§a• Burden Bearer (Potion): +%.0f kg", bonus)));
+                            }
+                        }
+                    }
+                    int totalLoadBearing = 0;
+                    for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                        totalLoadBearing += WeightCalculator.getEnchantmentLevel(player.getItemBySlot(slot), com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
+                    }
+                    if (totalLoadBearing > 0) {
+                        double bonus = totalLoadBearing * (ServerConfig.LOAD_BEARING_CAPACITY_BONUS != null ? ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get() : 50.0);
+                        weightTooltip.add(Component.literal(String.format("§b• Load Bearing (Armor): +%.0f kg", bonus)));
+                    }
+                }
+                if (tier == EncumbranceTier.NORMAL) {
+                    weightTooltip.add(Component.literal("§a✔ Unencumbered: Full mobility & baseline physics"));
+                } else {
+                    weightTooltip.add(Component.literal(String.format("§c• Speed Penalty: -%.0f%% Movement Speed", tier.getSpeedPenalty() * 100.0f)));
+                    weightTooltip.add(Component.literal(String.format("§c• Water Sinking: +%.0f%% Sink Pull", tier.getSinkPull() * 1000.0f)));
+                    weightTooltip.add(Component.literal(String.format("§c• Fall Impact: %.2fx Fall Damage", tier.getFallDamageMultiplier())));
+                }
+                weightTooltip.add(Component.literal("§8Light ≥50% | Medium ≥70% | Overburdened ≥85%"));
+            }
+        }
 
         if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
             int barWidth = infoWidth;
-
-            guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
-            curY += 3;
 
             if (PhysiologyModule.isSleepDeprivationEnabled()) {
                 float fatigueScore = physData.getFatigueScore();
@@ -287,7 +362,7 @@ public class DiagnosticScreen extends Screen {
                 }
 
                 String exertionText = "§7Stamina: " + statusColor + String.format("%.0f%%", 100.0f - exertion)
-                        + " §8(" + statusLabel + (isCramped ? " §c| Cramp" : "") + "§8)";
+                        + " §8(" + (isCramped ? "§cCramp" : statusLabel) + "§8)";
 
                 int exertionLabelY = curY;
                 guiGraphics.drawString(this.font, exertionText, infoX, curY, 0xFFFFFF, false);
@@ -347,7 +422,7 @@ public class DiagnosticScreen extends Screen {
             }
 
             int hrLabelY = curY;
-            String hrText = "§7Heart Rate: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)";
+            String hrText = "§7Heart: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)";
             guiGraphics.drawString(this.font, hrText, infoX, curY, 0xFFFFFF, false);
             curY += 9;
 
@@ -589,6 +664,8 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
         } else if (heartRateTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, heartRateTooltip, mouseX, mouseY);
+        } else if (weightTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, weightTooltip, mouseX, mouseY);
         } else if (metabolismTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, metabolismTooltip, mouseX, mouseY);
         }

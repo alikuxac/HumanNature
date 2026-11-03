@@ -74,8 +74,28 @@ public class ServerConfig {
     public static Supplier<Double> HYPOTHERMIA_ATTACK_SPEED_PENALTY = () -> 0.35;
     public static Supplier<Double> HYPOTHERMIA_INTERACTION_RANGE_PENALTY = () -> 1.0;
 
-    public static Supplier<Double> WEIGHT_HEAVY_BLOCK_BASE = () -> 2.0;
-    public static Supplier<Double> WEIGHT_METALLIC_ITEM_BASE = () -> 0.8;
-    public static Supplier<Double> WEIGHT_DEFAULT_ITEM_BASE = () -> 0.2;
-    public static Supplier<Double> WEIGHT_LIGHT_ITEM_BASE = () -> 0.02;
+    public static Supplier<Double> WEIGHT_HEAVY_BLOCK_BASE = () -> 0.8;
+    public static Supplier<Double> WEIGHT_METALLIC_ITEM_BASE = () -> 0.4;
+    public static Supplier<Double> WEIGHT_DEFAULT_ITEM_BASE = () -> 0.05;
+    public static Supplier<Double> WEIGHT_LIGHT_ITEM_BASE = () -> 0.005;
+
+    public static Supplier<Double> WEIGHT_MAX_CAPACITY = () -> 500.0;
+    public static Supplier<Double> WEIGHT_LIGHT_THRESHOLD = () -> 0.50;
+    public static Supplier<Double> WEIGHT_MEDIUM_THRESHOLD = () -> 0.70;
+    public static Supplier<Double> WEIGHT_OVERBURDENED_THRESHOLD = () -> 0.85;
+
+    public static Supplier<Double> WEIGHT_LIGHT_SPEED_PENALTY = () -> 0.10;
+    public static Supplier<Double> WEIGHT_MEDIUM_SPEED_PENALTY = () -> 0.25;
+    public static Supplier<Double> WEIGHT_OVERBURDENED_SPEED_PENALTY = () -> 0.50;
+
+    public static Supplier<Double> WEIGHT_LIGHT_SINK_PULL = () -> 0.015;
+    public static Supplier<Double> WEIGHT_MEDIUM_SINK_PULL = () -> 0.035;
+    public static Supplier<Double> WEIGHT_OVERBURDENED_SINK_PULL = () -> 0.065;
+
+    public static Supplier<Double> WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER = () -> 1.25;
+    public static Supplier<Double> WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER = () -> 1.50;
+    public static Supplier<Double> WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER = () -> 2.00;
+
+    public static Supplier<Double> BURDEN_BEARER_CAPACITY_BONUS = () -> 150.0;
+    public static Supplier<Double> LOAD_BEARING_CAPACITY_BONUS = () -> 50.0;
 }

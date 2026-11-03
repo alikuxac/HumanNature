@@ -9,5 +9,22 @@
   "key.humannature.cycle_hud": "Cycle HUD Mode",
   "key.categories.humannature": "Human Nature",
   "itemGroup.humannature": "Human Nature",
-  "message.humannature.stomach_full": "§6⚠ Stomach completely full! Eating again will cause vomiting..."
+  "message.humannature.stomach_full": "§6⚠ Stomach completely full! Eating again will cause vomiting...",
+  "effect.humannature.burden_bearer": "Burden Bearer",
+  "item.minecraft.potion.effect.humannature.burden_bearer": "Potion of Burden Bearing",
+  "item.minecraft.splash_potion.effect.humannature.burden_bearer": "Splash Potion of Burden Bearing",
+  "item.minecraft.lingering_potion.effect.humannature.burden_bearer": "Lingering Potion of Burden Bearing",
+  "item.minecraft.tipped_arrow.effect.humannature.burden_bearer": "Arrow of Burden Bearing",
+  "item.minecraft.potion.effect.humannature.long_burden_bearer": "Potion of Burden Bearing",
+  "item.minecraft.splash_potion.effect.humannature.long_burden_bearer": "Splash Potion of Burden Bearing",
+  "item.minecraft.lingering_potion.effect.humannature.long_burden_bearer": "Lingering Potion of Burden Bearing",
+  "item.minecraft.tipped_arrow.effect.humannature.long_burden_bearer": "Arrow of Burden Bearing",
+  "item.minecraft.potion.effect.humannature.strong_burden_bearer": "Potion of Burden Bearing",
+  "item.minecraft.splash_potion.effect.humannature.strong_burden_bearer": "Splash Potion of Burden Bearing",
+  "item.minecraft.lingering_potion.effect.humannature.strong_burden_bearer": "Lingering Potion of Burden Bearing",
+  "item.minecraft.tipped_arrow.effect.humannature.strong_burden_bearer": "Arrow of Burden Bearing",
+  "enchantment.humannature.load_bearing": "Load Bearing",
+  "tooltip.humannature.weight_single": "Weight: %s kg",
+  "tooltip.humannature.weight_stack": "Weight: %s kg (%s kg each)",
+  "tooltip.humannature.weight_container": "Weight: %s kg (Contents: %s kg)"
 }

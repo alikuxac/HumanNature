@@ -44,11 +44,16 @@ dependencies {
     implementation project(':common')
 }
 
+sourceSets.main.resources {
+    srcDir project(':common').file('src/main/resources')
+}
+
 
 
 tasks.named('jar', Jar) {
     archiveFileName = "${rootProject.mod_id}-${rootProject.mod_version}+mc${rootProject.minecraft_version}-forge.jar"
     from project(':common').sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes([
             'Specification-Title'     : rootProject.mod_id,
@@ -63,6 +68,7 @@ tasks.named('jar', Jar) {
 }
 
 tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     var replaceProperties = [
             minecraft_version      : rootProject.minecraft_version,
             minecraft_version_range: rootProject.minecraft_version_range,

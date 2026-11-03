@@ -6,6 +6,10 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
+import com.alikuxac.humannature.forge.init.ForgeModPotions;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraftforge.event.brewing.BrewingRecipeRegisterEvent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
@@ -36,6 +40,14 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = HumanNatureCommon.MOD_ID)
 public class ForgeEvents {
+
+    @SubscribeEvent
+    public static void onBrewingRecipeRegister(BrewingRecipeRegisterEvent event) {
+        event.getBuilder().addMix(Potions.AWKWARD, Items.ARMADILLO_SCUTE, ForgeModPotions.BURDEN_BEARER.getHolder().get());
+        event.getBuilder().addMix(Potions.AWKWARD, Items.IRON_INGOT, ForgeModPotions.BURDEN_BEARER.getHolder().get());
+        event.getBuilder().addMix(ForgeModPotions.BURDEN_BEARER.getHolder().get(), Items.REDSTONE, ForgeModPotions.LONG_BURDEN_BEARER.getHolder().get());
+        event.getBuilder().addMix(ForgeModPotions.BURDEN_BEARER.getHolder().get(), Items.GLOWSTONE_DUST, ForgeModPotions.STRONG_BURDEN_BEARER.getHolder().get());
+    }
 
     private static final Map<UUID, Float> PREV_WALK_DIST = new HashMap<>();
 
@@ -70,6 +82,12 @@ public class ForgeEvents {
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
         InjuryEventHandler.onLivingFall(event.getEntity(), event.getDistance(), event.getDamageMultiplier());
+        if (event.getEntity() instanceof Player player) {
+            float mult = WeightEventHandler.getFallDamageMultiplier(player);
+            if (mult > 1.0f) {
+                event.setDamageMultiplier(event.getDamageMultiplier() * mult);
+            }
+        }
     }
 
     @SubscribeEvent
@@ -244,6 +262,10 @@ public class ForgeEvents {
 
         if (ServerConfig.ENABLE_TEMPERATURE.get()) {
             TemperatureEventHandler.onPlayerTick(player);
+        }
+
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            WeightEventHandler.onPlayerTick(player);
         }
 
         if (ServerConfig.ENABLE_INJURY.get()) {

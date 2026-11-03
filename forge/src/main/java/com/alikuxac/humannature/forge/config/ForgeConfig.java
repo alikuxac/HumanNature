@@ -211,74 +211,72 @@ public class ForgeConfig {
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
         serverBuilder.pop();
 
-        serverBuilder.comment("Inventory weight density settings").push("weight");
+        serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
         ForgeConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
                 .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
-                .defineInRange("weightHeavyBlockBase", 2.0, 0.0, 100.0);
+                .defineInRange("weightHeavyBlockBase", 0.8, 0.0, 100.0);
         ForgeConfigSpec.DoubleValue weightMetallicItemBase = serverBuilder
                 .comment("Base weight multiplier for metallic items (#c:metallic_items)")
-                .defineInRange("weightMetallicItemBase", 0.8, 0.0, 100.0);
+                .defineInRange("weightMetallicItemBase", 0.4, 0.0, 100.0);
         ForgeConfigSpec.DoubleValue weightDefaultItemBase = serverBuilder
                 .comment("Base weight multiplier for uncategorized/standard items")
-                .defineInRange("weightDefaultItemBase", 0.2, 0.0, 100.0);
+                .defineInRange("weightDefaultItemBase", 0.05, 0.0, 100.0);
         ForgeConfigSpec.DoubleValue weightLightItemBase = serverBuilder
                 .comment("Base weight multiplier for light items (#c:light_items)")
-                .defineInRange("weightLightItemBase", 0.02, 0.0, 100.0);
+                .defineInRange("weightLightItemBase", 0.005, 0.0, 100.0);
+
+        ForgeConfigSpec.DoubleValue weightMaxCapacity = serverBuilder
+                .comment("Max weight carrying capacity baseline in kg")
+                .defineInRange("weightMaxCapacity", 500.0, 10.0, 10000.0);
+        ForgeConfigSpec.DoubleValue weightLightThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Light tier (0.50 = 50%)")
+                .defineInRange("weightLightThreshold", 0.50, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightMediumThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Medium tier (0.70 = 70%)")
+                .defineInRange("weightMediumThreshold", 0.70, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightOverburdenedThreshold = serverBuilder
+                .comment("Encumbrance ratio threshold for Overburdened tier (0.85 = 85%)")
+                .defineInRange("weightOverburdenedThreshold", 0.85, 0.0, 1.0);
+
+        ForgeConfigSpec.DoubleValue weightLightSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Light tier (0.10 = -10%)")
+                .defineInRange("weightLightSpeedPenalty", 0.10, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightMediumSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Medium tier (0.25 = -25%)")
+                .defineInRange("weightMediumSpeedPenalty", 0.25, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightOverburdenedSpeedPenalty = serverBuilder
+                .comment("Speed reduction fraction for Overburdened tier (0.50 = -50%)")
+                .defineInRange("weightOverburdenedSpeedPenalty", 0.50, 0.0, 1.0);
+
+        ForgeConfigSpec.DoubleValue weightLightSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Light tier")
+                .defineInRange("weightLightSinkPull", 0.015, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightMediumSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Medium tier")
+                .defineInRange("weightMediumSinkPull", 0.035, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue weightOverburdenedSinkPull = serverBuilder
+                .comment("Downward delta Y pull force in water for Overburdened tier")
+                .defineInRange("weightOverburdenedSinkPull", 0.065, 0.0, 1.0);
+
+        ForgeConfigSpec.DoubleValue weightLightFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Light tier (1.25 = +25%)")
+                .defineInRange("weightLightFallDamageMultiplier", 1.25, 1.0, 10.0);
+        ForgeConfigSpec.DoubleValue weightMediumFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Medium tier (1.50 = +50%)")
+                .defineInRange("weightMediumFallDamageMultiplier", 1.50, 1.0, 10.0);
+        ForgeConfigSpec.DoubleValue weightOverburdenedFallDamageMultiplier = serverBuilder
+                .comment("Fall damage multiplier for Overburdened tier (2.00 = +100%)")
+                .defineInRange("weightOverburdenedFallDamageMultiplier", 2.00, 1.0, 10.0);
+
+        ForgeConfigSpec.DoubleValue burdenBearerCapacityBonus = serverBuilder
+                .comment("Carrying capacity bonus in kg per level of Burden Bearer potion effect")
+                .defineInRange("burdenBearerCapacityBonus", 150.0, 0.0, 10000.0);
+        ForgeConfigSpec.DoubleValue loadBearingCapacityBonus = serverBuilder
+                .comment("Carrying capacity bonus in kg per level of Load Bearing enchantment on equipped armor")
+                .defineInRange("loadBearingCapacityBonus", 50.0, 0.0, 10000.0);
         serverBuilder.pop();
 
         SERVER_SPEC = serverBuilder.build();
-
-        ForgeConfigSpec.Builder clientBuilder = new ForgeConfigSpec.Builder();
-
-        clientBuilder.comment("HUD overlay settings").push("hud");
-        ForgeConfigSpec.BooleanValue enableHudOverlay = clientBuilder
-                .comment("Show injury & trauma status HUD overlay on screen")
-                .define("enableHudOverlay", true);
-        ForgeConfigSpec.IntValue hudX = clientBuilder
-                .comment("Screen X position of the injury HUD overlay")
-                .defineInRange("hudX", 10, 0, 10000);
-        ForgeConfigSpec.IntValue hudY = clientBuilder
-                .comment("Screen Y position of the injury HUD overlay")
-                .defineInRange("hudY", 10, 0, 10000);
-        ForgeConfigSpec.BooleanValue enableToxinHudOverlay = clientBuilder
-                .comment("Show transient soulslike toxin buildup bar above hotbar")
-                .define("enableToxinHudOverlay", true);
-        ForgeConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
-                .comment("Show transient stamina / exertion bar above hotbar")
-                .define("enableStaminaHudOverlay", true);
-        ForgeConfigSpec.BooleanValue enableSwappableHud = clientBuilder
-                .comment("Enable swappable HUD module cycling")
-                .define("enableSwappableHud", true);
-        ForgeConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
-                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, COMBINED)")
-                .define("defaultHudMode", "COMBINED");
-        ForgeConfigSpec.IntValue swappableHudX = clientBuilder
-                .comment("Screen X position of the swappable HUD mini box")
-                .defineInRange("swappableHudX", 10, 0, 10000);
-        ForgeConfigSpec.IntValue swappableHudY = clientBuilder
-                .comment("Screen Y position of the swappable HUD mini box")
-                .defineInRange("swappableHudY", 10, 0, 10000);
-        ForgeConfigSpec.BooleanValue showMetabolicDetails = clientBuilder
-                .comment("Show detailed rows for digestion buffer, calcium bone healing, and cramps")
-                .define("showMetabolicDetails", true);
-        ForgeConfigSpec.BooleanValue showCardiacHud = clientBuilder
-                .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
-                .define("showCardiacHud", true);
-        ForgeConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
-                .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
-                .define("showActionBarEnvironmentCues", true);
-        clientBuilder.pop();
-
-        clientBuilder.comment("Camera and visual effects").push("camera");
-        ForgeConfigSpec.BooleanValue enableCameraLimping = clientBuilder
-                .comment("Enable camera wobble/tilt effect when walking with fractured leg(s)")
-                .define("enableCameraLimping", true);
-        ForgeConfigSpec.BooleanValue enableShiveringCamera = clientBuilder
-                .comment("Enable subtle shivering screen tremor when suffering from hypothermia")
-                .define("enableShiveringCamera", true);
-        clientBuilder.pop();
-
-        CLIENT_SPEC = clientBuilder.build();
 
         ServerConfig.ENABLE_INJURY = safe(SERVER_SPEC, enableInjury, true);
         ServerConfig.ENABLE_TEMPERATURE = safe(SERVER_SPEC, enableTemperature, true);
@@ -341,25 +339,101 @@ public class ForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = safe(SERVER_SPEC, hypothermiaMiningFatigue, true);
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, hypothermiaAttackSpeedPenalty, 0.35);
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = safe(SERVER_SPEC, hypothermiaInteractionRangePenalty, 1.0);
-        ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = safe(SERVER_SPEC, weightHeavyBlockBase, 2.0);
-        ServerConfig.WEIGHT_METALLIC_ITEM_BASE = safe(SERVER_SPEC, weightMetallicItemBase, 0.8);
-        ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = safe(SERVER_SPEC, weightDefaultItemBase, 0.2);
-        ServerConfig.WEIGHT_LIGHT_ITEM_BASE = safe(SERVER_SPEC, weightLightItemBase, 0.02);
+
+        ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = safe(SERVER_SPEC, weightHeavyBlockBase, 0.8);
+        ServerConfig.WEIGHT_METALLIC_ITEM_BASE = safe(SERVER_SPEC, weightMetallicItemBase, 0.4);
+        ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = safe(SERVER_SPEC, weightDefaultItemBase, 0.05);
+        ServerConfig.WEIGHT_LIGHT_ITEM_BASE = safe(SERVER_SPEC, weightLightItemBase, 0.005);
+        ServerConfig.WEIGHT_MAX_CAPACITY = safe(SERVER_SPEC, weightMaxCapacity, 500.0);
+        ServerConfig.WEIGHT_LIGHT_THRESHOLD = safe(SERVER_SPEC, weightLightThreshold, 0.50);
+        ServerConfig.WEIGHT_MEDIUM_THRESHOLD = safe(SERVER_SPEC, weightMediumThreshold, 0.70);
+        ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD = safe(SERVER_SPEC, weightOverburdenedThreshold, 0.85);
+        ServerConfig.WEIGHT_LIGHT_SPEED_PENALTY = safe(SERVER_SPEC, weightLightSpeedPenalty, 0.10);
+        ServerConfig.WEIGHT_MEDIUM_SPEED_PENALTY = safe(SERVER_SPEC, weightMediumSpeedPenalty, 0.25);
+        ServerConfig.WEIGHT_OVERBURDENED_SPEED_PENALTY = safe(SERVER_SPEC, weightOverburdenedSpeedPenalty, 0.50);
+        ServerConfig.WEIGHT_LIGHT_SINK_PULL = safe(SERVER_SPEC, weightLightSinkPull, 0.015);
+        ServerConfig.WEIGHT_MEDIUM_SINK_PULL = safe(SERVER_SPEC, weightMediumSinkPull, 0.035);
+        ServerConfig.WEIGHT_OVERBURDENED_SINK_PULL = safe(SERVER_SPEC, weightOverburdenedSinkPull, 0.065);
+        ServerConfig.WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER = safe(SERVER_SPEC, weightLightFallDamageMultiplier, 1.25);
+        ServerConfig.WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER = safe(SERVER_SPEC, weightMediumFallDamageMultiplier, 1.50);
+        ServerConfig.WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER = safe(SERVER_SPEC, weightOverburdenedFallDamageMultiplier, 2.00);
+        ServerConfig.BURDEN_BEARER_CAPACITY_BONUS = safe(SERVER_SPEC, burdenBearerCapacityBonus, 150.0);
+        ServerConfig.LOAD_BEARING_CAPACITY_BONUS = safe(SERVER_SPEC, loadBearingCapacityBonus, 50.0);
+
+        ForgeConfigSpec.Builder clientBuilder = new ForgeConfigSpec.Builder();
+
+        clientBuilder.comment("HUD overlay settings").push("hud");
+        ForgeConfigSpec.BooleanValue enableHudOverlay = clientBuilder
+                .comment("Show injury & trauma status HUD overlay on screen")
+                .define("enableHudOverlay", true);
+        ForgeConfigSpec.IntValue hudX = clientBuilder
+                .comment("Screen X position of the injury HUD overlay")
+                .defineInRange("hudX", 10, 0, 10000);
+        ForgeConfigSpec.IntValue hudY = clientBuilder
+                .comment("Screen Y position of the injury HUD overlay")
+                .defineInRange("hudY", 10, 0, 10000);
+        ForgeConfigSpec.BooleanValue enableToxinHudOverlay = clientBuilder
+                .comment("Show transient soulslike toxin buildup bar above hotbar")
+                .define("enableToxinHudOverlay", true);
+        ForgeConfigSpec.BooleanValue enableStaminaHudOverlay = clientBuilder
+                .comment("Show transient stamina / exertion bar above hotbar")
+                .define("enableStaminaHudOverlay", true);
+        ForgeConfigSpec.BooleanValue enableWeightTooltip = clientBuilder
+                .comment("Show individual and stack weight in item tooltips")
+                .define("enableWeightTooltip", true);
+        ForgeConfigSpec.BooleanValue enableSwappableHud = clientBuilder
+                .comment("Enable swappable HUD module cycling")
+                .define("enableSwappableHud", true);
+        ForgeConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
+                .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
+                .define("defaultHudMode", "COMBINED");
+        ForgeConfigSpec.IntValue swappableHudX = clientBuilder
+                .comment("Screen X position of the swappable HUD mini box")
+                .defineInRange("swappableHudX", 10, 0, 10000);
+        ForgeConfigSpec.IntValue swappableHudY = clientBuilder
+                .comment("Screen Y position of the swappable HUD mini box")
+                .defineInRange("swappableHudY", 10, 0, 10000);
+        ForgeConfigSpec.BooleanValue showMetabolicDetails = clientBuilder
+                .comment("Show detailed rows for digestion buffer, calcium bone healing, and cramps")
+                .define("showMetabolicDetails", true);
+        ForgeConfigSpec.BooleanValue showCardiacHud = clientBuilder
+                .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
+                .define("showCardiacHud", true);
+        ForgeConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
+                .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
+                .define("showActionBarEnvironmentCues", true);
+        ForgeConfigSpec.BooleanValue showActionBarWeightWarnings = clientBuilder
+                .comment("Show action bar warning when transitioning into Overburdened encumbrance")
+                .define("showActionBarWeightWarnings", true);
+        clientBuilder.pop();
+
+        clientBuilder.comment("Camera and visual effects").push("camera");
+        ForgeConfigSpec.BooleanValue enableCameraLimping = clientBuilder
+                .comment("Enable camera wobble/tilt effect when walking with fractured leg(s)")
+                .define("enableCameraLimping", true);
+        ForgeConfigSpec.BooleanValue enableShiveringCamera = clientBuilder
+                .comment("Enable subtle shivering screen tremor when suffering from hypothermia")
+                .define("enableShiveringCamera", true);
+        clientBuilder.pop();
+
+        CLIENT_SPEC = clientBuilder.build();
 
         ClientConfig.ENABLE_HUD_OVERLAY = safe(CLIENT_SPEC, enableHudOverlay, true);
         ClientConfig.HUD_X = safe(CLIENT_SPEC, hudX, 10);
         ClientConfig.HUD_Y = safe(CLIENT_SPEC, hudY, 10);
         ClientConfig.ENABLE_TOXIN_HUD_OVERLAY = safe(CLIENT_SPEC, enableToxinHudOverlay, true);
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = safe(CLIENT_SPEC, enableStaminaHudOverlay, true);
+        ClientConfig.ENABLE_WEIGHT_TOOLTIP = safe(CLIENT_SPEC, enableWeightTooltip, true);
         ClientConfig.ENABLE_SWAPPABLE_HUD = safe(CLIENT_SPEC, enableSwappableHud, true);
         ClientConfig.DEFAULT_HUD_MODE = safe(CLIENT_SPEC, defaultHudMode, "COMBINED");
         ClientConfig.SWAPPABLE_HUD_X = safe(CLIENT_SPEC, swappableHudX, 10);
         ClientConfig.SWAPPABLE_HUD_Y = safe(CLIENT_SPEC, swappableHudY, 10);
         ClientConfig.SHOW_METABOLIC_DETAILS = safe(CLIENT_SPEC, showMetabolicDetails, true);
         ClientConfig.SHOW_CARDIAC_HUD = safe(CLIENT_SPEC, showCardiacHud, true);
+        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = safe(CLIENT_SPEC, showActionBarEnvironmentCues, true);
+        ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = safe(CLIENT_SPEC, showActionBarWeightWarnings, true);
         ClientConfig.ENABLE_CAMERA_LIMPING = safe(CLIENT_SPEC, enableCameraLimping, true);
         ClientConfig.ENABLE_SHIVERING_CAMERA = safe(CLIENT_SPEC, enableShiveringCamera, true);
-        ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = safe(CLIENT_SPEC, showActionBarEnvironmentCues, true);
     }
 
     private static <T> Supplier<T> safe(ForgeConfigSpec spec, ForgeConfigSpec.ConfigValue<T> value, T fallback) {
@@ -371,4 +445,3 @@ public class ForgeConfig {
         context.registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
     }
 }
-

@@ -6,6 +6,7 @@ import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
+
 import net.minecraft.client.gui.LayeredDraw.Layer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -38,6 +39,7 @@ public class ForgeClientModEvents {
             try {
                 StaminaHudOverlay.render(guiGraphics, partialTick);
             } catch (Throwable ignored) {}
+
             try {
                 SwappableHudOverlay.render(guiGraphics, partialTick);
             } catch (Throwable ignored) {}

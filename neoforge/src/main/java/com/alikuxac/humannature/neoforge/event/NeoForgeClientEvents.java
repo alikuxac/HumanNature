@@ -5,6 +5,8 @@ import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
+
+import com.alikuxac.humannature.client.WeightTooltipHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
@@ -21,6 +23,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 @EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
 public class NeoForgeClientEvents {
@@ -44,7 +47,13 @@ public class NeoForgeClientEvents {
         InjuryHudOverlay.render(event.getGuiGraphics(), partialTick);
         ToxinHudOverlay.render(event.getGuiGraphics(), partialTick);
         StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
+
         SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
+    }
+
+    @SubscribeEvent
+    public static void onItemTooltip(ItemTooltipEvent event) {
+        WeightTooltipHandler.onTooltip(event.getItemStack(), event.getToolTip());
     }
 
     private static DiagnosticTabButton tabButton = null;
