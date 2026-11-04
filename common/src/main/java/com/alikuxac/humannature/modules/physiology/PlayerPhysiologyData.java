@@ -34,6 +34,9 @@ public class PlayerPhysiologyData {
     private float indigestionBuildup;
     private int indigestionTickCounter;
     private int calciumAbsorptionTicks;
+    private byte calcium;
+    private byte carbohydrates;
+    private byte vitamins;
 
     private int claustrophobiaTicks;
     private boolean panicking;
@@ -74,6 +77,9 @@ public class PlayerPhysiologyData {
         this.indigestionBuildup = 0.0f;
         this.indigestionTickCounter = 0;
         this.calciumAbsorptionTicks = 0;
+        this.calcium = 0;
+        this.carbohydrates = 0;
+        this.vitamins = 0;
 
         this.claustrophobiaTicks = 0;
         this.panicking = false;
@@ -429,8 +435,6 @@ public class PlayerPhysiologyData {
         this.crampRestTicks = 0;
     }
 
-    // --- AIO-529: Digestion & Gut Reflex ---
-
     public float getPendingNutrition() {
         return pendingNutrition;
     }
@@ -568,9 +572,46 @@ public class PlayerPhysiologyData {
 
     public void resetCalcium() {
         this.calciumAbsorptionTicks = 0;
+        this.calcium = 0;
+        this.carbohydrates = 0;
+        this.vitamins = 0;
     }
 
-    // --- AIO-530: Claustrophobia Panic & Sensory Cues ---
+    public byte getCalcium() {
+        return calcium;
+    }
+
+    public void setCalcium(int calcium) {
+        this.calcium = (byte) Math.max(0, Math.min(100, calcium));
+    }
+
+    public void modifyCalcium(int delta) {
+        setCalcium(this.calcium + delta);
+    }
+
+    public byte getCarbohydrates() {
+        return carbohydrates;
+    }
+
+    public void setCarbohydrates(int carbohydrates) {
+        this.carbohydrates = (byte) Math.max(0, Math.min(100, carbohydrates));
+    }
+
+    public void modifyCarbohydrates(int delta) {
+        setCarbohydrates(this.carbohydrates + delta);
+    }
+
+    public byte getVitamins() {
+        return vitamins;
+    }
+
+    public void setVitamins(int vitamins) {
+        this.vitamins = (byte) Math.max(0, Math.min(100, vitamins));
+    }
+
+    public void modifyVitamins(int delta) {
+        setVitamins(this.vitamins + delta);
+    }
 
     public int getClaustrophobiaTicks() {
         return claustrophobiaTicks;
@@ -617,8 +658,6 @@ public class PlayerPhysiologyData {
         this.panicking = false;
         this.panicSoundCooldown = 0;
     }
-
-    // --- AIO-531: Adrenaline Surge & Pain Shock ---
 
     public int getAdrenalineTicks() {
         return adrenalineTicks;

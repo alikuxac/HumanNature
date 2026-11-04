@@ -270,7 +270,7 @@ public class PhysiologyEventHandler {
 
         if (PhysiologyModule.isCalciumHealingEnabled()) {
             if (stack.is(CALCIUM_FOODS) || stack.is(ModItems.BONE_BROTH.get()) || stack.is(Items.MILK_BUCKET)) {
-                data.setCalciumAbsorptionTicks(3600); // 3 minutes
+                data.setCalciumAbsorptionTicks(3600);
                 if (stack.is(ModItems.BONE_BROTH.get())) {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.8F);
