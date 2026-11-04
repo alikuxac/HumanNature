@@ -41,6 +41,7 @@ repositories {
 
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}")
+    implementation project(':api')
     implementation project(':common')
 }
 
@@ -48,11 +49,10 @@ sourceSets.main.resources {
     srcDir project(':common').file('src/main/resources')
 }
 
-
-
 tasks.named('jar', Jar) {
     archiveFileName = "${rootProject.mod_id}-${rootProject.mod_version}+mc${rootProject.minecraft_version}-forge.jar"
     from project(':common').sourceSets.main.output
+    from project(':api').sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes([

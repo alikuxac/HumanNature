@@ -4,7 +4,7 @@ import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
-import com.alikuxac.humannature.modules.injury.LimbType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

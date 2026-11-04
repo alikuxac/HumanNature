@@ -1,4 +1,4 @@
-package com.alikuxac.humannature.modules.injury;
+package com.alikuxac.humannature.api.injury;
 
 public enum InjuryTier {
     NONE(0, 0.0, 0.0, false, false),
@@ -39,3 +39,4 @@ public enum InjuryTier {
         return forceCrawl;
     }
 }
+

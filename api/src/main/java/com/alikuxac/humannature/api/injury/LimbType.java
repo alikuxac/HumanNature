@@ -1,4 +1,4 @@
-package com.alikuxac.humannature.modules.injury;
+package com.alikuxac.humannature.api.injury;
 
 public enum LimbType {
     HEAD(0, "Head"),
@@ -26,8 +26,11 @@ public enum LimbType {
 
     public static LimbType fromIndex(int index) {
         for (LimbType type : values()) {
-            if (type.index == index) return type;
+            if (type.index == index) {
+                return type;
+            }
         }
         return HEAD;
     }
 }
+

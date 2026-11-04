@@ -2,6 +2,7 @@ package com.alikuxac.humannature.forge;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.forge.config.ForgeConfig;
+import com.alikuxac.humannature.forge.event.ForgeHumanNatureEventBridge;
 import com.alikuxac.humannature.forge.init.ForgeCreativeTabs;
 import com.alikuxac.humannature.forge.init.ForgeModEffects;
 import com.alikuxac.humannature.forge.init.ForgeModItems;
@@ -16,6 +17,7 @@ public class HumanNatureForge {
         IEventBus modBus = context.getModEventBus();
         ForgeConfig.register(context);
         HumanNatureCommon.init();
+        ForgeHumanNatureEventBridge.register();
         ForgeModEffects.register(modBus);
         ForgeModPotions.register(modBus);
         ForgeModItems.register(modBus);

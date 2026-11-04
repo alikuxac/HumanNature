@@ -47,11 +47,13 @@ neoForge {
         "${rootProject.mod_id}" {
             sourceSet sourceSets.main
             sourceSet project(':common').sourceSets.main
+            sourceSet project(':api').sourceSets.main
         }
     }
 }
 
 dependencies {
+    implementation project(':api')
     implementation project(':common')
 }
 
@@ -62,6 +64,7 @@ sourceSets.main.resources {
 tasks.named('jar', Jar) {
     archiveFileName = "${rootProject.mod_id}-${rootProject.mod_version}+mc${rootProject.minecraft_version}-neoforge.jar"
     from project(':common').sourceSets.main.output
+    from project(':api').sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 

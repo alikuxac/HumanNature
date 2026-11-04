@@ -1,5 +1,7 @@
 package com.alikuxac.humannature.modules.injury;
 
+import com.alikuxac.humannature.api.injury.InjuryTier;
+
 import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
 import net.minecraft.util.Mth;

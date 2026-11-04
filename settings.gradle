@@ -11,6 +11,7 @@ pluginManagement {
 
 rootProject.name = 'human-nature'
 
+include 'api'
 include 'common'
 include 'neoforge'
 include 'forge'

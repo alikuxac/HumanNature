@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.modules.injury;
 
+import com.alikuxac.humannature.api.injury.LimbType;
 import java.util.Arrays;
 
 public class PlayerInjuryData {

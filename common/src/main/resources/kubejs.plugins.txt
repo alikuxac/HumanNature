@@ -1,0 +1,2 @@
+com.alikuxac.humannature.compat.kubejs.HumanNatureKubeJSPlugin humannature
+

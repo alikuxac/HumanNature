@@ -71,3 +71,10 @@ jobs:
           name: ${{ steps.properties.outputs.mod_id }}-${{ steps.properties.outputs.mod_version }}-build.${{ github.run_number }}+mc${{ steps.properties.outputs.mc_version }}-forge.jar
           path: forge/build/libs/*.jar
           retention-days: 14
+
+      - name: Upload API Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.properties.outputs.mod_id }}-api-${{ steps.properties.outputs.mod_version }}-build.${{ github.run_number }}+mc${{ steps.properties.outputs.mc_version }}.jar
+          path: api/build/libs/*.jar
+          retention-days: 14

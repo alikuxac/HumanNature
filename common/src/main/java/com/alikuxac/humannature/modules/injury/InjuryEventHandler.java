@@ -1,5 +1,8 @@
 package com.alikuxac.humannature.modules.injury;
 
+import com.alikuxac.humannature.api.injury.InjuryTier;
+import com.alikuxac.humannature.api.injury.LimbType;
+
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.item.SplintItem;

@@ -51,7 +51,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Mod Jars (NeoForge & Forge)
+      - name: Build Mod & API Jars
         run: |
           chmod +x ./gradlew
           ./gradlew build -Pmod_version="${{ steps.parse_release.outputs.mod_version }}"
@@ -60,11 +60,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            api/build/libs/humannature-api-*.jar
             neoforge/build/libs/humannature-*.jar
             forge/build/libs/humannature-*.jar
           tag_name: ${{ steps.parse_release.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger JitPack Build
+        run: |
+          curl -s "https://jitpack.io/api/builds/${{ github.repository }}/${{ steps.parse_release.outputs.tag_name }}" || true
 
       - name: Publish Forge Mod
         uses: Kir-Antipov/mc-publish@v3.3.1

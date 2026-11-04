@@ -1,0 +1,52 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '1.0.21'
+}
+
+version = rootProject.mod_version
+group = rootProject.mod_group_id
+
+base {
+    archivesName = "${rootProject.mod_id}-api"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(rootProject.java_version)
+    }
+    withSourcesJar()
+}
+
+neoForge {
+    version = rootProject.neo_version
+
+    parchment {
+        minecraftVersion = rootProject.parchment_minecraft_version
+        mappingsVersion = rootProject.parchment_mappings_version
+    }
+}
+
+tasks.named('jar', Jar) {
+    archiveFileName = "${rootProject.mod_id}-api-${rootProject.mod_version}+mc${rootProject.minecraft_version}.jar"
+}
+
+tasks.named('sourcesJar', Jar) {
+    archiveFileName = "${rootProject.mod_id}-api-${rootProject.mod_version}+mc${rootProject.minecraft_version}-sources.jar"
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = rootProject.mod_group_id
+            artifactId = "${rootProject.mod_id}-api"
+            version = rootProject.mod_version
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+

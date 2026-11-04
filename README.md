@@ -64,8 +64,29 @@ Tracks sleep deprivation and fatigue buildup over time, triggering brief involun
 
 ## Documentation
 For detailed module specifications, refer to:
+- [Extensibility API & Event Pipeline](docs/API.md)
 - [Injury System Documentation](docs/INJURY_SYSTEM.md)
 - [Physiology System Documentation](docs/PHYSIOLOGY_SYSTEM.md)
+- [Temperature System Documentation](docs/TEMPERATURE_SYSTEM.md)
+
+---
+
+## Addon Developer API
+
+Human Nature provides a standalone API JAR published to JitPack for third-party mod and addon developers.
+
+```groovy
+repositories {
+    mavenCentral()
+    maven { url = 'https://jitpack.io' }
+}
+
+dependencies {
+    compileOnly "com.github.alikuxac.human-nature:humannature-api:${humannature_version}"
+}
+```
+
+See [API Documentation](docs/API.md) for accessor interfaces, event bus registration, and KubeJS examples.
 
 ---
 
@@ -82,7 +103,10 @@ For detailed module specifications, refer to:
 ```bash
 ./gradlew clean build
 ```
-Output JAR files will be generated in `neoforge/build/libs/` and `forge/build/libs/`.
+Output JAR files are generated in:
+- `api/build/libs/` (`humannature-api-*+mc1.21.1.jar`)
+- `neoforge/build/libs/` (`humannature-*+mc1.21.1-neoforge.jar`)
+- `forge/build/libs/` (`humannature-*+mc1.21.1-forge.jar`)
 
 ---
 

@@ -5,7 +5,7 @@ import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
-import com.alikuxac.humannature.modules.injury.LimbType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;

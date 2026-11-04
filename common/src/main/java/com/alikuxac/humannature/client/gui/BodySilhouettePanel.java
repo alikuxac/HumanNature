@@ -3,7 +3,7 @@ package com.alikuxac.humannature.client.gui;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
-import com.alikuxac.humannature.modules.injury.LimbType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.mojang.blaze3d.systems.RenderSystem;
