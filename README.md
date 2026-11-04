@@ -55,7 +55,7 @@
 Simulates body temperature based on biome, weather, time of day, nearby heat sources, and armor.
 
 ### 4. Weight & Encumbrance
-Scales stamina use and movement speed by carried inventory weight.
+Calculates load across inventory, armor, and container contents against player capacity. Applies tiered penalties to movement speed, water sinking, and fall damage, with capacity-expanding potions and enchantments.
 
 ### 5. Physiology
 Tracks sleep deprivation and fatigue buildup over time, triggering brief involuntary darkness blinks during motion when reaching severe exhaustion.
@@ -68,6 +68,7 @@ For detailed module specifications, refer to:
 - [Injury System Documentation](docs/INJURY_SYSTEM.md)
 - [Physiology System Documentation](docs/PHYSIOLOGY_SYSTEM.md)
 - [Temperature System Documentation](docs/TEMPERATURE_SYSTEM.md)
+- [Weight & Encumbrance System Documentation](docs/WEIGHT_SYSTEM.md)
 
 ---
 
