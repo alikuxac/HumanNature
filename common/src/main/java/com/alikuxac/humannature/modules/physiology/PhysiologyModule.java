@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.modules.physiology;
 
+import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
@@ -60,6 +61,10 @@ public class PhysiologyModule implements IHumanModule {
 
     public static boolean isAdrenalineEnabled() {
         return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_ADRENALINE_SURGE.get();
+    }
+
+    public static boolean isBloodSystemEnabled() {
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_BLOOD_SYSTEM.get();
     }
 
     public static boolean isErupting(UUID playerId) {
@@ -203,6 +208,44 @@ public class PhysiologyModule implements IHumanModule {
     public static boolean isAdrenalineActive(UUID playerId) {
         PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
         return data != null && data.isAdrenalineActive();
+    }
+
+    public static short getBloodVolume(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getBloodVolume() : PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME;
+    }
+
+    public static void setBloodVolume(UUID playerId, short volume) {
+        getOrCreatePhysiologyData(playerId).setBloodVolume(volume);
+    }
+
+    public static void modifyBloodVolume(UUID playerId, int delta) {
+        getOrCreatePhysiologyData(playerId).modifyBloodVolume(delta);
+    }
+
+    public static BloodType getBloodType(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getBloodType() : null;
+    }
+
+    public static void setBloodType(UUID playerId, BloodType bloodType) {
+        getOrCreatePhysiologyData(playerId).setBloodType(bloodType);
+    }
+
+    public static byte getBleedingTier(UUID playerId) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        return data != null ? data.getBleedingTier() : 0;
+    }
+
+    public static void setBleedingTier(UUID playerId, byte tier) {
+        getOrCreatePhysiologyData(playerId).setBleedingTier(tier);
+    }
+
+    public static void resetBlood(UUID playerId, boolean resetBloodType) {
+        PlayerPhysiologyData data = PHYSIOLOGY_DATA.get(playerId);
+        if (data != null) {
+            data.resetBlood(resetBloodType);
+        }
     }
 
     public static void clearData(UUID playerId) {

@@ -1,10 +1,21 @@
 package com.alikuxac.humannature.modules.physiology;
 
+import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.config.ServerConfig;
 
 public class PlayerPhysiologyData {
+    public static final short DEFAULT_BLOOD_VOLUME = 5000;
+    public static final short MAX_BLOOD_VOLUME = 5000;
+
     private long awakeTicks;
     private int blinkCooldown;
+
+    private short bloodVolume;
+    private BloodType bloodType;
+    private byte bleedingTier;
+    private short lastSyncedBloodVolume;
+    private byte lastSyncedBleedingTier;
+    private BloodType lastSyncedBloodType;
 
     private float toxinBuildup;
     private ToxinType lastToxinType;
@@ -88,6 +99,13 @@ public class PlayerPhysiologyData {
         this.adrenalineTicks = 0;
         this.adrenalineActive = false;
         this.adrenalineCooldownTicks = 0;
+
+        this.bloodVolume = DEFAULT_BLOOD_VOLUME;
+        this.bloodType = null;
+        this.bleedingTier = 0;
+        this.lastSyncedBloodVolume = -1;
+        this.lastSyncedBleedingTier = -1;
+        this.lastSyncedBloodType = null;
     }
 
     public PlayerPhysiologyData(long initialAwakeTicks) {
@@ -160,6 +178,7 @@ public class PlayerPhysiologyData {
         resetCalcium();
         resetPanic();
         resetAdrenaline();
+        resetBlood(false);
     }
 
     public float getToxinBuildup() {
@@ -704,5 +723,69 @@ public class PlayerPhysiologyData {
         this.adrenalineTicks = 0;
         this.adrenalineActive = false;
         this.adrenalineCooldownTicks = 0;
+    }
+
+    public short getBloodVolume() {
+        return bloodVolume;
+    }
+
+    public void setBloodVolume(short bloodVolume) {
+        this.bloodVolume = (short) Math.max(0, Math.min(MAX_BLOOD_VOLUME, bloodVolume));
+    }
+
+    public void modifyBloodVolume(int delta) {
+        setBloodVolume((short) (this.bloodVolume + delta));
+    }
+
+    public BloodType getBloodType() {
+        return bloodType;
+    }
+
+    public void setBloodType(BloodType bloodType) {
+        this.bloodType = bloodType;
+    }
+
+    public byte getBleedingTier() {
+        return bleedingTier;
+    }
+
+    public void setBleedingTier(byte bleedingTier) {
+        this.bleedingTier = (byte) Math.max(0, Math.min(3, bleedingTier));
+    }
+
+    public boolean isBleeding() {
+        return this.bleedingTier > 0;
+    }
+
+    public short getLastSyncedBloodVolume() {
+        return lastSyncedBloodVolume;
+    }
+
+    public byte getLastSyncedBleedingTier() {
+        return lastSyncedBleedingTier;
+    }
+
+    public BloodType getLastSyncedBloodType() {
+        return lastSyncedBloodType;
+    }
+
+    public boolean isBloodDeltaThresholdExceeded(int deltaThreshold) {
+        if (this.lastSyncedBloodType != this.bloodType) return true;
+        if (this.lastSyncedBleedingTier != this.bleedingTier) return true;
+        return Math.abs(this.bloodVolume - this.lastSyncedBloodVolume) >= deltaThreshold;
+    }
+
+    public void markBloodSynced() {
+        this.lastSyncedBloodVolume = this.bloodVolume;
+        this.lastSyncedBleedingTier = this.bleedingTier;
+        this.lastSyncedBloodType = this.bloodType;
+    }
+
+    public void resetBlood(boolean resetBloodType) {
+        this.bloodVolume = DEFAULT_BLOOD_VOLUME;
+        this.bleedingTier = 0;
+        if (resetBloodType) {
+            this.bloodType = null;
+        }
     }
 }

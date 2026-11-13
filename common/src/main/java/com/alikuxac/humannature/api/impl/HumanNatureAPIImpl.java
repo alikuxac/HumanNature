@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.api.impl;
 
 import com.alikuxac.humannature.api.HumanNatureAPI;
+import com.alikuxac.humannature.api.blood.IBloodAccessor;
 import com.alikuxac.humannature.api.injury.IInjuryAccessor;
 import com.alikuxac.humannature.api.nutrition.INutritionAccessor;
 import com.alikuxac.humannature.api.temperature.ITemperatureAccessor;
@@ -11,6 +12,7 @@ public class HumanNatureAPIImpl extends HumanNatureAPI {
     private final INutritionAccessor nutrition = new NutritionAccessorImpl();
     private final ITemperatureAccessor temperature = new TemperatureAccessorImpl();
     private final IWeightAccessor weight = new WeightAccessorImpl();
+    private final IBloodAccessor blood = new BloodAccessorImpl();
 
     @Override
     public IInjuryAccessor getInjury() {
@@ -30,6 +32,11 @@ public class HumanNatureAPIImpl extends HumanNatureAPI {
     @Override
     public IWeightAccessor getWeight() {
         return weight;
+    }
+
+    @Override
+    public IBloodAccessor getBlood() {
+        return blood;
     }
 }
 

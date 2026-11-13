@@ -1,14 +1,18 @@
 package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
+import com.alikuxac.humannature.network.SyncBloodPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -122,6 +126,10 @@ public class PhysiologyEventHandler {
 
         if (PhysiologyModule.isAdrenalineEnabled()) {
             handleAdrenalineTick(player, data);
+        }
+
+        if (PhysiologyModule.isBloodSystemEnabled()) {
+            handleBloodTick(player, data);
         }
 
         if (data.hasCalciumBuff()) {
@@ -387,18 +395,106 @@ public class PhysiologyEventHandler {
 
     public static void onPlayerDeath(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        data.resetBlood(false);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
         removeExertionModifiers(player);
     }
 
     public static void onPlayerRespawn(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        initOrLoadPlayerBlood(player, data);
+        data.resetBlood(false);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
         removeExertionModifiers(player);
     }
 
     public static void onPlayerLoggedOut(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+    }
+
+    public static void initOrLoadPlayerBlood(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        if (persisted.contains("HumanNatureBlood")) {
+            CompoundTag bloodTag = persisted.getCompound("HumanNatureBlood");
+            if (bloodTag.contains("BloodType")) {
+                byte typeId = bloodTag.getByte("BloodType");
+                data.setBloodType(BloodType.fromId(typeId));
+                short vol = bloodTag.contains("BloodVolume") ? bloodTag.getShort("BloodVolume") : PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME;
+                data.setBloodVolume(vol);
+                byte bleed = bloodTag.contains("BleedingTier") ? bloodTag.getByte("BleedingTier") : 0;
+                data.setBleedingTier(bleed);
+                syncBloodToClient(player, data);
+                return;
+            }
+        }
+        // First initialization for the player
+        BloodType rolled = BloodType.getRandom(player.getRandom());
+        data.setBloodType(rolled);
+        data.setBloodVolume(PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME);
+        data.setBleedingTier((byte) 0);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
+    }
+
+    public static void savePlayerBloodNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        CompoundTag bloodTag = persisted.getCompound("HumanNatureBlood");
+
+        if (data.getBloodType() != null) {
+            bloodTag.putByte("BloodType", data.getBloodType().getId());
+        }
+        bloodTag.putShort("BloodVolume", data.getBloodVolume());
+        bloodTag.putByte("BleedingTier", data.getBleedingTier());
+
+        persisted.put("HumanNatureBlood", bloodTag);
+        root.put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    public static void syncBloodToClient(Player player, PlayerPhysiologyData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            byte typeId = data.getBloodType() != null ? data.getBloodType().getId() : BloodType.O_POSITIVE.getId();
+            SyncBloodPayload payload = new SyncBloodPayload(data.getBloodVolume(), typeId, data.getBleedingTier());
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(payload));
+            data.markBloodSynced();
+        }
+    }
+
+    private static void handleBloodTick(Player player, PlayerPhysiologyData data) {
+        if (data.getBloodType() == null) {
+            initOrLoadPlayerBlood(player, data);
+        }
+
+        if (player.tickCount % 20 != 0) return;
+
+        byte bleedTier = data.getBleedingTier();
+        if (bleedTier > 0) {
+            int loss = switch (bleedTier) {
+                case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
+                case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
+                default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+            };
+            data.modifyBloodVolume(-loss);
+        } else if (data.getBloodVolume() < PlayerPhysiologyData.MAX_BLOOD_VOLUME && player.getFoodData().getFoodLevel() >= 18) {
+            int regen = ServerConfig.BLOOD_NATURAL_REGEN_PER_SEC.get();
+            data.modifyBloodVolume(regen);
+        }
+
+        int threshold = ServerConfig.BLOOD_SYNC_DELTA_THRESHOLD.get();
+        if (data.isBloodDeltaThresholdExceeded(threshold)) {
+            savePlayerBloodNbt(player, data);
+            syncBloodToClient(player, data);
+        }
     }
 
     private static void handlePhysicalExertionTick(Player player, PlayerPhysiologyData data, boolean isMoving, boolean isSleeping) {

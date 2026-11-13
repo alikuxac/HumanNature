@@ -56,6 +56,13 @@ public class ServerConfig {
     public static Supplier<Boolean> ENABLE_ADRENALINE_SURGE = () -> true;
     public static Supplier<Integer> ADRENALINE_SURGE_DURATION_TICKS = () -> 80;
 
+    public static Supplier<Boolean> ENABLE_BLOOD_SYSTEM = () -> true;
+    public static Supplier<Integer> BLOOD_SYNC_DELTA_THRESHOLD = () -> 25;
+    public static Supplier<Integer> BLOOD_NATURAL_REGEN_PER_SEC = () -> 2;
+    public static Supplier<Integer> BLEEDING_TIER_1_LOSS_PER_SEC = () -> 5;
+    public static Supplier<Integer> BLEEDING_TIER_2_LOSS_PER_SEC = () -> 15;
+    public static Supplier<Integer> BLEEDING_TIER_3_LOSS_PER_SEC = () -> 40;
+
     public static Supplier<Boolean> ENABLE_WETNESS_ACCUMULATION = () -> true;
     public static Supplier<Double> WETNESS_RAIN_ACCUMULATION_RATE = () -> 0.0025;
     public static Supplier<Double> WETNESS_WATER_ACCUMULATION_RATE = () -> 0.015;

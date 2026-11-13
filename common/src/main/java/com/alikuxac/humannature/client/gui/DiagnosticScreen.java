@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.client.gui;
 
+import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
@@ -155,6 +156,7 @@ public class DiagnosticScreen extends Screen {
         List<Component> heartRateTooltip = null;
         List<Component> metabolismTooltip = null;
         List<Component> weightTooltip = null;
+        List<Component> bloodTooltip = null;
 
         if (ServerConfig.ENABLE_WEIGHT.get() || ServerConfig.ENABLE_PHYSIOLOGY.get()) {
             guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
@@ -470,7 +472,65 @@ public class DiagnosticScreen extends Screen {
                 if (physData.getIndigestionBuildup() >= 50.0f) {
                     heartRateTooltip.add(Component.literal("§6• Gut Discomfort / Indigestion: +10 BPM"));
                 }
+                if (PhysiologyModule.isBloodSystemEnabled() && physData.getBloodVolume() < 4500) {
+                    double bloodBpm = ((4500.0 - physData.getBloodVolume()) / 4500.0) * 50.0;
+                    heartRateTooltip.add(Component.literal(String.format("§c• Hypovolemic Strain / Blood Loss: +%.0f BPM", bloodBpm)));
+                }
                 heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
+            }
+
+            if (PhysiologyModule.isBloodSystemEnabled()) {
+                short bloodVol = physData.getBloodVolume();
+                BloodType bloodType = physData.getBloodType();
+                byte bleedTier = physData.getBleedingTier();
+
+                String typeStr = bloodType != null ? bloodType.getDisplayName() : "Unknown";
+                String bleedStr = bleedTier > 0 ? "§cBleed " + bleedTier : "§aNormal";
+                String bloodColor = bloodVol >= 4000 ? "§c" : (bloodVol >= 2500 ? "§e" : "§4");
+
+                String bloodText = "§7Blood: " + bloodColor + bloodVol + "ml §8(" + typeStr + "§8, " + bleedStr + "§8)";
+                int bloodLabelY = curY;
+                guiGraphics.drawString(this.font, bloodText, infoX, curY, 0xFFFFFF, false);
+                curY += 9;
+
+                int bloodBarHeight = 2;
+                int bloodBarY = curY;
+                guiGraphics.fill(infoX, bloodBarY, infoX + barWidth, bloodBarY + bloodBarHeight, 0xFF101010);
+                guiGraphics.renderOutline(infoX, bloodBarY, barWidth, bloodBarHeight, 0xFF282828);
+
+                float bloodFraction = Math.max(0.0f, Math.min(1.0f, (float) bloodVol / 5000.0f));
+                int filledBloodWidth = (int) (barWidth * bloodFraction);
+                int bloodBarColor = bloodVol >= 4000 ? 0xFFDD2C00 : (bloodVol >= 2500 ? 0xFFFF6D00 : 0xFF880000);
+                if (filledBloodWidth > 0) {
+                    guiGraphics.fill(infoX, bloodBarY, infoX + filledBloodWidth, bloodBarY + bloodBarHeight, bloodBarColor);
+                }
+                curY += bloodBarHeight + 3;
+
+                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= bloodLabelY && mouseY <= bloodBarY + bloodBarHeight + 2) {
+                    bloodTooltip = new ArrayList<>();
+                    bloodTooltip.add(Component.literal("§c🩸 Blood Volume: " + bloodColor + bloodVol + " / 5,000 ml (" + String.format("%.0f%%", bloodFraction * 100.0f) + ")"));
+                    bloodTooltip.add(Component.literal("§7• ABO/Rh Type: §c" + typeStr));
+                    if (bloodType != null) {
+                        bloodTooltip.add(Component.literal("§8  ↳ Compatible Donor: " + (bloodType == BloodType.O_NEGATIVE ? "Universal Donor (All)" : "Specific Types")));
+                        bloodTooltip.add(Component.literal("§8  ↳ Compatible Recipient: " + (bloodType == BloodType.AB_POSITIVE ? "Universal Recipient (All)" : "Specific Types")));
+                    }
+                    if (bleedTier > 0) {
+                        int loss = switch (bleedTier) {
+                            case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                            case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
+                            case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
+                            default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                        };
+                        bloodTooltip.add(Component.literal("§c⚠ Active Hemorrhage: Tier " + bleedTier + " (-" + loss + " ml/s)"));
+                    } else {
+                        bloodTooltip.add(Component.literal("§a✔ Hemostasis: Intact (No active bleeding)"));
+                    }
+                    if (bloodVol < 2500) {
+                        bloodTooltip.add(Component.literal("§4⚠ Severe Hypovolemic Shock: Extreme risk of mortality"));
+                    } else if (bloodVol < 4000) {
+                        bloodTooltip.add(Component.literal("§e⚡ Moderate Hypovolemia: Compensatory Tachycardia"));
+                    }
+                }
             }
 
             // Compact metabolic and mental indicators
@@ -664,6 +724,8 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
         } else if (heartRateTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, heartRateTooltip, mouseX, mouseY);
+        } else if (bloodTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, bloodTooltip, mouseX, mouseY);
         } else if (weightTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, weightTooltip, mouseX, mouseY);
         } else if (metabolismTooltip != null) {
@@ -699,6 +761,10 @@ public class DiagnosticScreen extends Screen {
 
         if (physData.getIndigestionBuildup() >= 50.0f) {
             bpm += 10.0;
+        }
+
+        if (PhysiologyModule.isBloodSystemEnabled() && physData.getBloodVolume() < 4500) {
+            bpm += ((4500.0 - physData.getBloodVolume()) / 4500.0) * 50.0;
         }
 
         return (int) Math.round(Math.max(55.0, Math.min(205.0, bpm)));
