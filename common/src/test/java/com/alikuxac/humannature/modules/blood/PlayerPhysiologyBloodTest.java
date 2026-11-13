@@ -49,7 +49,6 @@ class PlayerPhysiologyBloodTest {
         assertEquals(3, data.getBleedingTier());
         assertTrue(data.isBleeding());
 
-        // Clamped at 3
         data.setBleedingTier((byte) 5);
         assertEquals(3, data.getBleedingTier());
 
@@ -68,25 +67,21 @@ class PlayerPhysiologyBloodTest {
         assertEquals(0, data.getLastSyncedBleedingTier());
         assertEquals(BloodType.O_POSITIVE, data.getLastSyncedBloodType());
 
-        // Delta under threshold 25 ml: should not exceed
         data.modifyBloodVolume(-10);
         assertFalse(data.isBloodDeltaThresholdExceeded(25));
 
-        // Delta >= 25 ml: threshold exceeded
-        data.modifyBloodVolume(-20); // total delta 30 ml
+        data.modifyBloodVolume(-20);
         assertTrue(data.isBloodDeltaThresholdExceeded(25));
 
         data.markBloodSynced();
         assertFalse(data.isBloodDeltaThresholdExceeded(25));
 
-        // Bleeding tier change immediately triggers threshold
         data.setBleedingTier((byte) 1);
         assertTrue(data.isBloodDeltaThresholdExceeded(25));
 
         data.markBloodSynced();
         assertFalse(data.isBloodDeltaThresholdExceeded(25));
 
-        // BloodType change immediately triggers threshold
         data.setBloodType(BloodType.A_NEGATIVE);
         assertTrue(data.isBloodDeltaThresholdExceeded(25));
     }
@@ -98,15 +93,75 @@ class PlayerPhysiologyBloodTest {
         data.setBloodVolume((short) 2500);
         data.setBleedingTier((byte) 2);
 
-        // Reset without resetting blood type (e.g. respawn)
         data.resetBlood(false);
         assertEquals(5000, data.getBloodVolume());
         assertEquals(0, data.getBleedingTier());
         assertEquals(BloodType.B_POSITIVE, data.getBloodType());
 
-        // Reset with blood type reset
         data.resetBlood(true);
         assertNull(data.getBloodType());
+        assertEquals(0, data.getClottingTicks());
+        assertEquals(0, data.getBloodRegenBoostTicks());
+    }
+
+    @Test
+    void testClottingCountdownOnTier1() {
+        PlayerPhysiologyData data = new PlayerPhysiologyData();
+
+        data.setBleedingTier((byte) 1);
+        assertEquals(1, data.getBleedingTier());
+        assertTrue(data.getClottingTicks() > 0);
+
+        int initialClotting = data.getClottingTicks();
+        data.decrementClottingTicks();
+        assertEquals(initialClotting - 1, data.getClottingTicks());
+
+        data.setBleedingTier((byte) 2);
+        assertEquals(2, data.getBleedingTier());
+        assertEquals(0, data.getClottingTicks());
+    }
+
+    @Test
+    void testExertionDoubledWhenBloodBelow80Percent() {
+        PlayerPhysiologyData data = new PlayerPhysiologyData();
+        assertEquals(5000, data.getBloodVolume());
+
+        data.addExertion(10.0f);
+        assertEquals(10.0f, data.getExertionScore(), 0.001f);
+
+        data.setBloodVolume((short) 3800);
+        data.addExertion(10.0f);
+        assertEquals(30.0f, data.getExertionScore(), 0.001f);
+    }
+
+    @Test
+    void testBloodRegenBoostCountdown() {
+        PlayerPhysiologyData data = new PlayerPhysiologyData();
+        assertEquals(0, data.getBloodRegenBoostTicks());
+
+        data.setBloodRegenBoostTicks(1200);
+        assertEquals(1200, data.getBloodRegenBoostTicks());
+
+        data.decrementBloodRegenBoostTicks();
+        assertEquals(1199, data.getBloodRegenBoostTicks());
+    }
+
+    @Test
+    void testMaxHealthSafetyFloorCalculation() {
+        double h0 = 20.0;
+        double floor = 4.0;
+
+        double lost50 = 0.50;
+        double target50 = Math.max(floor, h0 * (1.0 - lost50));
+        assertEquals(10.0, target50, 0.001);
+
+        double lost90 = 0.90;
+        double target90 = Math.max(floor, h0 * (1.0 - lost90));
+        assertEquals(4.0, target90, 0.001);
+
+        double hBuffed = 40.0;
+        double lost95 = 0.95;
+        double targetBuffed = Math.max(floor, hBuffed * (1.0 - lost95));
+        assertEquals(4.0, targetBuffed, 0.001);
     }
 }
-

@@ -13,6 +13,8 @@ public class PlayerPhysiologyData {
     private short bloodVolume;
     private BloodType bloodType;
     private byte bleedingTier;
+    private int clottingTicks;
+    private int bloodRegenBoostTicks;
     private short lastSyncedBloodVolume;
     private byte lastSyncedBleedingTier;
     private BloodType lastSyncedBloodType;
@@ -103,6 +105,8 @@ public class PlayerPhysiologyData {
         this.bloodVolume = DEFAULT_BLOOD_VOLUME;
         this.bloodType = null;
         this.bleedingTier = 0;
+        this.clottingTicks = 0;
+        this.bloodRegenBoostTicks = 0;
         this.lastSyncedBloodVolume = -1;
         this.lastSyncedBleedingTier = -1;
         this.lastSyncedBloodType = null;
@@ -276,7 +280,11 @@ public class PlayerPhysiologyData {
     }
 
     public void addExertion(float amount) {
-        setExertionScore(this.exertionScore + Math.max(0.0f, amount));
+        float effective = amount;
+        if (this.bloodVolume < 4000) {
+            effective *= 2.0f;
+        }
+        setExertionScore(this.exertionScore + Math.max(0.0f, effective));
     }
 
     public void decayExertion(float amount) {
@@ -750,7 +758,41 @@ public class PlayerPhysiologyData {
     }
 
     public void setBleedingTier(byte bleedingTier) {
-        this.bleedingTier = (byte) Math.max(0, Math.min(3, bleedingTier));
+        byte newTier = (byte) Math.max(0, Math.min(3, bleedingTier));
+        if (newTier == 1 && this.bleedingTier != 1) {
+            this.clottingTicks = 700;
+        } else if (newTier != 1) {
+            this.clottingTicks = 0;
+        }
+        this.bleedingTier = newTier;
+    }
+
+    public int getClottingTicks() {
+        return clottingTicks;
+    }
+
+    public void setClottingTicks(int clottingTicks) {
+        this.clottingTicks = Math.max(0, clottingTicks);
+    }
+
+    public void decrementClottingTicks() {
+        if (this.clottingTicks > 0) {
+            this.clottingTicks--;
+        }
+    }
+
+    public int getBloodRegenBoostTicks() {
+        return bloodRegenBoostTicks;
+    }
+
+    public void setBloodRegenBoostTicks(int bloodRegenBoostTicks) {
+        this.bloodRegenBoostTicks = Math.max(0, bloodRegenBoostTicks);
+    }
+
+    public void decrementBloodRegenBoostTicks() {
+        if (this.bloodRegenBoostTicks > 0) {
+            this.bloodRegenBoostTicks--;
+        }
     }
 
     public boolean isBleeding() {
@@ -784,6 +826,8 @@ public class PlayerPhysiologyData {
     public void resetBlood(boolean resetBloodType) {
         this.bloodVolume = DEFAULT_BLOOD_VOLUME;
         this.bleedingTier = 0;
+        this.clottingTicks = 0;
+        this.bloodRegenBoostTicks = 0;
         if (resetBloodType) {
             this.bloodType = null;
         }

@@ -59,8 +59,13 @@ public class ServerConfig {
     public static Supplier<Boolean> ENABLE_BLOOD_SYSTEM = () -> true;
     public static Supplier<Integer> BLOOD_SYNC_DELTA_THRESHOLD = () -> 25;
     public static Supplier<Integer> BLOOD_NATURAL_REGEN_PER_SEC = () -> 2;
-    public static Supplier<Integer> BLEEDING_TIER_1_LOSS_PER_SEC = () -> 5;
-    public static Supplier<Integer> BLEEDING_TIER_2_LOSS_PER_SEC = () -> 15;
+    public static Supplier<Integer> BLOOD_REGEN_PER_TICK = () -> 1;
+    public static Supplier<Integer> BLOOD_MILK_RESTORE_AMOUNT = () -> 500;
+    public static Supplier<Integer> BLOOD_MEAT_BOOST_MULTIPLIER = () -> 3;
+    public static Supplier<Integer> BLOOD_MEAT_BOOST_DURATION_TICKS = () -> 1200;
+    public static Supplier<Double> BLOOD_SAFE_MIN_HEALTH = () -> 4.0;
+    public static Supplier<Integer> BLEEDING_TIER_1_LOSS_PER_SEC = () -> 2;
+    public static Supplier<Integer> BLEEDING_TIER_2_LOSS_PER_SEC = () -> 20;
     public static Supplier<Integer> BLEEDING_TIER_3_LOSS_PER_SEC = () -> 40;
 
     public static Supplier<Boolean> ENABLE_WETNESS_ACCUMULATION = () -> true;

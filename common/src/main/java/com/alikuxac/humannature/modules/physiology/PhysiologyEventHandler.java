@@ -8,12 +8,15 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.network.SyncBloodPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -68,6 +71,7 @@ public class PhysiologyEventHandler {
     public static final ResourceLocation EXERTION_JUMP_STRENGTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "exertion_jump_strength");
     public static final ResourceLocation ADRENALINE_SPEED_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "adrenaline_speed_surge");
     public static final ResourceLocation OVEREATING_SLOW_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "overeating_slowness");
+    public static final ResourceLocation BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "blood_loss_max_health");
 
     private static final AttributeModifier EXERTION_ATTACK_SPEED_MODIFIER = new AttributeModifier(
             EXERTION_ATTACK_SPEED_MODIFIER_ID,
@@ -303,6 +307,16 @@ public class PhysiologyEventHandler {
             }
         }
 
+        if (PhysiologyModule.isBloodSystemEnabled()) {
+            if (stack.is(Items.MILK_BUCKET)) {
+                int milkAmount = ServerConfig.BLOOD_MILK_RESTORE_AMOUNT != null ? ServerConfig.BLOOD_MILK_RESTORE_AMOUNT.get() : 500;
+                data.modifyBloodVolume(milkAmount);
+            } else if (stack.is(Items.BEEF) || stack.is(Items.COOKED_BEEF) || stack.is(ModItems.BONE_BROTH.get())) {
+                int duration = ServerConfig.BLOOD_MEAT_BOOST_DURATION_TICKS != null ? ServerConfig.BLOOD_MEAT_BOOST_DURATION_TICKS.get() : 1200;
+                data.setBloodRegenBoostTicks(duration);
+            }
+        }
+
         FoodProperties food = stack.get(DataComponents.FOOD);
         if (food != null) {
             int nutrition = food.nutrition();
@@ -401,6 +415,7 @@ public class PhysiologyEventHandler {
         syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
         removeExertionModifiers(player);
+        removeBloodModifiers(player);
     }
 
     public static void onPlayerRespawn(Player player) {
@@ -412,6 +427,7 @@ public class PhysiologyEventHandler {
         syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
         removeExertionModifiers(player);
+        removeBloodModifiers(player);
     }
 
     public static void onPlayerLoggedOut(Player player) {
@@ -431,6 +447,10 @@ public class PhysiologyEventHandler {
                 data.setBloodVolume(vol);
                 byte bleed = bloodTag.contains("BleedingTier") ? bloodTag.getByte("BleedingTier") : 0;
                 data.setBleedingTier(bleed);
+                int clotting = bloodTag.contains("ClottingTicks") ? bloodTag.getInt("ClottingTicks") : 0;
+                data.setClottingTicks(clotting);
+                int boost = bloodTag.contains("BloodRegenBoostTicks") ? bloodTag.getInt("BloodRegenBoostTicks") : 0;
+                data.setBloodRegenBoostTicks(boost);
                 syncBloodToClient(player, data);
                 return;
             }
@@ -440,6 +460,8 @@ public class PhysiologyEventHandler {
         data.setBloodType(rolled);
         data.setBloodVolume(PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME);
         data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+        data.setBloodRegenBoostTicks(0);
         savePlayerBloodNbt(player, data);
         syncBloodToClient(player, data);
     }
@@ -455,6 +477,8 @@ public class PhysiologyEventHandler {
         }
         bloodTag.putShort("BloodVolume", data.getBloodVolume());
         bloodTag.putByte("BleedingTier", data.getBleedingTier());
+        bloodTag.putInt("ClottingTicks", data.getClottingTicks());
+        bloodTag.putInt("BloodRegenBoostTicks", data.getBloodRegenBoostTicks());
 
         persisted.put("HumanNatureBlood", bloodTag);
         root.put(Player.PERSISTED_NBT_TAG, persisted);
@@ -469,31 +493,177 @@ public class PhysiologyEventHandler {
         }
     }
 
+    public static void removeBloodModifiers(Player player) {
+        AttributeInstance maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttr != null && maxHealthAttr.hasModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID)) {
+            maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        }
+    }
+
+    public static void updateBloodMaxHealthModifier(Player player, PlayerPhysiologyData data) {
+        AttributeInstance maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttr == null) return;
+
+        short bloodVol = data.getBloodVolume();
+        double lostFraction = Math.max(0.0, (PlayerPhysiologyData.MAX_BLOOD_VOLUME - bloodVol) / (double) PlayerPhysiologyData.MAX_BLOOD_VOLUME);
+
+        double totalWithoutBlood = maxHealthAttr.getValue();
+        AttributeModifier existing = maxHealthAttr.getModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        if (existing != null) {
+            double mult = 1.0 + existing.amount();
+            if (mult > 0.001) {
+                totalWithoutBlood = totalWithoutBlood / mult;
+            }
+        }
+
+        double safeFloor = ServerConfig.BLOOD_SAFE_MIN_HEALTH != null ? ServerConfig.BLOOD_SAFE_MIN_HEALTH.get() : 4.0;
+
+        if (lostFraction > 0.001 && totalWithoutBlood > safeFloor) {
+            double targetHealth = Math.max(safeFloor, totalWithoutBlood * (1.0 - lostFraction));
+            double modAmount = (targetHealth / totalWithoutBlood) - 1.0;
+            modAmount = Math.max(-1.0, Math.min(0.0, modAmount));
+
+            if (existing == null || Math.abs(existing.amount() - modAmount) > 0.005) {
+                if (existing != null) {
+                    maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+                }
+                maxHealthAttr.addTransientModifier(new AttributeModifier(
+                        BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID,
+                        modAmount,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+                ));
+            }
+        } else if (existing != null) {
+            maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        }
+
+        if (player.getHealth() > maxHealthAttr.getValue()) {
+            player.setHealth((float) Math.max(1.0, maxHealthAttr.getValue()));
+        }
+    }
+
+    public static boolean shouldCancelNaturalRegen(Player player, float amount) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return false;
+        if (amount > 1.0F) return false;
+        if (player.hasEffect(MobEffects.REGENERATION) || player.hasEffect(MobEffects.HEAL)) return false;
+
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        return data.isBleeding() || data.getBloodVolume() < (short) (PlayerPhysiologyData.MAX_BLOOD_VOLUME * 0.70);
+    }
+
+    public static void triggerMinorBleeding(Player player) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        if (player.isCreative() || player.isSpectator() || player.isDeadOrDying()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() == 0) {
+            data.setBleedingTier((byte) 1);
+            savePlayerBloodNbt(player, data);
+            syncBloodToClient(player, data);
+        }
+    }
+
+    public static void triggerArterialBleeding(Player player) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        if (player.isCreative() || player.isSpectator() || player.isDeadOrDying()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() < 2) {
+            data.setBleedingTier((byte) 2);
+            savePlayerBloodNbt(player, data);
+            syncBloodToClient(player, data);
+        }
+    }
+
     private static void handleBloodTick(Player player, PlayerPhysiologyData data) {
         if (data.getBloodType() == null) {
             initOrLoadPlayerBlood(player, data);
         }
 
-        if (player.tickCount % 20 != 0) return;
-
         byte bleedTier = data.getBleedingTier();
-        if (bleedTier > 0) {
-            int loss = switch (bleedTier) {
-                case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
-                case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
-                case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
-                default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
-            };
-            data.modifyBloodVolume(-loss);
-        } else if (data.getBloodVolume() < PlayerPhysiologyData.MAX_BLOOD_VOLUME && player.getFoodData().getFoodLevel() >= 18) {
-            int regen = ServerConfig.BLOOD_NATURAL_REGEN_PER_SEC.get();
-            data.modifyBloodVolume(regen);
+
+        // Minor bleeding auto-clotting countdown
+        if (bleedTier == 1) {
+            data.decrementClottingTicks();
+            if (data.getClottingTicks() <= 0) {
+                data.setBleedingTier((byte) 0);
+                savePlayerBloodNbt(player, data);
+                syncBloodToClient(player, data);
+                bleedTier = 0;
+            }
         }
 
-        int threshold = ServerConfig.BLOOD_SYNC_DELTA_THRESHOLD.get();
-        if (data.isBloodDeltaThresholdExceeded(threshold)) {
-            savePlayerBloodNbt(player, data);
-            syncBloodToClient(player, data);
+        // Blood regeneration boost countdown
+        if (data.getBloodRegenBoostTicks() > 0) {
+            data.decrementBloodRegenBoostTicks();
+        }
+
+        // Natural blood generation when full and not bleeding (+1 ml/tick base, +3 ml/tick boosted)
+        if (!data.isBleeding() && data.getBloodVolume() < PlayerPhysiologyData.MAX_BLOOD_VOLUME && player.getFoodData().getFoodLevel() >= 18) {
+            int baseRegen = ServerConfig.BLOOD_REGEN_PER_TICK != null ? ServerConfig.BLOOD_REGEN_PER_TICK.get() : 1;
+            int mult = data.getBloodRegenBoostTicks() > 0 ?
+                    (ServerConfig.BLOOD_MEAT_BOOST_MULTIPLIER != null ? ServerConfig.BLOOD_MEAT_BOOST_MULTIPLIER.get() : 3) : 1;
+            data.modifyBloodVolume(baseRegen * mult);
+        }
+
+        // In-world falling blood drops/particles for Arterial bleeding (Tier 2+)
+        if (bleedTier >= 2 && player.tickCount % 8 == 0 && player.level() instanceof ServerLevel serverLevel) {
+            double px = player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.3;
+            double py = player.getY() + 0.7 + (player.getRandom().nextDouble() - 0.5) * 0.2;
+            double pz = player.getZ() + (player.getRandom().nextDouble() - 0.5) * 0.3;
+            serverLevel.sendParticles(
+                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState()),
+                    px, py, pz,
+                    3, 0.05, 0.0, 0.05, 0.02
+            );
+        }
+
+        // Update vanilla 20 HP Max Health AttributeModifier with 4.0 HP safety floor
+        updateBloodMaxHealthModifier(player, data);
+
+        // Mortality Check: 0 ml blood -> cardiac arrest
+        short vol = data.getBloodVolume();
+        if (vol <= 0) {
+            player.kill();
+            return;
+        }
+
+        // Hypovolemic Shock Threshold Effects
+        if (vol < 2000) {
+            // < 40% (2,000 ml): Ngất xỉu (blackout)
+            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 3, false, false, true));
+            player.setSprinting(false);
+        } else if (vol < 3000) {
+            // < 60% (3,000 ml): Tunnel vision & desaturation
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
+        }
+
+        if (vol < 4000) {
+            // < 80% (4,000 ml): Tim đập nhanh (tachycardia)
+            if (player.tickCount % 25 == 0) {
+                float pitch = 1.0F + (float) ((4000 - vol) / 4000.0) * 0.5F;
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 0.9F, pitch);
+            }
+        }
+
+        // Bleeding deduction every 20 ticks (1 second)
+        if (player.tickCount % 20 == 0) {
+            if (bleedTier > 0) {
+                int loss = switch (bleedTier) {
+                    case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                    case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
+                    case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
+                    default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                };
+                data.modifyBloodVolume(-loss);
+            }
+
+            int threshold = ServerConfig.BLOOD_SYNC_DELTA_THRESHOLD.get();
+            if (data.isBloodDeltaThresholdExceeded(threshold)) {
+                savePlayerBloodNbt(player, data);
+                syncBloodToClient(player, data);
+            }
         }
     }
 

@@ -522,13 +522,21 @@ public class DiagnosticScreen extends Screen {
                             default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
                         };
                         bloodTooltip.add(Component.literal("§c⚠ Active Hemorrhage: Tier " + bleedTier + " (-" + loss + " ml/s)"));
+                        if (bleedTier == 1) {
+                            int clottingSec = Math.max(0, physData.getClottingTicks() / 20);
+                            bloodTooltip.add(Component.literal("§e  ↳ Clotting in: " + clottingSec + "s"));
+                        } else if (bleedTier >= 2) {
+                            bloodTooltip.add(Component.literal("§c  ↳ Arterial: Severe Trauma (No auto-clotting)"));
+                        }
                     } else {
                         bloodTooltip.add(Component.literal("§a✔ Hemostasis: Intact (No active bleeding)"));
                     }
-                    if (bloodVol < 2500) {
-                        bloodTooltip.add(Component.literal("§4⚠ Severe Hypovolemic Shock: Extreme risk of mortality"));
+                    if (bloodVol < 2000) {
+                        bloodTooltip.add(Component.literal("§4⚠ Critical Shock (< 40%): Blackout / Syncope"));
+                    } else if (bloodVol < 3000) {
+                        bloodTooltip.add(Component.literal("§6⚠ Moderate Shock (< 60%): Tunnel Vision & Desaturation"));
                     } else if (bloodVol < 4000) {
-                        bloodTooltip.add(Component.literal("§e⚡ Moderate Hypovolemia: Compensatory Tachycardia"));
+                        bloodTooltip.add(Component.literal("§e⚡ Mild Shock (< 80%): Tachycardia & 2x Stamina Drain"));
                     }
                 }
             }

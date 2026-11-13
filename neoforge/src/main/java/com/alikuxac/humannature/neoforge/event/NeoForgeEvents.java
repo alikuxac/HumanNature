@@ -98,7 +98,8 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onLivingHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (InjuryEventHandler.shouldCancelNaturalRegen(player, event.getAmount())) {
+            if (InjuryEventHandler.shouldCancelNaturalRegen(player, event.getAmount())
+                    || PhysiologyEventHandler.shouldCancelNaturalRegen(player, event.getAmount())) {
                 event.setCanceled(true);
             }
         }

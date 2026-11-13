@@ -129,6 +129,10 @@ public class InjuryEventHandler {
         InjuryModule.setFractureTier(player.getUUID(), targetTier);
         updatePlayerAttributesAndPose(player);
 
+        if (targetTier == InjuryTier.TIER_2_DOUBLE_LEG) {
+            PhysiologyEventHandler.triggerArterialBleeding(player);
+        }
+
         float pitch = (targetTier == InjuryTier.TIER_1_SINGLE_LEG) ? 0.8F : 0.6F;
         playBoneCrackSound(player, pitch);
     }
@@ -573,6 +577,15 @@ public class InjuryEventHandler {
         if (stateChanged) {
             InjuryModule.setInjuryData(player.getUUID(), data);
             updatePlayerAttributesAndPose(player);
+            if (data.hasAnySevereTrauma()) {
+                PhysiologyEventHandler.triggerArterialBleeding(player);
+            }
+        }
+
+        if (!damageSource.is(DamageTypes.DROWN) && !damageSource.is(DamageTypes.STARVE)
+                && !damageSource.is(DamageTypes.FREEZE) && !damageSource.is(DamageTypes.MAGIC)
+                && amount >= 2.0F) {
+            PhysiologyEventHandler.triggerMinorBleeding(player);
         }
     }
 
