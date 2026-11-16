@@ -7,6 +7,7 @@ import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModPotions;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
@@ -32,6 +33,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -381,7 +383,28 @@ public class NeoForgeEvents {
                 return;
             }
         }
+        ItemStack stack = event.getItemStack();
+        if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+            if (PhysiologyEventHandler.applyEmergencyTourniquet(player, stack)) {
+                event.setCancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide()));
+                event.setCanceled(true);
+                return;
+            }
+        }
         InjuryEventHandler.onPlayerRightClickItem(player, event.getHand(), event.getItemStack());
+    }
+
+    @SubscribeEvent
+    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (event.getTarget() instanceof Player targetPlayer) {
+            ItemStack stack = event.getItemStack();
+            if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+                if (PhysiologyEventHandler.applyEmergencyTourniquetToTarget(event.getEntity(), targetPlayer, stack)) {
+                    event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+                    event.setCanceled(true);
+                }
+            }
+        }
     }
 
     @SubscribeEvent

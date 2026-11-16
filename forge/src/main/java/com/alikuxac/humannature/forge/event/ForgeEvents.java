@@ -7,11 +7,13 @@ import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import com.alikuxac.humannature.forge.init.ForgeModPotions;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraftforge.event.brewing.BrewingRecipeRegisterEvent;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -380,7 +382,28 @@ public class ForgeEvents {
                 return;
             }
         }
+        ItemStack stack = event.getItemStack();
+        if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+            if (PhysiologyEventHandler.applyEmergencyTourniquet(player, stack)) {
+                event.setCancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide()));
+                event.setCanceled(true);
+                return;
+            }
+        }
         InjuryEventHandler.onPlayerRightClickItem(player, event.getHand(), event.getItemStack());
+    }
+
+    @SubscribeEvent
+    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (event.getTarget() instanceof Player targetPlayer) {
+            ItemStack stack = event.getItemStack();
+            if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+                if (PhysiologyEventHandler.applyEmergencyTourniquetToTarget(event.getEntity(), targetPlayer, stack)) {
+                    event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+                    event.setCanceled(true);
+                }
+            }
+        }
     }
 
     @SubscribeEvent

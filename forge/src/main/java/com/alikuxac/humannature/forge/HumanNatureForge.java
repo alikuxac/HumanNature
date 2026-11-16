@@ -7,6 +7,7 @@ import com.alikuxac.humannature.forge.init.ForgeCreativeTabs;
 import com.alikuxac.humannature.forge.init.ForgeModEffects;
 import com.alikuxac.humannature.forge.init.ForgeModItems;
 import com.alikuxac.humannature.forge.init.ForgeModPotions;
+import com.alikuxac.humannature.forge.network.ForgeNetwork;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -17,6 +18,7 @@ public class HumanNatureForge {
         IEventBus modBus = context.getModEventBus();
         ForgeConfig.register(context);
         HumanNatureCommon.init();
+        ForgeNetwork.register();
         ForgeHumanNatureEventBridge.register();
         ForgeModEffects.register(modBus);
         ForgeModPotions.register(modBus);

@@ -573,6 +573,68 @@ public class PhysiologyEventHandler {
         }
     }
 
+    public static void applyClothBandageTreatment(Player patient) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(patient.getUUID());
+        byte tier = data.getBleedingTier();
+        if (tier <= 0) return;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        if (tier >= 2) {
+            int duration = ServerConfig.BANDAGE_NUMBNESS_DURATION_TICKS.get();
+            patient.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 0, false, false, true));
+        }
+
+        savePlayerBloodNbt(patient, data);
+        syncBloodToClient(patient, data);
+    }
+
+    public static boolean applyEmergencyTourniquet(Player player, ItemStack stack) {
+        if (!PhysiologyModule.isBloodSystemEnabled() || !ServerConfig.ENABLE_EMERGENCY_TOURNIQUET.get()) return false;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() <= 0) return false;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        int duration = ServerConfig.TOURNIQUET_NUMBNESS_DURATION_TICKS.get();
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 1, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, duration, 0, false, false, true));
+
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
+
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.LEASH_KNOT_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
+
+        stack.consume(1, player);
+        return true;
+    }
+
+    public static boolean applyEmergencyTourniquetToTarget(Player healer, Player target, ItemStack stack) {
+        if (!PhysiologyModule.isBloodSystemEnabled() || !ServerConfig.ENABLE_EMERGENCY_TOURNIQUET.get()) return false;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(target.getUUID());
+        if (data.getBleedingTier() <= 0) return false;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        int duration = ServerConfig.TOURNIQUET_NUMBNESS_DURATION_TICKS.get();
+        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 1, false, false, true));
+        target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, duration, 0, false, false, true));
+
+        savePlayerBloodNbt(target, data);
+        syncBloodToClient(target, data);
+
+        target.level().playSound(null, target.getX(), target.getY(), target.getZ(),
+                SoundEvents.LEASH_KNOT_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
+
+        stack.consume(1, healer);
+        return true;
+    }
+
     private static void handleBloodTick(Player player, PlayerPhysiologyData data) {
         if (data.getBloodType() == null) {
             initOrLoadPlayerBlood(player, data);
@@ -580,7 +642,6 @@ public class PhysiologyEventHandler {
 
         byte bleedTier = data.getBleedingTier();
 
-        // Minor bleeding auto-clotting countdown
         if (bleedTier == 1) {
             data.decrementClottingTicks();
             if (data.getClottingTicks() <= 0) {

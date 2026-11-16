@@ -27,6 +27,8 @@ public class ModCreativeTabs {
                     output.accept(ModItems.GOLDEN_SPLINT.get());
                     output.accept(ModItems.DIAMOND_SPLINT.get());
                     output.accept(ModItems.NETHERITE_SPLINT.get());
+                    output.accept(ModItems.CLOTH_BANDAGE.get());
+                    output.accept(ModItems.BLOOD_BAG.get());
 
                     output.accept(ModItems.BONE_BROTH.get());
 
@@ -65,6 +67,8 @@ public class ModCreativeTabs {
         consumer.accept(ModItems.GOLDEN_SPLINT.get());
         consumer.accept(ModItems.DIAMOND_SPLINT.get());
         consumer.accept(ModItems.NETHERITE_SPLINT.get());
+        consumer.accept(ModItems.CLOTH_BANDAGE.get());
+        consumer.accept(ModItems.BLOOD_BAG.get());
     }
 
     public static void acceptFoodAndDrinks(Consumer<Item> consumer) {

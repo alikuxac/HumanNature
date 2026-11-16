@@ -1,6 +1,6 @@
 # Physiology System
 
-The physiology module tracks sleep deprivation, handles stamina and muscle fatigue, replaces instant poison/wither damage with an accumulating toxin gauge, and simulates digestion, stress, and trauma shock.
+The physiology module tracks sleep deprivation, handles stamina and muscle fatigue, replaces instant poison/wither damage with an accumulating toxin gauge, simulates digestion, stress, and trauma shock, and models blood volume, hemorrhage, hemostasis, and transfusions.
 
 ---
 
@@ -156,6 +156,111 @@ At 100% exertion:
 
 ---
 
+### Blood Circulation, Hemorrhage & Transfusion
+
+Every player has a circulatory system with a baseline volume of 5,000 ml and an ABO/Rh blood type assigned on first spawn.
+
+#### Blood Volume & Hypovolemic Shock
+
+Blood volume directly caps maximum health. When volume drops below 5,000 ml, an attribute modifier lowers maximum health proportionally down to a hard floor of 4.0 HP (2 hearts):
+
+$$\text{MaxHealthTarget} = \max\left(4.0, 20.0 \times \frac{\text{BloodVolume}}{5000}\right)$$
+
+Active bleeding or blood volume below 70% (3,500 ml) blocks natural food health regeneration. Potion effects (Regeneration, Instant Health) bypass this restriction.
+
+Dropping through blood loss thresholds causes progressive hypovolemic shock:
+
+| Blood Volume | Fraction | Shock State & Symptoms |
+| :--- | :--- | :--- |
+| **5,000 ml** | 100% | Normal circulation. |
+| **< 4,000 ml** | < 80% | Tachycardia. Heartbeat audio plays every 25 ticks with pitch scaling from 1.0 to 1.5. Stamina drain doubles. |
+| **< 3,000 ml** | < 60% | Hypoxic vision. Darkness effect applies continuously (tunnel vision and desaturation). |
+| **< 2,000 ml** | < 40% | Circulatory collapse and syncope. Forces Darkness, Blindness, and Slowness IV; cancels sprinting. |
+| **0 ml** | 0% | Fatal cardiac arrest. Immediate player death. |
+
+#### Hemorrhage Tiers
+
+Physical trauma causes bleeding at different rates based on injury severity:
+
+| Tier | Bleed Rate | Cause | Clotting / Resolution |
+| :--- | :--- | :--- | :--- |
+| **Tier 1 (Minor)** | 2 ml/s | Physical damage $\ge 2.0$ HP (excluding freeze and magic). | Clots automatically after 35 seconds (700 ticks), or treated with bandages/tourniquets. |
+| **Tier 2 (Arterial)** | 20 ml/s | Severe limb trauma or Tier 2 double leg fractures. | Does not clot naturally. Spawns redstone drip particles every 8 ticks. Requires medical intervention. |
+| **Tier 3 (Massive)** | 40 ml/s | Critical open trauma. | Does not clot naturally. Requires immediate medical intervention. |
+
+#### Hemostasis & Field Treatments
+
+Players can stop hemorrhage using dedicated bandages or makeshift items:
+
+- **Cloth Bandage** (`humannature:cloth_bandage`):
+  - Stacks to 16.
+  - Channels for 1.5 seconds (30 ticks) with brush animation and wool particle cues.
+  - Clears Tier 1 bleeding with zero side effects.
+  - Clears Tier 2 arterial bleeding and applies 5 seconds (100 ticks) of Slowness I to simulate local tissue numbness.
+  - Used on self by holding right-click in air. Applied to teammates by holding right-click while targeting the player.
+  - Crafted shapelessly from 2 Wool (yields 4) or 4 String (yields 2).
+
+- **Emergency Tourniquet (Makeshift)**:
+  - Consumes 1 Leather or 1 String from the hand on right-click.
+  - Instantly stops active bleeding of any tier.
+  - Tight constriction applies Slowness II and Mining Fatigue I for 8 seconds (160 ticks).
+  - Can be applied to oneself (right-click in air) or to a teammate (interact while targeting player).
+
+#### Blood Regeneration & Nutrition
+
+When not bleeding and with hunger $\ge 18$ (9 drumsticks), blood replenishes naturally:
+- **Baseline recovery**: +1 ml/tick (+20 ml/s).
+- **Nutritional boost**: Eating Beef, Cooked Beef, or drinking Bone Broth grants a 60-second (1,200 ticks) boost, increasing recovery to 3 ml/tick (+60 ml/s).
+- **Milk hydration**: Drinking a Milk Bucket instantly restores 500 ml of blood.
+
+---
+
+### Co-op Blood Transfusion Engine
+
+The Blood Bag (`humannature:blood_bag`) stores and transfers blood between players. Empty bags stack to 16. Bags holding blood become unstackable (stack size 1) and store the donor blood type and volume.
+
+#### Specifications & Thresholds
+- **Capacity**: 1,000 ml maximum.
+- **Transfer step**: 500 ml per extraction or transfusion.
+- **Safe extraction floor**: Donors must have $> 3,500$ ml blood. Extraction attempts at or below 3,500 ml fail to prevent donor collapse.
+- **Extraction cost**: Drawing blood inflicts 1.0 HP generic needle damage and plays bottle fill audio.
+- **Type locking**: A bag containing blood only accepts additional blood of the exact same ABO/Rh type.
+
+#### Controls Matrix
+
+| Action | Input Target | Mouse Interaction | Result |
+| :--- | :--- | :--- | :--- |
+| **Self Draw** | Air | Right-click (empty/partial bag) | Channels 1.5s (30 ticks, bow aim pose). Extracts 500 ml from self into bag. |
+| **Self Transfuse** | Air | Shift + Right-click (filled bag) | Transfuses stored blood into self. Returns empty bag. |
+| **Teammate Transfuse** | Teammate | Right-click (filled bag) | Transfuses stored blood into target player. Returns empty bag. |
+| **Teammate Draw** | Teammate | Shift + Right-click (empty/partial bag) | Extracts 500 ml from target player into bag. |
+
+#### ABO/Rh Blood Types & Compatibility
+
+Every player is assigned one of 8 blood types on spawn:
+
+| Recipient Type | Compatible Donor Blood Types |
+| :--- | :--- |
+| **O-** | O- only |
+| **O+** | O-, O+ |
+| **A-** | O-, A- |
+| **A+** | O-, O+, A-, A+ |
+| **B-** | O-, B- |
+| **B+** | O-, O+, B-, B+ |
+| **AB-** | O-, A-, B-, AB- |
+| **AB+** | Universal Recipient (accepts all types) |
+
+`O-` is the Universal Donor and can donate to all types.
+
+#### Acute Hemolytic Transfusion Reaction (AHTR)
+
+Transfusing an incompatible blood type into yourself or a teammate triggers immediate acute hemolytic shock:
+- Spikes toxin buildup to 100% (`POISON` type), triggering an immediate toxic eruption.
+- Inflicts 6.0 magic damage directly to the recipient.
+- Applies Nausea II for 15 seconds (300 ticks), Slowness III for 15 seconds (300 ticks), and Blindness I for 5 seconds (100 ticks).
+
+---
+
 ### HUD & Diagnostic Interface
 
 #### Swappable HUD Overlay
@@ -273,6 +378,41 @@ Server settings are in `config/humannature-server.toml`:
     enableAdrenalineSurge = true
     # Duration in ticks of the adrenaline surge (80 ticks = 4.0s)
     adrenalineSurgeDurationTicks = 80
+
+    # Enable blood circulation, hemorrhage, and transfusion system
+    enableBloodSystem = true
+    # Blood volume delta required before dispatching a network sync packet to client (ml)
+    bloodSyncDeltaThreshold = 25
+    # Natural blood recovery per second when well-fed (>= 18 hunger)
+    bloodNaturalRegenPerSec = 2
+    # Blood volume regenerated per tick when well-fed (>= 18 hunger)
+    bloodRegenPerTick = 1
+    # Blood volume restored immediately upon drinking a Milk Bucket (ml)
+    bloodMilkRestoreAmount = 500
+    # Blood regeneration multiplier when boosted by meat/bone broth
+    bloodMeatBoostMultiplier = 3
+    # Duration in ticks of the blood regeneration boost from meat/bone broth (1200 ticks = 60s)
+    bloodMeatBoostDurationTicks = 1200
+    # Minimum safe health floor below which blood loss cannot reduce max health
+    bloodSafeMinHealth = 4.0
+    # Bleeding rate per second for Tier 1 minor bleeding (ml/s)
+    bleedingTier1LossPerSec = 2
+    # Bleeding rate per second for Tier 2 arterial bleeding (ml/s)
+    bleedingTier2LossPerSec = 20
+    # Bleeding rate per second for Tier 3 massive bleeding (ml/s)
+    bleedingTier3LossPerSec = 40
+    # Enable craftable cloth bandages
+    enableClothBandage = true
+    # Enable craftable blood bags and transfusion mechanics
+    enableBloodBag = true
+    # Enable emergency makeshift tourniquets using string or leather
+    enableEmergencyTourniquet = true
+    # Duration in ticks of Slowness I numbness after bandaging Tier 2 arterial bleeding (100 ticks = 5s)
+    bandageNumbnessDurationTicks = 100
+    # Duration in ticks of Slowness II and Mining Fatigue I from emergency tourniquet application (160 ticks = 8s)
+    tourniquetNumbnessDurationTicks = 160
+    # Stored blood volume transfer capacity for blood bags (ml)
+    bloodBagTransferVolume = 1000
 ```
 
 Client settings are in `config/humannature-client.toml`:

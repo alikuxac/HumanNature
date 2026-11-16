@@ -7,6 +7,7 @@ import com.alikuxac.humannature.neoforge.init.NeoForgeCreativeTabs;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModEffects;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModItems;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModPotions;
+import com.alikuxac.humannature.neoforge.network.NeoForgeNetwork;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -22,6 +23,7 @@ public class HumanNatureNeoForge {
         NeoForgeModItems.register(modBus);
         NeoForgeCreativeTabs.register(modBus);
         modBus.addListener(NeoForgeCreativeTabs::onBuildCreativeModeTabContents);
+        modBus.addListener(NeoForgeNetwork::onRegisterPayloadHandlers);
     }
 }
 

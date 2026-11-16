@@ -67,6 +67,12 @@ public class ServerConfig {
     public static Supplier<Integer> BLEEDING_TIER_1_LOSS_PER_SEC = () -> 2;
     public static Supplier<Integer> BLEEDING_TIER_2_LOSS_PER_SEC = () -> 20;
     public static Supplier<Integer> BLEEDING_TIER_3_LOSS_PER_SEC = () -> 40;
+    public static Supplier<Boolean> ENABLE_CLOTH_BANDAGE = () -> true;
+    public static Supplier<Boolean> ENABLE_BLOOD_BAG = () -> true;
+    public static Supplier<Boolean> ENABLE_EMERGENCY_TOURNIQUET = () -> true;
+    public static Supplier<Integer> BANDAGE_NUMBNESS_DURATION_TICKS = () -> 100;
+    public static Supplier<Integer> TOURNIQUET_NUMBNESS_DURATION_TICKS = () -> 160;
+    public static Supplier<Integer> BLOOD_BAG_TRANSFER_VOLUME = () -> 1000;
 
     public static Supplier<Boolean> ENABLE_WETNESS_ACCUMULATION = () -> true;
     public static Supplier<Double> WETNESS_RAIN_ACCUMULATION_RATE = () -> 0.0025;

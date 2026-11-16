@@ -108,5 +108,18 @@ When a player triggers a Totem of Undying to survive fatal fall damage:
       - Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
       - Drops any firework rockets held in either hand.
 
+---
+
+### 10. Hemorrhage & Field Hemostasis
+
+Physical trauma triggers bleeding tracked by the physiology module:
+
+- **Tier 1 (Minor Bleeding)**: Any non-magic, non-freeze hit $\ge 2.0$ damage triggers minor capillary bleeding (2 ml/s). Clots automatically after 35 seconds.
+- **Tier 2 (Arterial Bleeding)**: Severe trauma, including Tier 2 double leg fractures, triggers arterial bleeding (20 ml/s). Does not clot naturally; emits falling blood particles in-world.
+- **Cloth Bandage** (`humannature:cloth_bandage`): Channels for 1.5 seconds. Instantly halts minor bleeding; halts arterial bleeding while inflicting 5 seconds of Slowness I numbness.
+- **Emergency Tourniquet**: Consuming 1 Leather or String halts bleeding immediately at the cost of Slowness II and Mining Fatigue I for 8 seconds.
+- For complete circulatory thresholds and transfusion mechanics, see [PHYSIOLOGY_SYSTEM.md](./PHYSIOLOGY_SYSTEM.md).
+
+
 
 
