@@ -74,6 +74,17 @@ public class ServerConfig {
     public static Supplier<Double> HYPOTHERMIA_ATTACK_SPEED_PENALTY = () -> 0.35;
     public static Supplier<Double> HYPOTHERMIA_INTERACTION_RANGE_PENALTY = () -> 1.0;
 
+    public static Supplier<Boolean> ENABLE_ARMOR_THERMAL_INSULATION = () -> true;
+    public static Supplier<Double> LEATHER_INSULATION_FREEZE_REDUCTION = () -> 0.60;
+    public static Supplier<Double> METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER = () -> 1.50;
+
+    public static Supplier<Boolean> ENABLE_HEAVY_LOAD_HEAT_STRESS = () -> true;
+    public static Supplier<Double> HEAT_STRESS_TEMP_RISE_RATE = () -> 0.0015;
+    public static Supplier<Double> HEAT_STRESS_EXERTION_DRAIN = () -> 0.10;
+    public static Supplier<Double> HEAT_STRESS_OVERHEAT_THRESHOLD = () -> 39.5;
+    public static Supplier<Double> HEAT_STRESS_DAMAGE_THRESHOLD = () -> 42.0;
+    public static Supplier<Integer> HEAT_STRESS_DAMAGE_INTERVAL_TICKS = () -> 40;
+
     public static Supplier<Double> WEIGHT_HEAVY_BLOCK_BASE = () -> 0.8;
     public static Supplier<Double> WEIGHT_METALLIC_ITEM_BASE = () -> 0.4;
     public static Supplier<Double> WEIGHT_DEFAULT_ITEM_BASE = () -> 0.05;

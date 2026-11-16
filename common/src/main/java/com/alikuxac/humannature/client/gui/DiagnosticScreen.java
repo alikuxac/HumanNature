@@ -498,7 +498,12 @@ public class DiagnosticScreen extends Screen {
                 boolean hasBuff = tempData.hasInternalWarming();
                 boolean nearHeat = tempData.isNearHeatSource();
 
-                if (hasBuff) {
+                float coreTemp = tempData.getCoreTemperature();
+                if (coreTemp > 42.0f) {
+                    tags.add(String.format("§c☠ Hyperthermia (%.1f°C)", coreTemp));
+                } else if (coreTemp > 39.5f) {
+                    tags.add(String.format("§c⚠ Heat Exhaustion (%.1f°C)", coreTemp));
+                } else if (hasBuff) {
                     tags.add("§6♨ Internal Warming (" + (tempData.getInternalWarmingTicks() / 20) + "s)");
                 } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
                     tags.add("§c❄ Freezing (Hypothermia)");
@@ -575,15 +580,20 @@ public class DiagnosticScreen extends Screen {
                     int ticksFrozen = player.getTicksFrozen();
                     boolean isNearHeat = tempData.isNearHeatSource();
 
+                    float coreTemp = tempData.getCoreTemperature();
                     String tempStatus;
-                    if (tempData.hasInternalWarming()) {
-                        tempStatus = "§6Warm (Stew)";
+                    if (coreTemp > 42.0f) {
+                        tempStatus = String.format("§c☠ Hyperthermia (%.1f°C)", coreTemp);
+                    } else if (coreTemp > 39.5f) {
+                        tempStatus = String.format("§c⚠ Heat Exhaustion (%.1f°C)", coreTemp);
+                    } else if (tempData.hasInternalWarming()) {
+                        tempStatus = String.format("§6Warm (Stew - %.1f°C)", coreTemp);
                     } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
-                        tempStatus = "§cFreezing (Hypothermia)";
+                        tempStatus = String.format("§cFreezing (Hypothermia - %.1f°C)", coreTemp);
                     } else if (ticksFrozen > 0 || (wetness >= 0.5f && !isNearHeat)) {
-                        tempStatus = "§bChilly";
+                        tempStatus = String.format("§bChilly (%.1f°C)", coreTemp);
                     } else {
-                        tempStatus = "§aNormal (37°C)";
+                        tempStatus = String.format("§aNormal (%.1f°C)", coreTemp);
                     }
 
                     String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§bDamp (%.0f%%)", wetness * 100.0f) : "§a0% (Dry)");
@@ -603,6 +613,20 @@ public class DiagnosticScreen extends Screen {
                     float red = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
                     boolean noHelm = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
                     metabolismTooltip.add(Component.literal(String.format("§7  ↳ Insulation: %.0f%% reduction | Head: %s", red * 100.0f, noHelm ? "§cMissing (2x Soak)" : "§aProtected")));
+
+                    int leatherCount = TemperatureEventHandler.countLeatherPieces(player);
+                    int metalCount = TemperatureEventHandler.countMetallicPieces(player);
+                    if (leatherCount > 0) {
+                        double maxRed = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION != null ?
+                                ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION.get() : 0.60;
+                        metabolismTooltip.add(Component.literal(String.format("§a  ↳ Leather Insulation: %.0f%% cold dampening (%d/4 pieces)", (leatherCount / 4.0f) * maxRed * 100.0f, leatherCount)));
+                    }
+                    if (metalCount > 0) {
+                        double condMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER != null ?
+                                ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER.get() : 1.50;
+                        float extraCond = (metalCount / 4.0f) * (float) (condMult - 1.0) * 100.0f;
+                        metabolismTooltip.add(Component.literal(String.format("§b  ↳ Metal Cold Conduction: +%.0f%% chill conduction (%d/4 pieces)", extraCond, metalCount)));
+                    }
                 }
             }
         }

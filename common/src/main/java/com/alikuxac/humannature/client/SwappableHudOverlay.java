@@ -110,7 +110,8 @@ public class SwappableHudOverlay {
         boolean hasBuff = tempData.hasInternalWarming();
         boolean nearHeat = tempData.isNearHeatSource();
 
-        boolean isNormal = (wetness <= 0.0f && ticksFrozen <= 0 && !hasBuff && !nearHeat);
+        float coreTemp = tempData.getCoreTemperature();
+        boolean isNormal = (wetness <= 0.0f && ticksFrozen <= 0 && !hasBuff && !nearHeat && coreTemp <= 37.5f && coreTemp >= 36.5f);
         if (isNormal) {
             actionBarCooldown = 20;
             return;
@@ -130,21 +131,35 @@ public class SwappableHudOverlay {
         }
 
         String tempLabel;
+        String tempColor;
         int freezeThresh = (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get());
-        if (hasBuff) {
+        if (coreTemp > 42.0f) {
+            tempLabel = String.format("☠ Hyperthermia (%.1f°C)", coreTemp);
+            tempColor = "§c";
+        } else if (coreTemp > 39.5f) {
+            tempLabel = String.format("⚠ Heat Exhaustion (%.1f°C)", coreTemp);
+            tempColor = "§c";
+        } else if (hasBuff) {
             tempLabel = "Warm (Stew Buff)";
+            tempColor = "§6";
         } else if (ticksFrozen >= freezeThresh) {
             tempLabel = "Freezing";
+            tempColor = "§c";
         } else if (ticksFrozen > 0) {
             tempLabel = "Chilly";
+            tempColor = "§b";
         } else if (nearHeat) {
             tempLabel = "Rewarming";
+            tempColor = "§6";
+        } else if (coreTemp > 37.5f) {
+            tempLabel = String.format("Elevated (%.1f°C)", coreTemp);
+            tempColor = "§e";
         } else {
             tempLabel = "Normal";
+            tempColor = "§a";
         }
 
         String wetColor = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : (wetness > 0.0f ? "§b" : "§a"));
-        String tempColor = ticksFrozen >= freezeThresh ? "§c" : (ticksFrozen > 0 ? "§b" : (hasBuff ? "§6" : "§a"));
 
         Component cue = Component.literal("§7Wetness: " + wetColor + wetLabel + " §7| Temp: " + tempColor + tempLabel);
         player.displayClientMessage(cue, true);
@@ -389,11 +404,15 @@ public class SwappableHudOverlay {
                     }
                     String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : "§b");
                     lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
+                } else if (tempData.getCoreTemperature() > 42.0f) {
+                    lines.add(String.format("§c☠ Hyperthermia: %.1f°C §8(Heat Damage)", tempData.getCoreTemperature()));
+                } else if (tempData.getCoreTemperature() > 39.5f) {
+                    lines.add(String.format("§c⚠ Heat Exhaustion: %.1f°C §8(Panting)", tempData.getCoreTemperature()));
                 } else if (tempData.hasInternalWarming()) {
                     int remSec = tempData.getInternalWarmingTicks() / 20;
                     lines.add(String.format("§6♨ Internal Warming: %ds §8(Warm)", remSec));
                 } else {
-                    lines.add("§7Temperature: §aWarm §8(Dry)");
+                    lines.add(String.format("§7Temperature: §aNormal §8(%.1f°C)", tempData.getCoreTemperature()));
                 }
             }
 
