@@ -207,6 +207,33 @@ public class NeoForgeConfig {
         ModConfigSpec.DoubleValue hypothermiaInteractionRangePenalty = serverBuilder
                 .comment("Block interaction range penalty in blocks during hypothermia (1.0 = -1.0 block)")
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
+        ModConfigSpec.BooleanValue enableArmorThermalInsulation = serverBuilder
+                .comment("Enable thermal insulation from leather armor and cold conduction from metallic armor")
+                .define("enableArmorThermalInsulation", true);
+        ModConfigSpec.DoubleValue leatherInsulationFreezeReduction = serverBuilder
+                .comment("Fractional freeze accumulation reduction when wearing full leather armor (0.60 = 60% reduction)")
+                .defineInRange("leatherInsulationFreezeReduction", 0.60, 0.0, 1.0);
+        ModConfigSpec.DoubleValue metallicArmorColdConductionMultiplier = serverBuilder
+                .comment("Cold conduction multiplier applied when wet or in cold biomes wearing full metallic armor")
+                .defineInRange("metallicArmorColdConductionMultiplier", 1.50, 1.0, 5.0);
+        ModConfigSpec.BooleanValue enableHeavyLoadHeatStress = serverBuilder
+                .comment("Enable heat stress and exhaustion when overburdened in hot biomes (Desert, Badlands, Nether)")
+                .define("enableHeavyLoadHeatStress", true);
+        ModConfigSpec.DoubleValue heatStressTempRiseRate = serverBuilder
+                .comment("Core body temperature rise rate per tick when overburdened in hot biomes")
+                .defineInRange("heatStressTempRiseRate", 0.0015, 0.0001, 0.1);
+        ModConfigSpec.DoubleValue heatStressExertionDrain = serverBuilder
+                .comment("Physical exertion stamina drain added per tick during heat stress")
+                .defineInRange("heatStressExertionDrain", 0.10, 0.0, 2.0);
+        ModConfigSpec.DoubleValue heatStressOverheatThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering heat exhaustion debuffs (panting, slowness)")
+                .defineInRange("heatStressOverheatThreshold", 39.5, 37.5, 43.0);
+        ModConfigSpec.DoubleValue heatStressDamageThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering periodic lethal hyperthermia damage")
+                .defineInRange("heatStressDamageThreshold", 42.0, 39.0, 45.0);
+        ModConfigSpec.IntValue heatStressDamageIntervalTicks = serverBuilder
+                .comment("Interval in ticks between periodic hyperthermia damage ticks (40 ticks = 2.0s)")
+                .defineInRange("heatStressDamageIntervalTicks", 40, 10, 600);
         serverBuilder.pop();
 
         serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
@@ -337,6 +364,15 @@ public class NeoForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
+        ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION = enableArmorThermalInsulation::get;
+        ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION = leatherInsulationFreezeReduction::get;
+        ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER = metallicArmorColdConductionMultiplier::get;
+        ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS = enableHeavyLoadHeatStress::get;
+        ServerConfig.HEAT_STRESS_TEMP_RISE_RATE = heatStressTempRiseRate::get;
+        ServerConfig.HEAT_STRESS_EXERTION_DRAIN = heatStressExertionDrain::get;
+        ServerConfig.HEAT_STRESS_OVERHEAT_THRESHOLD = heatStressOverheatThreshold::get;
+        ServerConfig.HEAT_STRESS_DAMAGE_THRESHOLD = heatStressDamageThreshold::get;
+        ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS = heatStressDamageIntervalTicks::get;
 
         ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = weightHeavyBlockBase::get;
         ServerConfig.WEIGHT_METALLIC_ITEM_BASE = weightMetallicItemBase::get;
@@ -382,6 +418,9 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
+        ModConfigSpec.BooleanValue autoHideHealthyHud = clientBuilder
+                .comment("Automatically hide HUD overlays when player is fully healthy")
+                .define("autoHideHealthyHud", false);
         ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
                 .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
@@ -423,6 +462,7 @@ public class NeoForgeConfig {
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
         ClientConfig.ENABLE_WEIGHT_TOOLTIP = enableWeightTooltip::get;
         ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
+        ClientConfig.AUTO_HIDE_HEALTHY_HUD = autoHideHealthyHud::get;
         ClientConfig.DEFAULT_HUD_MODE = defaultHudMode::get;
         ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
         ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;

@@ -5,6 +5,8 @@ import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.network.NetworkHandler;
+import com.alikuxac.humannature.network.TreatLimbPayload;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
@@ -743,12 +745,17 @@ public class DiagnosticScreen extends Screen {
             int silX = leftPos + 12;
             int silY = topPos + 30;
 
+            PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+
             for (LimbHitbox box : HITBOXES) {
                 if (box.contains((int) mouseX, (int) mouseY, silX, silY)) {
-                    ItemStack splint = InjuryEventHandler.findFirstSplint(player);
-                    if (!splint.isEmpty()) {
-                        InjuryEventHandler.handleQuickTreat(player, box.limb(), splint);
-                        return true;
+                    if (data.getSeverity(box.limb()) > 0) {
+                        ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+                        if (!splint.isEmpty()) {
+                            InjuryEventHandler.handleQuickTreat(player, box.limb(), splint);
+                            NetworkHandler.sendToServer(new TreatLimbPayload((byte) box.limb().getIndex()));
+                            return true;
+                        }
                     }
                 }
             }

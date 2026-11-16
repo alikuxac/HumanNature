@@ -3,6 +3,8 @@ package com.alikuxac.humannature.client.gui;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.network.NetworkHandler;
+import com.alikuxac.humannature.network.TreatLimbPayload;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
@@ -90,7 +92,12 @@ public class BodySilhouettePanel {
                     case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
                     case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
                 }
-                tooltip.add(Component.literal("§e[Click with Splint to Treat]"));
+                ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+                if (!splint.isEmpty()) {
+                    tooltip.add(Component.literal("§e[Click to Treat with Splint]"));
+                } else {
+                    tooltip.add(Component.literal("§8[Need Splint to Treat]"));
+                }
             } else {
                 tooltip.add(Component.literal("§aNo active fractures"));
             }
@@ -113,16 +120,17 @@ public class BodySilhouettePanel {
         Player player = mc.player;
         if (player == null) return false;
 
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+
         for (LimbHitbox box : HITBOXES) {
             if (box.contains((int) mouseX, (int) mouseY, originX, originY)) {
-                ItemStack carriedStack = mc.player.containerMenu.getCarried();
-                if (carriedStack.isEmpty()) {
-                    carriedStack = player.getMainHandItem();
-                }
-
-                if (SplintItem.isValidSplint(carriedStack)) {
-                    InjuryEventHandler.handleQuickTreat(player, box.limb(), carriedStack);
-                    return true;
+                if (data.getSeverity(box.limb()) > 0) {
+                    ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+                    if (!splint.isEmpty()) {
+                        InjuryEventHandler.handleQuickTreat(player, box.limb(), splint);
+                        NetworkHandler.sendToServer(new TreatLimbPayload((byte) box.limb().getIndex()));
+                        return true;
+                    }
                 }
             }
         }

@@ -165,11 +165,59 @@ public class SwappableHudOverlay {
         player.displayClientMessage(cue, true);
     }
 
+    public static boolean isPlayerFullyHealthy(Player player) {
+        if (player == null) return false;
+
+        if (ServerConfig.ENABLE_INJURY.get()) {
+            if (InjuryEventHandler.isFractureActive(player)) return false;
+            PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
+            if (injuryData.hasAnyInjury()) return false;
+        }
+
+        if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+            PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+            if (tempData.getWetnessBuffer() > 0.0f) return false;
+            if (player.getTicksFrozen() > 0) return false;
+            if (tempData.hasInternalWarming()) return false;
+            if (tempData.isNearHeatSource()) return false;
+            if (tempData.isHypothermiaDebuffActive()) return false;
+            float coreTemp = tempData.getCoreTemperature();
+            if (coreTemp < 36.5f || coreTemp > 37.5f) return false;
+        }
+
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+            if (physData.getToxinBuildup() > 0.0f) return false;
+            if (physData.getExertionScore() > 0.0f) return false;
+            if (physData.isMuscleFailure() || physData.isSwimmingCramped()) return false;
+            if (physData.isAdrenalineActive() || physData.isPanicking()) return false;
+            if (physData.getIndigestionBuildup() > 0.0f) return false;
+        }
+
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
+            float curWeight = weightData.getCachedWeight();
+            if (curWeight <= 0.0f) {
+                curWeight = WeightCalculator.calculateWeight(player);
+                weightData.setCachedWeight(curWeight);
+            }
+            float maxWeight = WeightCalculator.calculateMaxCapacity(player);
+            float ratio = maxWeight > 0 ? curWeight / maxWeight : 0.0f;
+            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
+            if (tier != EncumbranceTier.NORMAL && tier != EncumbranceTier.LIGHT) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public static void render(GuiGraphics guiGraphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null || mc.options.hideGui || player.isDeadOrDying()) return;
         if (!ClientConfig.ENABLE_SWAPPABLE_HUD.get()) return;
+        if (ClientConfig.AUTO_HIDE_HEALTHY_HUD.get() && isPlayerFullyHealthy(player)) return;
 
         HudMode mode = getCurrentMode();
         if (mode == HudMode.OFF || mode == HudMode.INJURY || mode == HudMode.ENVIRONMENT) return;

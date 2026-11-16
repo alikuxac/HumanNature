@@ -209,6 +209,33 @@ public class ForgeConfig {
         ForgeConfigSpec.DoubleValue hypothermiaInteractionRangePenalty = serverBuilder
                 .comment("Block interaction range penalty in blocks during hypothermia (1.0 = -1.0 block)")
                 .defineInRange("hypothermiaInteractionRangePenalty", 1.0, 0.0, 5.0);
+        ForgeConfigSpec.BooleanValue enableArmorThermalInsulation = serverBuilder
+                .comment("Enable thermal insulation from leather armor and cold conduction from metallic armor")
+                .define("enableArmorThermalInsulation", true);
+        ForgeConfigSpec.DoubleValue leatherInsulationFreezeReduction = serverBuilder
+                .comment("Fractional freeze accumulation reduction when wearing full leather armor (0.60 = 60% reduction)")
+                .defineInRange("leatherInsulationFreezeReduction", 0.60, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue metallicArmorColdConductionMultiplier = serverBuilder
+                .comment("Cold conduction multiplier applied when wet or in cold biomes wearing full metallic armor")
+                .defineInRange("metallicArmorColdConductionMultiplier", 1.50, 1.0, 5.0);
+        ForgeConfigSpec.BooleanValue enableHeavyLoadHeatStress = serverBuilder
+                .comment("Enable heat stress and exhaustion when overburdened in hot biomes (Desert, Badlands, Nether)")
+                .define("enableHeavyLoadHeatStress", true);
+        ForgeConfigSpec.DoubleValue heatStressTempRiseRate = serverBuilder
+                .comment("Core body temperature rise rate per tick when overburdened in hot biomes")
+                .defineInRange("heatStressTempRiseRate", 0.0015, 0.0001, 0.1);
+        ForgeConfigSpec.DoubleValue heatStressExertionDrain = serverBuilder
+                .comment("Physical exertion stamina drain added per tick during heat stress")
+                .defineInRange("heatStressExertionDrain", 0.10, 0.0, 2.0);
+        ForgeConfigSpec.DoubleValue heatStressOverheatThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering heat exhaustion debuffs (panting, slowness)")
+                .defineInRange("heatStressOverheatThreshold", 39.5, 37.5, 43.0);
+        ForgeConfigSpec.DoubleValue heatStressDamageThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering periodic lethal hyperthermia damage")
+                .defineInRange("heatStressDamageThreshold", 42.0, 39.0, 45.0);
+        ForgeConfigSpec.IntValue heatStressDamageIntervalTicks = serverBuilder
+                .comment("Interval in ticks between periodic hyperthermia damage ticks (40 ticks = 2.0s)")
+                .defineInRange("heatStressDamageIntervalTicks", 40, 10, 600);
         serverBuilder.pop();
 
         serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
@@ -339,6 +366,15 @@ public class ForgeConfig {
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = safe(SERVER_SPEC, hypothermiaMiningFatigue, true);
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, hypothermiaAttackSpeedPenalty, 0.35);
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = safe(SERVER_SPEC, hypothermiaInteractionRangePenalty, 1.0);
+        ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION = safe(SERVER_SPEC, enableArmorThermalInsulation, true);
+        ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION = safe(SERVER_SPEC, leatherInsulationFreezeReduction, 0.60);
+        ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER = safe(SERVER_SPEC, metallicArmorColdConductionMultiplier, 1.50);
+        ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS = safe(SERVER_SPEC, enableHeavyLoadHeatStress, true);
+        ServerConfig.HEAT_STRESS_TEMP_RISE_RATE = safe(SERVER_SPEC, heatStressTempRiseRate, 0.0015);
+        ServerConfig.HEAT_STRESS_EXERTION_DRAIN = safe(SERVER_SPEC, heatStressExertionDrain, 0.10);
+        ServerConfig.HEAT_STRESS_OVERHEAT_THRESHOLD = safe(SERVER_SPEC, heatStressOverheatThreshold, 39.5);
+        ServerConfig.HEAT_STRESS_DAMAGE_THRESHOLD = safe(SERVER_SPEC, heatStressDamageThreshold, 42.0);
+        ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS = safe(SERVER_SPEC, heatStressDamageIntervalTicks, 40);
 
         ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = safe(SERVER_SPEC, weightHeavyBlockBase, 0.8);
         ServerConfig.WEIGHT_METALLIC_ITEM_BASE = safe(SERVER_SPEC, weightMetallicItemBase, 0.4);
@@ -384,6 +420,9 @@ public class ForgeConfig {
         ForgeConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
+        ForgeConfigSpec.BooleanValue autoHideHealthyHud = clientBuilder
+                .comment("Automatically hide HUD overlays when player is fully healthy")
+                .define("autoHideHealthyHud", false);
         ForgeConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
                 .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
@@ -425,6 +464,7 @@ public class ForgeConfig {
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = safe(CLIENT_SPEC, enableStaminaHudOverlay, true);
         ClientConfig.ENABLE_WEIGHT_TOOLTIP = safe(CLIENT_SPEC, enableWeightTooltip, true);
         ClientConfig.ENABLE_SWAPPABLE_HUD = safe(CLIENT_SPEC, enableSwappableHud, true);
+        ClientConfig.AUTO_HIDE_HEALTHY_HUD = safe(CLIENT_SPEC, autoHideHealthyHud, false);
         ClientConfig.DEFAULT_HUD_MODE = safe(CLIENT_SPEC, defaultHudMode, "COMBINED");
         ClientConfig.SWAPPABLE_HUD_X = safe(CLIENT_SPEC, swappableHudX, 10);
         ClientConfig.SWAPPABLE_HUD_Y = safe(CLIENT_SPEC, swappableHudY, 10);

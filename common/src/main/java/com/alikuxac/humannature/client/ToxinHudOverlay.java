@@ -27,6 +27,7 @@ public class ToxinHudOverlay {
         }
         if (!ServerConfig.ENABLE_PHYSIOLOGY.get() || !ServerConfig.ENABLE_TOXIN_BUILDUP.get()) return;
         if (!ClientConfig.ENABLE_TOXIN_HUD_OVERLAY.get()) return;
+        if (ClientConfig.AUTO_HIDE_HEALTHY_HUD.get() && SwappableHudOverlay.isPlayerFullyHealthy(player)) return;
 
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         float buildup = data.getToxinBuildup();
