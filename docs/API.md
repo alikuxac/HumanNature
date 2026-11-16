@@ -8,6 +8,8 @@ Public API and event system for Human Nature **v0.3.0** on Minecraft 1.21.1 (Neo
 
 ### JitPack
 
+[![JitPack](https://img.shields.io/badge/JitPack-Available-brightgreen.svg?style=flat-square)](https://jitpack.io/#alikuxac/HumanNature)
+
 Add the JitPack repository and API dependency to your `build.gradle`:
 
 ```groovy
@@ -17,7 +19,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "com.github.alikuxac.human-nature:humannature-api:${humannature_version}"
+    compileOnly "com.github.alikuxac.HumanNature:humannature-api:${humannature_version}"
 }
 ```
 

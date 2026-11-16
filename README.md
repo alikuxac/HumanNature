@@ -3,6 +3,7 @@
 [![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen.svg?style=flat-square)](https://minecraft.net/)
 [![NeoForge 21.1.77+](https://img.shields.io/badge/NeoForge-21.1.77+-orange.svg?style=flat-square)](https://neoforged.net/)
 [![Forge 52.1.20+](https://img.shields.io/badge/Forge-52.1.20+-blue.svg?style=flat-square)](https://files.minecraftforge.net/)
+[![JitPack](https://img.shields.io/badge/JitPack-Available-brightgreen.svg?style=flat-square)](https://jitpack.io/#alikuxac/HumanNature)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/Models-CC%20BY--NC--ND%204.0-yellow.svg?style=flat-square)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
@@ -83,7 +84,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "com.github.alikuxac.human-nature:humannature-api:${humannature_version}"
+    compileOnly "com.github.alikuxac.HumanNature:humannature-api:${humannature_version}"
 }
 ```
 

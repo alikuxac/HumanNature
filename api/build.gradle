@@ -4,8 +4,13 @@ plugins {
     id 'net.neoforged.moddev' version '1.0.21'
 }
 
-version = rootProject.mod_version
-group = rootProject.mod_group_id
+def isJitPack = "true" == System.getenv("JITPACK")
+def rawVersion = System.getenv("VERSION") ?: (project.findProperty("mod_version") ?: rootProject.mod_version)
+def publishVersion = rawVersion ? rawVersion.replaceFirst('^v', '') : rootProject.mod_version
+def publishGroup = System.getenv("GROUP") ?: (isJitPack ? "com.github.alikuxac.HumanNature" : rootProject.mod_group_id)
+
+version = publishVersion
+group = publishGroup
 
 base {
     archivesName = "${rootProject.mod_id}-api"
@@ -28,20 +33,20 @@ neoForge {
 }
 
 tasks.named('jar', Jar) {
-    archiveFileName = "${rootProject.mod_id}-api-${rootProject.mod_version}+mc${rootProject.minecraft_version}.jar"
+    archiveFileName = "${rootProject.mod_id}-api-${publishVersion}.jar"
 }
 
 tasks.named('sourcesJar', Jar) {
-    archiveFileName = "${rootProject.mod_id}-api-${rootProject.mod_version}+mc${rootProject.minecraft_version}-sources.jar"
+    archiveFileName = "${rootProject.mod_id}-api-${publishVersion}-sources.jar"
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            groupId = rootProject.mod_group_id
+            groupId = publishGroup
             artifactId = "${rootProject.mod_id}-api"
-            version = rootProject.mod_version
+            version = publishVersion
         }
     }
 }
