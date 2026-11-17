@@ -1,5 +1,7 @@
 package com.alikuxac.humannature.modules.injury;
 
+import net.minecraft.ChatFormatting;
+
 public enum TraumaSeverity {
     HEALTHY(0, 0xFF2E7D32, "Healthy"),
     MINOR(1, 0xFFF57F17, "Minor / Sprained"),
@@ -25,6 +27,18 @@ public enum TraumaSeverity {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getTranslationKey() {
+        return "humannature.severity." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    public ChatFormatting getChatFormatting() {
+        return switch (this) {
+            case HEALTHY -> ChatFormatting.GREEN;
+            case MINOR -> ChatFormatting.GOLD;
+            case MAJOR -> ChatFormatting.RED;
+        };
     }
 
     public static TraumaSeverity fromLevel(int level) {

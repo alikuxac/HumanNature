@@ -2,6 +2,8 @@ package com.alikuxac.humannature.client.gui;
 
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.init.ModEffects;
+import com.alikuxac.humannature.init.ModEnchantments;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
@@ -23,6 +25,7 @@ import com.alikuxac.humannature.modules.weight.WeightCalculator;
 import com.alikuxac.humannature.modules.weight.WeightModule;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -60,7 +63,7 @@ public class DiagnosticScreen extends Screen {
     );
 
     public DiagnosticScreen() {
-        super(Component.literal("Skeleton & Body Diagnostics"));
+        super(Component.translatable("gui.humannature.diagnostic.title"));
     }
 
     @Override
@@ -70,7 +73,7 @@ public class DiagnosticScreen extends Screen {
         this.topPos = (this.height - GUI_HEIGHT) / 2;
 
         this.addRenderableWidget(Button.builder(
-                Component.literal("← Inventory"),
+                Component.translatable("gui.humannature.diagnostic.back_inventory"),
                 btn -> {
                     if (this.minecraft != null && this.minecraft.player != null) {
                         this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
@@ -96,7 +99,7 @@ public class DiagnosticScreen extends Screen {
         guiGraphics.fill(leftPos, topPos, leftPos + GUI_WIDTH, topPos + GUI_HEIGHT, 0xF0181818);
         guiGraphics.renderOutline(leftPos, topPos, GUI_WIDTH, GUI_HEIGHT, 0xFF3E3E3E);
 
-        guiGraphics.drawString(this.font, "§6§lBODY DIAGNOSTICS", leftPos + 12, topPos + 10, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.title").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), leftPos + 12, topPos + 10, 0xFFFFFF, false);
         guiGraphics.fill(leftPos + 12, topPos + 24, leftPos + GUI_WIDTH - 12, topPos + 25, 0xFF353535);
 
         int silX = leftPos + 12;
@@ -134,17 +137,19 @@ public class DiagnosticScreen extends Screen {
         }
 
         if (totalFractures == 0) {
-            guiGraphics.drawString(this.font, "§a✔ All limbs healthy", infoX, curY, 0x55FF55, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.all_healthy").withStyle(ChatFormatting.GREEN), infoX, curY, 0x55FF55, false);
             curY += 12;
         } else {
-            guiGraphics.drawString(this.font, "§c⚠ " + totalFractures + " Fractured Limb(s)", infoX, curY, 0xFF5555, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.fractured_count", totalFractures).withStyle(ChatFormatting.RED), infoX, curY, 0xFF5555, false);
             curY += 13;
 
             for (LimbType limb : LimbType.values()) {
                 byte sev = data.getSeverity(limb);
                 if (sev > 0) {
-                    String sevName = sev >= 2 ? "Broken" : "Sprained";
-                    String line = "§f• " + limb.getDisplayName() + ": " + getSeverityColor(sev) + sevName;
+                    ChatFormatting sevColor = sev >= 2 ? ChatFormatting.RED : ChatFormatting.GOLD;
+                    Component sevName = Component.translatable(sev >= 2 ? "humannature.severity.broken" : "humannature.severity.sprained").withStyle(sevColor);
+                    Component limbName = Component.translatable(limb.getTranslationKey()).withStyle(ChatFormatting.WHITE);
+                    Component line = Component.translatable("gui.humannature.diagnostic.limb_status", limbName, sevName).withStyle(ChatFormatting.WHITE);
                     guiGraphics.drawString(this.font, line, infoX, curY, 0xFFFFFF, false);
                     curY += 11;
                 }
@@ -177,7 +182,15 @@ public class DiagnosticScreen extends Screen {
             float weightPct = ratio * 100.0f;
             EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
 
-            String weightText = "§7Weight: " + tier.getColorCode() + String.format("%.1f/%.0fkg §8(%s)", curWeight, maxWeight, tier.getDisplayName());
+            ChatFormatting tierColor = tier.getChatFormatting();
+            Component curWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.1f", curWeight)).withStyle(tierColor);
+            Component maxWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f", maxWeight)).withStyle(ChatFormatting.GRAY);
+            Component tierComp = Component.translatable(tier.getTranslationKey()).withStyle(tierColor);
+
+            Component weightText = Component.translatable("gui.humannature.diagnostic.weight_bar",
+                    curWeightComp,
+                    maxWeightComp,
+                    tierComp).withStyle(ChatFormatting.GRAY);
             int weightLabelY = curY;
             guiGraphics.drawString(this.font, weightText, infoX, curY, 0xFFFFFF, false);
             curY += 9;
@@ -202,38 +215,42 @@ public class DiagnosticScreen extends Screen {
 
             if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= weightLabelY && mouseY <= barY + barHeight + 2) {
                 weightTooltip = new ArrayList<>();
-                weightTooltip.add(Component.literal("§6Inventory Weight: " + tier.getColorCode() + String.format("%.1f / %.1f kg (%.1f%%)", curWeight, maxWeight, weightPct)));
-                weightTooltip.add(Component.literal("§7Status: " + tier.getColorCode() + tier.getDisplayName()));
+                Component pctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.1f%%", weightPct)).withStyle(tierColor);
+                weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.header",
+                        curWeightComp,
+                        Component.literal(String.format(java.util.Locale.ROOT, "%.1f", maxWeight)).withStyle(ChatFormatting.GOLD),
+                        pctComp).withStyle(ChatFormatting.GOLD));
+                weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.status", tierComp).withStyle(ChatFormatting.GRAY));
 
                 if (Math.abs(maxWeight - baseWeight) > 0.5f) {
-                    weightTooltip.add(Component.literal(String.format("§7Base Capacity: %.0f kg", baseWeight)));
-                    if (com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER != null) {
-                        var holder = com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER.get();
+                    weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.base_capacity", String.format(java.util.Locale.ROOT, "%.0f", baseWeight)).withStyle(ChatFormatting.GRAY));
+                    if (ModEffects.BURDEN_BEARER != null) {
+                        var holder = ModEffects.BURDEN_BEARER.get();
                         if (holder != null) {
                             var burden = player.getEffect(holder);
                             if (burden != null) {
                                 double bonus = (burden.getAmplifier() + 1) * ServerConfig.BURDEN_BEARER_CAPACITY_BONUS;
-                                weightTooltip.add(Component.literal(String.format("§a• Burden Bearer (Potion): +%.0f kg", bonus)));
+                                weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.burden_bearer", String.format(java.util.Locale.ROOT, "%.0f", bonus)).withStyle(ChatFormatting.GREEN));
                             }
                         }
                     }
                     int totalLoadBearing = 0;
                     for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-                        totalLoadBearing += WeightCalculator.getEnchantmentLevel(player.getItemBySlot(slot), com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
+                        totalLoadBearing += WeightCalculator.getEnchantmentLevel(player.getItemBySlot(slot), ModEnchantments.LOAD_BEARING);
                     }
                     if (totalLoadBearing > 0) {
                         double bonus = totalLoadBearing * ServerConfig.LOAD_BEARING_CAPACITY_BONUS;
-                        weightTooltip.add(Component.literal(String.format("§b• Load Bearing (Armor): +%.0f kg", bonus)));
+                        weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.load_bearing", String.format(java.util.Locale.ROOT, "%.0f", bonus)).withStyle(ChatFormatting.AQUA));
                     }
                 }
                 if (tier == EncumbranceTier.NORMAL) {
-                    weightTooltip.add(Component.literal("§a✔ Unencumbered: Full mobility & baseline physics"));
+                    weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.unencumbered").withStyle(ChatFormatting.GREEN));
                 } else {
-                    weightTooltip.add(Component.literal(String.format("§c• Speed Penalty: -%.0f%% Movement Speed", tier.getSpeedPenalty() * 100.0f)));
-                    weightTooltip.add(Component.literal(String.format("§c• Water Sinking: +%.0f%% Sink Pull", tier.getSinkPull() * 1000.0f)));
-                    weightTooltip.add(Component.literal(String.format("§c• Fall Impact: %.2fx Fall Damage", tier.getFallDamageMultiplier())));
+                    weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.penalty_speed", String.format(java.util.Locale.ROOT, "%.0f", tier.getSpeedPenalty() * 100.0f)).withStyle(ChatFormatting.RED));
+                    weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.penalty_sink", String.format(java.util.Locale.ROOT, "%.0f", tier.getSinkPull() * 1000.0f)).withStyle(ChatFormatting.RED));
+                    weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.penalty_fall", String.format(java.util.Locale.ROOT, "%.2f", tier.getFallDamageMultiplier())).withStyle(ChatFormatting.RED));
                 }
-                weightTooltip.add(Component.literal("§8Light ≥50% | Medium ≥70% | Overburdened ≥85%"));
+                weightTooltip.add(Component.translatable("gui.humannature.tooltip.weight.thresholds").withStyle(ChatFormatting.DARK_GRAY));
             }
         }
 
@@ -245,24 +262,28 @@ public class DiagnosticScreen extends Screen {
                 float fatigueScore = physData.getFatigueScore();
                 float fatiguePct = physData.getFatiguePercentage();
 
-                String fatigueColor;
-                String fatigueLabel;
+                ChatFormatting fatigueFormatting;
+                String fatigueKey;
                 if (fatigueScore >= 0.80f) {
-                    fatigueColor = "§c";
-                    fatigueLabel = "Drowsy";
+                    fatigueFormatting = ChatFormatting.RED;
+                    fatigueKey = "humannature.fatigue.drowsy";
                 } else if (fatigueScore >= 0.50f) {
-                    fatigueColor = "§6";
-                    fatigueLabel = "Tired";
+                    fatigueFormatting = ChatFormatting.GOLD;
+                    fatigueKey = "humannature.fatigue.tired";
                 } else if (fatigueScore >= 0.20f) {
-                    fatigueColor = "§e";
-                    fatigueLabel = "Mild";
+                    fatigueFormatting = ChatFormatting.YELLOW;
+                    fatigueKey = "humannature.fatigue.mild";
                 } else {
-                    fatigueColor = "§a";
-                    fatigueLabel = "Rested";
+                    fatigueFormatting = ChatFormatting.GREEN;
+                    fatigueKey = "humannature.fatigue.rested";
                 }
 
                 int physLabelY = curY;
-                String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueLabel + "§8)";
+                Component fatiguePctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", fatiguePct)).withStyle(fatigueFormatting);
+                Component fatigueLabelComp = Component.translatable(fatigueKey).withStyle(fatigueFormatting);
+                Component physText = Component.translatable("gui.humannature.diagnostic.fatigue_bar",
+                        fatiguePctComp,
+                        fatigueLabelComp).withStyle(ChatFormatting.GRAY);
                 guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
                 curY += 9;
 
@@ -280,16 +301,17 @@ public class DiagnosticScreen extends Screen {
 
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
                     physTooltip = new ArrayList<>();
-                    physTooltip.add(Component.literal("§6Sleep Fatigue: " + fatigueColor + String.format("%.1f%%", fatiguePct)));
+                    Component headerPct = Component.literal(String.format(java.util.Locale.ROOT, "%.1f%%", fatiguePct)).withStyle(fatigueFormatting);
+                    physTooltip.add(Component.translatable("gui.humannature.tooltip.fatigue.header", headerPct).withStyle(ChatFormatting.GOLD));
                     long awakeTicks = physData.getAwakeTicks();
                     double awakeDays = (double) awakeTicks / 24000.0;
-                    physTooltip.add(Component.literal(String.format("§7Awake: %.1f in-game day(s)", awakeDays)));
+                    physTooltip.add(Component.translatable("gui.humannature.tooltip.fatigue.awake", String.format(java.util.Locale.ROOT, "%.1f", awakeDays)).withStyle(ChatFormatting.GRAY));
                     if (physData.isBlinkEligible()) {
-                        physTooltip.add(Component.literal("§c⚠ Micro-Sleep Active: Periodic Darkness blinks while moving"));
+                        physTooltip.add(Component.translatable("gui.humannature.tooltip.fatigue.microsleep_active").withStyle(ChatFormatting.RED));
                     } else {
-                        physTooltip.add(Component.literal("§a✔ Darkness Blinks: Inactive (< 80% fatigue)"));
+                        physTooltip.add(Component.translatable("gui.humannature.tooltip.fatigue.microsleep_inactive").withStyle(ChatFormatting.GREEN));
                     }
-                    physTooltip.add(Component.literal("§8Sleep in a bed through the night to reset fatigue."));
+                    physTooltip.add(Component.translatable("gui.humannature.tooltip.fatigue.reset_hint").withStyle(ChatFormatting.DARK_GRAY));
                 }
             }
 
@@ -297,9 +319,13 @@ public class DiagnosticScreen extends Screen {
                 float toxinBuildup = physData.getToxinBuildup();
                 ToxinType toxinType = physData.getLastToxinType();
 
-                String toxinLabel = toxinType == ToxinType.NONE ? "Clear" : toxinType.getDisplayName();
-                String toxinText = "§7Toxin: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.0f%%", toxinBuildup) : "§a0%")
-                        + " §8(" + (toxinBuildup > 0.0f ? toxinType.getColorCode() : "§a") + toxinLabel + "§8)";
+                ChatFormatting toxinFormatting = toxinType == ToxinType.WITHER ? ChatFormatting.DARK_PURPLE : (toxinBuildup > 0.0f ? ChatFormatting.GREEN : ChatFormatting.GREEN);
+                Component toxinPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", toxinBuildup)).withStyle(toxinFormatting);
+                Component toxinLabelComp = Component.translatable(toxinType == ToxinType.NONE ? "humannature.toxin.none" : toxinType.getTranslationKey()).withStyle(toxinFormatting);
+
+                Component toxinText = Component.translatable("gui.humannature.diagnostic.toxin_bar",
+                        toxinPctComp,
+                        toxinLabelComp).withStyle(ChatFormatting.GRAY);
 
                 int toxinLabelY = curY;
                 guiGraphics.drawString(this.font, toxinText, infoX, curY, 0xFFFFFF, false);
@@ -319,29 +345,33 @@ public class DiagnosticScreen extends Screen {
 
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= toxinLabelY && mouseY <= toxinBarY + toxinBarHeight + 2) {
                     toxinTooltip = new ArrayList<>();
-                    toxinTooltip.add(Component.literal("§6Toxin Buildup: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.1f%%", toxinBuildup) : "§a0.0% (Clear)")));
+                    Component toxinHeaderVal = toxinBuildup > 0.0f
+                            ? Component.literal(String.format(java.util.Locale.ROOT, "%.1f%%", toxinBuildup)).withStyle(toxinFormatting)
+                            : Component.translatable("gui.humannature.tooltip.toxin.clear").withStyle(ChatFormatting.GREEN);
+                    toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.header", toxinHeaderVal).withStyle(ChatFormatting.GOLD));
                     float toxinMultiplier = PhysiologyModule.calculateToxinMultiplier(player.getUUID());
                     if (toxinBuildup > 0.0f) {
-                        toxinTooltip.add(Component.literal("§7Accumulated Type: " + toxinType.getColorCode() + toxinType.getDisplayName()));
+                        Component accTypeComp = Component.translatable(toxinType.getTranslationKey()).withStyle(toxinFormatting);
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.accumulated", accTypeComp).withStyle(ChatFormatting.GRAY));
                         int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS;
                         int elapsed = physData.getTicksSinceLastExposure();
                         if (elapsed < delayTicks) {
-                            toxinTooltip.add(Component.literal(String.format("§7Decay Delay: %.1fs remaining", (delayTicks - elapsed) / 20.0)));
+                            toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.decay_delay", String.format(java.util.Locale.ROOT, "%.1f", (delayTicks - elapsed) / 20.0)).withStyle(ChatFormatting.GRAY));
                         } else {
-                            toxinTooltip.add(Component.literal("§a✔ Passive Decay Active (~2.0%/s)"));
+                            toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.decay_active").withStyle(ChatFormatting.GREEN));
                         }
-                        toxinTooltip.add(Component.literal("§e⚡ Heat/Resting: 3x decay acceleration"));
-                        toxinTooltip.add(Component.literal("§b🍶 Milk Bucket: Clears 100% | 🍯 Honey: -50%"));
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.heat_resting").withStyle(ChatFormatting.YELLOW));
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.remedy").withStyle(ChatFormatting.AQUA));
                         if (toxinMultiplier > 1.01f) {
-                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
+                            toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.vulnerability", String.format(java.util.Locale.ROOT, "%.1f", toxinMultiplier)).withStyle(ChatFormatting.RED));
                         }
-                        toxinTooltip.add(Component.literal("§c⚠ Reaching 100% causes immediate outbreak!"));
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.imminent_outbreak").withStyle(ChatFormatting.RED));
                     } else {
-                        toxinTooltip.add(Component.literal("§a✔ Toxin Free: Poison & Wither attacks build up here."));
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.free").withStyle(ChatFormatting.GREEN));
                         if (toxinMultiplier > 1.01f) {
-                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
+                            toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.vulnerability", String.format(java.util.Locale.ROOT, "%.1f", toxinMultiplier)).withStyle(ChatFormatting.RED));
                         }
-                        toxinTooltip.add(Component.literal("§8Effects erupt only when the buildup reaches 100%."));
+                        toxinTooltip.add(Component.translatable("gui.humannature.tooltip.toxin.erupt_hint").withStyle(ChatFormatting.DARK_GRAY));
                     }
                 }
             }
@@ -351,21 +381,26 @@ public class DiagnosticScreen extends Screen {
                 boolean isFailure = physData.isMuscleFailure();
                 boolean isCramped = physData.isSwimmingCramped();
 
-                String statusColor;
-                String statusLabel;
+                ChatFormatting staminaFormatting;
+                String statusKey;
                 if (isFailure) {
-                    statusColor = "§c";
-                    statusLabel = "Failure";
+                    staminaFormatting = ChatFormatting.RED;
+                    statusKey = "humannature.stamina.failure";
                 } else if (exertion >= 50.0f) {
-                    statusColor = "§6";
-                    statusLabel = "Strained";
+                    staminaFormatting = ChatFormatting.GOLD;
+                    statusKey = "humannature.stamina.strained";
                 } else {
-                    statusColor = "§a";
-                    statusLabel = "Rested";
+                    staminaFormatting = ChatFormatting.GREEN;
+                    statusKey = "humannature.stamina.rested";
                 }
 
-                String exertionText = "§7Stamina: " + statusColor + String.format("%.0f%%", 100.0f - exertion)
-                        + " §8(" + (isCramped ? "§cCramp" : statusLabel) + "§8)";
+                Component parenLabel = isCramped
+                        ? Component.translatable("humannature.stamina.cramp").withStyle(ChatFormatting.RED)
+                        : Component.translatable(statusKey).withStyle(staminaFormatting);
+                Component staminaPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", 100.0f - exertion)).withStyle(staminaFormatting);
+                Component exertionText = Component.translatable("gui.humannature.diagnostic.stamina_bar",
+                        staminaPctComp,
+                        parenLabel).withStyle(ChatFormatting.GRAY);
 
                 int exertionLabelY = curY;
                 guiGraphics.drawString(this.font, exertionText, infoX, curY, 0xFFFFFF, false);
@@ -386,46 +421,49 @@ public class DiagnosticScreen extends Screen {
 
                 if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= exertionLabelY && mouseY <= exertionBarY + exertionBarHeight + 2) {
                     exertionTooltip = new ArrayList<>();
-                    exertionTooltip.add(Component.literal("§6Stamina & Muscle: " + statusColor + String.format("%.0f%% Capacity", 100.0f - exertion)));
+                    Component capComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", 100.0f - exertion)).withStyle(staminaFormatting);
+                    exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.header", capComp).withStyle(ChatFormatting.GOLD));
                     if (isFailure) {
-                        exertionTooltip.add(Component.literal("§c⚠ Muscle Failure: -50% Attack Speed & -50% Digging Speed"));
-                        exertionTooltip.add(Component.literal("§e⚡ Stand still & release mouse for 3–4s to recover 100%"));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.failure").withStyle(ChatFormatting.RED));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.failure_recovery").withStyle(ChatFormatting.YELLOW));
                     } else if (exertion > 0.0f) {
-                        exertionTooltip.add(Component.literal(String.format("§7Exertion: %.0f%% (Continuous labor/jumping/upstream)", exertion)));
-                        exertionTooltip.add(Component.literal("§8Recovers passively or completely when resting"));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.exertion", String.format(java.util.Locale.ROOT, "%.0f", exertion)).withStyle(ChatFormatting.GRAY));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.recovery_passive").withStyle(ChatFormatting.DARK_GRAY));
                     } else {
-                        exertionTooltip.add(Component.literal("§a✔ Muscles Rested: Full attack & mining efficiency"));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.rested").withStyle(ChatFormatting.GREEN));
                     }
                     if (isCramped) {
-                        exertionTooltip.add(Component.literal("§c⚠ Swimming Cramp: -40% Swim Speed"));
-                        exertionTooltip.add(Component.literal("§e⚡ Exit to shore or boat for 3s to relieve cramp"));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.cramp").withStyle(ChatFormatting.RED));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.cramp_relief").withStyle(ChatFormatting.YELLOW));
                     } else if (physData.getContinuousSwimmingTicks() > 200) {
                         int crampThreshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS;
                         int remTicks = Math.max(0, crampThreshold - physData.getContinuousSwimmingTicks());
-                        exertionTooltip.add(Component.literal(String.format("§7Swimming: %.1fs until leg cramp", remTicks / 20.0)));
+                        exertionTooltip.add(Component.translatable("gui.humannature.tooltip.stamina.swimming_countdown", String.format(java.util.Locale.ROOT, "%.1f", remTicks / 20.0)).withStyle(ChatFormatting.GRAY));
                     }
                 }
             }
 
             int bpm = calculateHeartRateBpm(player, physData);
-            String bpmColor;
-            String bpmLabel;
+            ChatFormatting bpmFormatting;
+            String bpmKey;
             if (bpm >= 140) {
-                bpmColor = "§c";
-                bpmLabel = "Tachycardia";
+                bpmFormatting = ChatFormatting.RED;
+                bpmKey = "humannature.heart.tachycardia";
             } else if (bpm >= 110) {
-                bpmColor = "§6";
-                bpmLabel = "Elevated";
+                bpmFormatting = ChatFormatting.GOLD;
+                bpmKey = "humannature.heart.elevated";
             } else if (bpm >= 80) {
-                bpmColor = "§e";
-                bpmLabel = "Moderate";
+                bpmFormatting = ChatFormatting.YELLOW;
+                bpmKey = "humannature.heart.moderate";
             } else {
-                bpmColor = "§a";
-                bpmLabel = "Normal";
+                bpmFormatting = ChatFormatting.GREEN;
+                bpmKey = "humannature.heart.normal";
             }
 
             int hrLabelY = curY;
-            String hrText = "§7Heart: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)";
+            Component bpmComp = Component.literal("❤ " + bpm + " BPM").withStyle(bpmFormatting);
+            Component bpmLabelComp = Component.translatable(bpmKey).withStyle(bpmFormatting);
+            Component hrText = Component.translatable("gui.humannature.diagnostic.heart_bar", bpmComp, bpmLabelComp).withStyle(ChatFormatting.GRAY);
             guiGraphics.drawString(this.font, hrText, infoX, curY, 0xFFFFFF, false);
             curY += 9;
 
@@ -444,53 +482,53 @@ public class DiagnosticScreen extends Screen {
 
             if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= hrLabelY && mouseY <= hrBarY + hrBarHeight + 2) {
                 heartRateTooltip = new ArrayList<>();
-                heartRateTooltip.add(Component.literal("§c❤ Heart Rate: " + bpmColor + bpm + " BPM (" + bpmLabel + ")"));
-                heartRateTooltip.add(Component.literal("§7Resting Baseline: ~68 BPM"));
+                heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.header", bpmComp, bpmLabelComp).withStyle(ChatFormatting.RED));
+                heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.baseline").withStyle(ChatFormatting.GRAY));
                 double exertionBpm = (physData.getExertionScore() / 100.0) * 45.0;
                 if (exertionBpm > 0.5) {
-                    heartRateTooltip.add(Component.literal(String.format("§7• Exertion / Labor: +%.0f BPM", exertionBpm)));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.exertion", String.format(java.util.Locale.ROOT, "%.0f", exertionBpm)).withStyle(ChatFormatting.GRAY));
                 }
                 float maxHp = player.getMaxHealth();
                 float curHp = player.getHealth();
                 if (maxHp > 0.0f && curHp < maxHp) {
                     double traumaBpm = (1.0f - (curHp / maxHp)) * 40.0;
-                    heartRateTooltip.add(Component.literal(String.format("§c• Trauma / Low HP: +%.0f BPM", traumaBpm)));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.trauma", String.format(java.util.Locale.ROOT, "%.0f", traumaBpm)).withStyle(ChatFormatting.RED));
                 }
                 if (physData.getToxinBuildup() > 0.0f) {
                     double toxinBpm = (physData.getToxinBuildup() / 100.0) * 25.0;
-                    heartRateTooltip.add(Component.literal(String.format("§2• Toxin Cardiovascular Strain: +%.0f BPM", toxinBpm)));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.toxin", String.format(java.util.Locale.ROOT, "%.0f", toxinBpm)).withStyle(ChatFormatting.DARK_GREEN));
                 }
                 if (physData.getFatigueScore() > 0.1f) {
                     double fatigueBpm = physData.getFatigueScore() * 15.0;
-                    heartRateTooltip.add(Component.literal(String.format("§6• Fatigue Stress: +%.0f BPM", fatigueBpm)));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.fatigue", String.format(java.util.Locale.ROOT, "%.0f", fatigueBpm)).withStyle(ChatFormatting.GOLD));
                 }
                 if (physData.isPanicking()) {
-                    heartRateTooltip.add(Component.literal("§c• Underground Claustrophobia: +45 BPM"));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.claustrophobia").withStyle(ChatFormatting.RED));
                 }
                 if (physData.isAdrenalineActive()) {
-                    heartRateTooltip.add(Component.literal("§c• Adrenaline Surge: +60 BPM"));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.adrenaline").withStyle(ChatFormatting.RED));
                 }
                 if (physData.getIndigestionBuildup() >= 50.0f) {
-                    heartRateTooltip.add(Component.literal("§6• Gut Discomfort / Indigestion: +10 BPM"));
+                    heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.indigestion").withStyle(ChatFormatting.GOLD));
                 }
-                heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
+                heartRateTooltip.add(Component.translatable("gui.humannature.tooltip.heart.exhaustion_warning").withStyle(ChatFormatting.DARK_GRAY));
             }
 
-            List<String> tags = new ArrayList<>();
+            List<Component> tags = new ArrayList<>();
             if (physData.isAdrenalineActive()) {
-                tags.add("§c⚡ Adrenaline (" + String.format("%.1fs", physData.getAdrenalineTicks() / 20.0) + ")");
+                tags.add(Component.translatable("gui.humannature.tag.adrenaline", String.format(java.util.Locale.ROOT, "%.1f", physData.getAdrenalineTicks() / 20.0f)).withStyle(ChatFormatting.RED));
             } else if (physData.isPanicking()) {
-                tags.add("§c⚠ Panic (0 Lux)");
+                tags.add(Component.translatable("gui.humannature.tag.panic").withStyle(ChatFormatting.RED));
             }
             if (physData.getPendingNutrition() > 0.0f) {
-                tags.add("§aDigesting (+" + String.format("%.0f", physData.getPendingNutrition()) + "🍗)");
+                tags.add(Component.translatable("gui.humannature.tag.digesting", String.format(java.util.Locale.ROOT, "%.0f", physData.getPendingNutrition())).withStyle(ChatFormatting.GREEN));
             }
             if (physData.getIndigestionBuildup() > 0.0f) {
-                tags.add("§6Indigestion (" + String.format("%.0f%%", physData.getIndigestionBuildup()) + ")");
+                tags.add(Component.translatable("gui.humannature.tag.indigestion", String.format(java.util.Locale.ROOT, "%.0f", physData.getIndigestionBuildup())).withStyle(ChatFormatting.GOLD));
             }
             if (physData.hasCalciumBuff()) {
                 long cSec = physData.getCalciumAbsorptionTicks() / 20;
-                tags.add("§bCalcium (" + (cSec / 60) + "m " + (cSec % 60) + "s)");
+                tags.add(Component.translatable("gui.humannature.tag.calcium", cSec / 60, cSec % 60).withStyle(ChatFormatting.AQUA));
             }
 
             if (ServerConfig.ENABLE_TEMPERATURE.get()) {
@@ -502,78 +540,86 @@ public class DiagnosticScreen extends Screen {
 
                 float coreTemp = tempData.getCoreTemperature();
                 if (coreTemp > 42.0f) {
-                    tags.add(String.format("§c☠ Hyperthermia (%.1f°C)", coreTemp));
+                    tags.add(Component.translatable("gui.humannature.tag.hyperthermia", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.RED));
                 } else if (coreTemp > 39.5f) {
-                    tags.add(String.format("§c⚠ Heat Exhaustion (%.1f°C)", coreTemp));
+                    tags.add(Component.translatable("gui.humannature.tag.heat_exhaustion", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.RED));
                 } else if (hasBuff) {
-                    tags.add("§6♨ Internal Warming (" + (tempData.getInternalWarmingTicks() / 20) + "s)");
+                    tags.add(Component.translatable("gui.humannature.tag.internal_warming", tempData.getInternalWarmingTicks() / 20).withStyle(ChatFormatting.GOLD));
                 } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
-                    tags.add("§c❄ Freezing (Hypothermia)");
+                    tags.add(Component.translatable("gui.humannature.tag.freezing").withStyle(ChatFormatting.RED));
                 } else if (ticksFrozen > 0) {
-                    tags.add("§b❄ Chilly");
+                    tags.add(Component.translatable("gui.humannature.tag.chilly").withStyle(ChatFormatting.AQUA));
                 }
 
                 if (wetness >= 1.0f) {
-                    tags.add("§cWetness: Soaked (100%)");
+                    tags.add(Component.translatable("gui.humannature.tag.soaked").withStyle(ChatFormatting.RED));
                 } else if (wetness > 0.0f) {
-                    tags.add(String.format("§bWetness: Damp (%.0f%%)", wetness * 100.0f));
+                    tags.add(Component.translatable("gui.humannature.tag.damp", String.format(java.util.Locale.ROOT, "%.0f", wetness * 100.0f)).withStyle(ChatFormatting.AQUA));
                 }
 
                 if (nearHeat) {
-                    tags.add("§6Near Heat (Rewarming)");
+                    tags.add(Component.translatable("gui.humannature.tag.near_heat").withStyle(ChatFormatting.GOLD));
                 }
             }
 
             int tagStartY = curY;
             if (!tags.isEmpty() && curY < topPos + 118) {
-                for (String tag : tags) {
+                for (Component tag : tags) {
                     if (curY + 9 > topPos + 120) break;
                     guiGraphics.drawString(this.font, tag, infoX, curY, 0xFFFFFF, false);
                     curY += 9;
                 }
             } else if (curY < topPos + 118) {
-                guiGraphics.drawString(this.font, "§8Metabolism: Normal (Resting)", infoX, curY, 0x888888, false);
+                guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.metabolism_normal").withStyle(ChatFormatting.DARK_GRAY), infoX, curY, 0x888888, false);
                 curY += 9;
             }
 
             if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= tagStartY && mouseY <= Math.max(curY, tagStartY + 9)) {
                 metabolismTooltip = new ArrayList<>();
-                metabolismTooltip.add(Component.literal("§6Metabolic & Sensory Vitals"));
+                metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.title").withStyle(ChatFormatting.GOLD));
                 if (physData.getPendingNutrition() > 0.0f || physData.getPendingSaturation() > 0.0f) {
-                    metabolismTooltip.add(Component.literal(String.format("§a• Digestion Buffer: +%.0f Nutrition / +%.1f Saturation",
-                            physData.getPendingNutrition(), physData.getPendingSaturation())));
-                    metabolismTooltip.add(Component.literal("§7  Absorption ticks in every 1.5s to prevent meal spam."));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.digestion_buffer",
+                            String.format(java.util.Locale.ROOT, "%.0f", physData.getPendingNutrition()),
+                            String.format(java.util.Locale.ROOT, "%.1f", physData.getPendingSaturation())).withStyle(ChatFormatting.GREEN));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.digestion_hint").withStyle(ChatFormatting.GRAY));
                 } else {
-                    metabolismTooltip.add(Component.literal("§a• Digestion: Clear / Resting"));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.digestion_resting").withStyle(ChatFormatting.GREEN));
                 }
 
                 if (physData.hasCalciumBuff()) {
                     long calSec = physData.getCalciumAbsorptionTicks() / 20;
-                    metabolismTooltip.add(Component.literal(String.format("§b• Calcium Absorption: %02d:%02d remaining", calSec / 60, calSec % 60)));
-                    metabolismTooltip.add(Component.literal("§7  Doubles natural fracture healing speed during rest & sleep."));
+                    String timeStr = String.format(java.util.Locale.ROOT, "%02d:%02d", calSec / 60, calSec % 60);
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.calcium_remaining", timeStr).withStyle(ChatFormatting.AQUA));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.calcium_hint").withStyle(ChatFormatting.GRAY));
                 } else {
-                    metabolismTooltip.add(Component.literal("§8• Calcium Buff: Inactive (Drink Hot Bone Broth or Milk)"));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.calcium_inactive").withStyle(ChatFormatting.DARK_GRAY));
                 }
 
                 if (physData.getIndigestionBuildup() > 0.0f) {
-                    String crampTxt = physData.getIndigestionBuildup() >= 50.0f ? "§c[CRAMPING ACTIVE]" : "§6[Mild Discomfort]";
-                    metabolismTooltip.add(Component.literal(String.format("§6• Indigestion Buildup: %.0f%% %s", physData.getIndigestionBuildup(), crampTxt)));
-                    metabolismTooltip.add(Component.literal("§7  Caused by raw chicken/spoiled meat. Remedy with milk or honey."));
+                    Component crampTxt = physData.getIndigestionBuildup() >= 50.0f
+                            ? Component.translatable("gui.humannature.tooltip.metabolism.indigestion_cramp_active").withStyle(ChatFormatting.RED)
+                            : Component.translatable("gui.humannature.tooltip.metabolism.indigestion_mild").withStyle(ChatFormatting.GOLD);
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.indigestion_buildup",
+                            String.format(java.util.Locale.ROOT, "%.0f", physData.getIndigestionBuildup()),
+                            crampTxt).withStyle(ChatFormatting.GOLD));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.indigestion_hint").withStyle(ChatFormatting.GRAY));
                 }
 
                 if (physData.isAdrenalineActive()) {
                     float remSec = physData.getAdrenalineTicks() / 20.0f;
-                    metabolismTooltip.add(Component.literal(String.format("§c• Adrenaline Rush: %.1fs remaining", remSec)));
-                    metabolismTooltip.add(Component.literal("§a  +35% Speed Burst & Sprint Unlocked overriding fractures."));
-                    metabolismTooltip.add(Component.literal("§c⚠ Pain Shock collapse occurs immediately upon rush expiry!"));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.adrenaline_remaining", String.format(java.util.Locale.ROOT, "%.1f", remSec)).withStyle(ChatFormatting.RED));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.adrenaline_buff").withStyle(ChatFormatting.GREEN));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.adrenaline_collapse").withStyle(ChatFormatting.RED));
                 }
 
                 if (physData.isPanicking() || physData.getClaustrophobiaTicks() > 0) {
                     int pThresh = ServerConfig.PANIC_THRESHOLD_TICKS;
                     int pPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) pThresh) * 100.0f));
-                    metabolismTooltip.add(Component.literal(String.format("§c• Underground Claustrophobia: %d%% %s", pPct,
-                            physData.isPanicking() ? "§c[PANIC - AIM TREMORS]" : "§e[Building]")));
-                    metabolismTooltip.add(Component.literal("§7  Triggers at Y < 0 in pitch black. Calm near torches, fires, music, or pets."));
+                    Component pTxt = physData.isPanicking()
+                            ? Component.translatable("gui.humannature.tooltip.metabolism.claustrophobia_panic").withStyle(ChatFormatting.RED)
+                            : Component.translatable("gui.humannature.tooltip.metabolism.claustrophobia_building").withStyle(ChatFormatting.YELLOW);
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.claustrophobia_status", pPct, pTxt).withStyle(ChatFormatting.RED));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.claustrophobia_hint").withStyle(ChatFormatting.GRAY));
                 }
 
                 if (ServerConfig.ENABLE_TEMPERATURE.get()) {
@@ -583,49 +629,61 @@ public class DiagnosticScreen extends Screen {
                     boolean isNearHeat = tempData.isNearHeatSource();
 
                     float coreTemp = tempData.getCoreTemperature();
-                    String tempStatus;
+                    Component tempStatus;
                     if (coreTemp > 42.0f) {
-                        tempStatus = String.format("§c☠ Hyperthermia (%.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.hyperthermia", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.RED);
                     } else if (coreTemp > 39.5f) {
-                        tempStatus = String.format("§c⚠ Heat Exhaustion (%.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.heat_exhaustion", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.RED);
                     } else if (tempData.hasInternalWarming()) {
-                        tempStatus = String.format("§6Warm (Stew - %.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.warm_stew", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.GOLD);
                     } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
-                        tempStatus = String.format("§cFreezing (Hypothermia - %.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.freezing", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.RED);
                     } else if (ticksFrozen > 0 || (wetness >= 0.5f && !isNearHeat)) {
-                        tempStatus = String.format("§bChilly (%.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.chilly", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.AQUA);
                     } else {
-                        tempStatus = String.format("§aNormal (%.1f°C)", coreTemp);
+                        tempStatus = Component.translatable("humannature.temperature.normal", String.format(java.util.Locale.ROOT, "%.1f", coreTemp)).withStyle(ChatFormatting.GREEN);
                     }
 
-                    String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§bDamp (%.0f%%)", wetness * 100.0f) : "§a0% (Dry)");
-                    metabolismTooltip.add(Component.literal("§6• Body Temp: " + tempStatus));
-                    metabolismTooltip.add(Component.literal("§b• Wetness: " + wStatus));
+                    Component wStatus = wetness >= 1.0f
+                            ? Component.translatable("humannature.wetness.soaked").withStyle(ChatFormatting.RED)
+                            : (wetness > 0.0f
+                            ? Component.translatable("humannature.wetness.damp", String.format(java.util.Locale.ROOT, "%.0f", wetness * 100.0f)).withStyle(ChatFormatting.AQUA)
+                            : Component.translatable("humannature.wetness.dry").withStyle(ChatFormatting.GREEN));
+
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.body_temp", tempStatus).withStyle(ChatFormatting.GOLD));
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.wetness", wStatus).withStyle(ChatFormatting.AQUA));
 
                     if (tempData.hasInternalWarming()) {
                         int remSec = tempData.getInternalWarmingTicks() / 20;
-                        metabolismTooltip.add(Component.literal(String.format("§6  ↳ Internal Warming Buff: %ds remaining (Freeze Immune)", remSec)));
+                        metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.internal_warming", remSec).withStyle(ChatFormatting.GOLD));
                     }
                     if (isNearHeat) {
-                        metabolismTooltip.add(Component.literal("§6  ↳ Near Heat Source: Rapid drying (~12.5s) & 5x thaw"));
+                        metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.near_heat").withStyle(ChatFormatting.GOLD));
                     }
                     if (ticksFrozen > 0) {
-                        metabolismTooltip.add(Component.literal(String.format("§c  ↳ Freezing Ticks: %d / %d (Hypothermia)", ticksFrozen, player.getTicksRequiredToFreeze())));
+                        metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.freezing_ticks", ticksFrozen, player.getTicksRequiredToFreeze()).withStyle(ChatFormatting.RED));
                     }
                     float red = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
                     boolean noHelm = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
-                    metabolismTooltip.add(Component.literal(String.format("§7  ↳ Insulation: %.0f%% reduction | Head: %s", red * 100.0f, noHelm ? "§cMissing (2x Soak)" : "§aProtected")));
+                    Component helmStatus = noHelm
+                            ? Component.translatable("gui.humannature.tooltip.metabolism.insulation_missing").withStyle(ChatFormatting.RED)
+                            : Component.translatable("gui.humannature.tooltip.metabolism.insulation_protected").withStyle(ChatFormatting.GREEN);
+                    metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.insulation", String.format(java.util.Locale.ROOT, "%.0f", red * 100.0f), helmStatus).withStyle(ChatFormatting.GRAY));
 
                     int leatherCount = TemperatureEventHandler.countLeatherPieces(player);
                     int metalCount = TemperatureEventHandler.countMetallicPieces(player);
                     if (leatherCount > 0) {
                         double maxRed = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION;
-                        metabolismTooltip.add(Component.literal(String.format("§a  ↳ Leather Insulation: %.0f%% cold dampening (%d/4 pieces)", (leatherCount / 4.0f) * maxRed * 100.0f, leatherCount)));
+                        metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.leather_insulation",
+                                String.format(java.util.Locale.ROOT, "%.0f", (leatherCount / 4.0f) * maxRed * 100.0f),
+                                leatherCount).withStyle(ChatFormatting.GREEN));
                     }
                     if (metalCount > 0) {
                         double condMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER;
                         float extraCond = (metalCount / 4.0f) * (float) (condMult - 1.0) * 100.0f;
-                        metabolismTooltip.add(Component.literal(String.format("§b  ↳ Metal Cold Conduction: +%.0f%% chill conduction (%d/4 pieces)", extraCond, metalCount)));
+                        metabolismTooltip.add(Component.translatable("gui.humannature.tooltip.metabolism.metal_cold",
+                                String.format(java.util.Locale.ROOT, "%.0f", extraCond),
+                                metalCount).withStyle(ChatFormatting.AQUA));
                     }
                 }
             }
@@ -639,15 +697,15 @@ public class DiagnosticScreen extends Screen {
 
         if (hasSplint) {
             if (isOnCooldown) {
-                guiGraphics.drawString(this.font, "§c⌛ Treating...", infoX, splintDividerY + 5, 0xFF6666, false);
+                guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.splint_treating").withStyle(ChatFormatting.RED), infoX, splintDividerY + 5, 0xFF6666, false);
             } else {
-                guiGraphics.drawString(this.font, "§eClick limb to treat", infoX, splintDividerY + 5, 0xFFFF55, false);
+                guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.splint_click_treat").withStyle(ChatFormatting.YELLOW), infoX, splintDividerY + 5, 0xFFFF55, false);
             }
             String splintName = this.font.plainSubstrByWidth(availableSplint.getHoverName().getString(), infoWidth - 36);
-            guiGraphics.drawString(this.font, "§7Using: " + splintName, infoX, splintDividerY + 17, 0xAAAAAA, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.splint_using", splintName).withStyle(ChatFormatting.GRAY), infoX, splintDividerY + 17, 0xAAAAAA, false);
         } else {
-            guiGraphics.drawString(this.font, "§8No splint in inventory", infoX, splintDividerY + 5, 0x888888, false);
-            guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, splintDividerY + 17, 0x666666, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.splint_none").withStyle(ChatFormatting.DARK_GRAY), infoX, splintDividerY + 5, 0x888888, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.humannature.diagnostic.return_inventory").withStyle(ChatFormatting.DARK_GRAY), infoX, splintDividerY + 17, 0x666666, false);
         }
 
         if (hoveredBox != null) {
@@ -655,41 +713,44 @@ public class DiagnosticScreen extends Screen {
             TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
 
             List<Component> tooltip = new ArrayList<>();
-            tooltip.add(Component.literal("§6" + hoveredBox.limb().getDisplayName()));
-            tooltip.add(Component.literal("Status: " + getSeverityColor(sev) + sevEnum.getDisplayName() + " (Tier " + sev + ")"));
+            tooltip.add(Component.translatable(hoveredBox.limb().getTranslationKey()).withStyle(ChatFormatting.GOLD));
+            tooltip.add(Component.translatable("gui.humannature.tooltip.limb.status",
+                    Component.translatable(sevEnum.getTranslationKey()).withStyle(sevEnum.getChatFormatting()),
+                    sev).withStyle(ChatFormatting.GRAY));
 
             if (sev > 0) {
                 switch (hoveredBox.limb()) {
-                    case HEAD -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Mild Disorientation" : "§cPenalty: Flashing Darkness"));
-                    case TORSO -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Increased Hunger Exhaustion" : "§cPenalty: Max Health Capped (7 Hearts)"));
-                    case MAIN_ARM -> tooltip.add(Component.literal("§cPenalty: -50% Attack/Mine Speed, Spasm Drop, Draw Lock"));
-                    case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
-                    case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
+                    case HEAD -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_head_mild" : "gui.humannature.tooltip.limb.penalty_head_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
+                    case TORSO -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_torso_mild" : "gui.humannature.tooltip.limb.penalty_torso_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
+                    case MAIN_ARM -> tooltip.add(Component.translatable("gui.humannature.tooltip.limb.penalty_main_arm").withStyle(ChatFormatting.RED));
+                    case OFF_ARM -> tooltip.add(Component.translatable("gui.humannature.tooltip.limb.penalty_off_arm").withStyle(ChatFormatting.RED));
+                    case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_leg_mild" : "gui.humannature.tooltip.limb.penalty_leg_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
                 }
                 if (data.isSplinted(hoveredBox.limb())) {
                     SplintTier st = data.getSplint(hoveredBox.limb());
-                    tooltip.add(Component.literal("§bSplinted: " + (st != null ? st.getDisplayName() : "Splint") + " (" + data.getSplintDurability(hoveredBox.limb()) + " dura)"));
+                    Component stName = st != null ? Component.translatable(st.getTranslationKey()) : Component.translatable("humannature.splint_tier.generic");
+                    tooltip.add(Component.translatable("gui.humannature.tooltip.limb.splinted", stName, data.getSplintDurability(hoveredBox.limb())).withStyle(ChatFormatting.AQUA));
                     if (PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                        tooltip.add(Component.literal("§d• Osteogenesis Active (Accelerated Healing)"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.osteogenesis").withStyle(ChatFormatting.LIGHT_PURPLE));
                     }
                     if (hasSplint) {
                         if (isOnCooldown) {
-                            tooltip.add(Component.literal("§c[Splint on Cooldown]"));
+                            tooltip.add(Component.translatable("gui.humannature.tooltip.limb.splint_cooldown").withStyle(ChatFormatting.RED));
                         } else {
-                            tooltip.add(Component.literal("§e[Click to Replace with " + availableSplint.getHoverName().getString() + "]"));
+                            tooltip.add(Component.translatable("gui.humannature.tooltip.limb.click_replace", availableSplint.getHoverName()).withStyle(ChatFormatting.YELLOW));
                         }
                     }
                 } else if (hasSplint) {
                     if (isOnCooldown) {
-                        tooltip.add(Component.literal("§c[Splint on Cooldown]"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.splint_cooldown").withStyle(ChatFormatting.RED));
                     } else {
-                        tooltip.add(Component.literal("§e[Click to Treat with " + availableSplint.getHoverName().getString() + "]"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.click_treat", availableSplint.getHoverName()).withStyle(ChatFormatting.YELLOW));
                     }
                 } else {
-                    tooltip.add(Component.literal("§7[Requires Splint in inventory]"));
+                    tooltip.add(Component.translatable("gui.humannature.tooltip.limb.requires_splint").withStyle(ChatFormatting.GRAY));
                 }
             } else {
-                tooltip.add(Component.literal("§aNo active fractures"));
+                tooltip.add(Component.translatable("gui.humannature.tooltip.limb.no_fractures").withStyle(ChatFormatting.GREEN));
             }
 
             guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);

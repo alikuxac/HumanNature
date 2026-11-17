@@ -72,6 +72,10 @@ public enum SplintTier {
         return displayName;
     }
 
+    public String getTranslationKey() {
+        return "humannature.splint_tier." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     public int getIndex() {
         return ordinal() + 1;
     }

@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.modules.physiology;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
@@ -23,8 +24,20 @@ public enum ToxinType {
         return displayName;
     }
 
+    public String getTranslationKey() {
+        return "humannature.toxin." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     public String getColorCode() {
         return colorCode;
+    }
+
+    public ChatFormatting getChatFormatting() {
+        return switch (this) {
+            case NONE -> ChatFormatting.GREEN;
+            case POISON -> ChatFormatting.DARK_GREEN;
+            case WITHER -> ChatFormatting.DARK_PURPLE;
+        };
     }
 
     public int getRgbColor() {

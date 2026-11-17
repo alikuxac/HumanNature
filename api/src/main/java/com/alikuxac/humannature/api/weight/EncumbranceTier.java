@@ -18,6 +18,10 @@ public enum EncumbranceTier {
         return displayName;
     }
 
+    public String getTranslationKey() {
+        return "humannature.encumbrance." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     public String getColorCode() {
         return colorCode;
     }

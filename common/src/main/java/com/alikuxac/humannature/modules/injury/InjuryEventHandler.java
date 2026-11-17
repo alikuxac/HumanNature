@@ -9,6 +9,7 @@ import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
@@ -906,7 +907,11 @@ public class InjuryEventHandler {
                 0.9F
         );
 
-        player.displayClientMessage(Component.literal("§cYour " + tier.getDisplayName() + " Splint on " + limb.getDisplayName() + " snapped!"), true);
+        player.displayClientMessage(Component.translatable(
+                "message.humannature.splint_snapped",
+                Component.translatable(tier.getTranslationKey()),
+                Component.translatable(limb.getTranslationKey())
+        ).withStyle(ChatFormatting.RED), true);
     }
 
     public static void handleFractureTick(Player player, boolean isResting, boolean isStandingStill, boolean isMoving, boolean isSprinting, double deltaDistance) {

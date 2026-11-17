@@ -11,6 +11,7 @@ import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -84,37 +85,40 @@ public class BodySilhouettePanel {
             TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
 
             List<Component> tooltip = new ArrayList<>();
-            tooltip.add(Component.literal("§6" + hoveredBox.limb().getDisplayName()));
-            tooltip.add(Component.literal("Status: " + getSeverityColorCode(sev) + sevEnum.getDisplayName() + " (Tier " + sev + ")"));
+            tooltip.add(Component.translatable(hoveredBox.limb().getTranslationKey()).withStyle(ChatFormatting.GOLD));
+            tooltip.add(Component.translatable("gui.humannature.tooltip.limb.status",
+                    Component.translatable(sevEnum.getTranslationKey()).withStyle(sevEnum.getChatFormatting()),
+                    sev).withStyle(ChatFormatting.GRAY));
 
             if (sev > 0) {
                 switch (hoveredBox.limb()) {
-                    case HEAD -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Mild Disorientation" : "§cPenalty: Flashing Darkness"));
-                    case TORSO -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Increased Hunger Exhaustion" : "§cPenalty: Max Health Capped (7 Hearts)"));
-                    case MAIN_ARM -> tooltip.add(Component.literal("§cPenalty: -50% Attack/Mine Speed, Spasm Drop, Draw Lock"));
-                    case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
-                    case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
+                    case HEAD -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_head_mild" : "gui.humannature.tooltip.limb.penalty_head_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
+                    case TORSO -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_torso_mild" : "gui.humannature.tooltip.limb.penalty_torso_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
+                    case MAIN_ARM -> tooltip.add(Component.translatable("gui.humannature.tooltip.limb.penalty_main_arm").withStyle(ChatFormatting.RED));
+                    case OFF_ARM -> tooltip.add(Component.translatable("gui.humannature.tooltip.limb.penalty_off_arm").withStyle(ChatFormatting.RED));
+                    case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.translatable(sev == 1 ? "gui.humannature.tooltip.limb.penalty_leg_mild" : "gui.humannature.tooltip.limb.penalty_leg_severe").withStyle(sev == 1 ? ChatFormatting.GRAY : ChatFormatting.RED));
                 }
                 if (data.isSplinted(hoveredBox.limb())) {
                     SplintTier st = data.getSplint(hoveredBox.limb());
-                    tooltip.add(Component.literal("§bSplinted: " + (st != null ? st.getDisplayName() : "Splint") + " (" + data.getSplintDurability(hoveredBox.limb()) + " dura)"));
+                    Component splintName = st != null ? Component.translatable(st.getTranslationKey()) : Component.translatable("humannature.splint_tier.generic");
+                    tooltip.add(Component.translatable("gui.humannature.tooltip.limb.splinted", splintName, data.getSplintDurability(hoveredBox.limb())).withStyle(ChatFormatting.AQUA));
                     if (PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                        tooltip.add(Component.literal("§d• Osteogenesis Active (Accelerated Healing)"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.osteogenesis").withStyle(ChatFormatting.LIGHT_PURPLE));
                     }
                     ItemStack splint = InjuryEventHandler.findFirstSplint(player);
                     if (!splint.isEmpty()) {
-                        tooltip.add(Component.literal("§e[Click to Replace with " + splint.getHoverName().getString() + "]"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.click_replace", splint.getHoverName()).withStyle(ChatFormatting.YELLOW));
                     }
                 } else {
                     ItemStack splint = InjuryEventHandler.findFirstSplint(player);
                     if (!splint.isEmpty()) {
-                        tooltip.add(Component.literal("§e[Click to Treat with " + splint.getHoverName().getString() + "]"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.click_treat", splint.getHoverName()).withStyle(ChatFormatting.YELLOW));
                     } else {
-                        tooltip.add(Component.literal("§8[Need Splint to Treat]"));
+                        tooltip.add(Component.translatable("gui.humannature.tooltip.limb.need_splint").withStyle(ChatFormatting.GRAY));
                     }
                 }
             } else {
-                tooltip.add(Component.literal("§aNo active fractures"));
+                tooltip.add(Component.translatable("gui.humannature.tooltip.limb.no_fractures").withStyle(ChatFormatting.GREEN));
             }
 
             guiGraphics.renderComponentTooltip(mc.font, tooltip, mouseX, mouseY);

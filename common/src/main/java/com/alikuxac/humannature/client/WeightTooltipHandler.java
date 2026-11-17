@@ -9,6 +9,7 @@ import com.alikuxac.humannature.modules.weight.WeightModule;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
@@ -63,17 +64,11 @@ public class WeightTooltipHandler {
                 float weightRatio = maxWeight > 0.0f ? (curWeight / maxWeight) : 0.0f;
                 int pct = Math.round(weightRatio * 100.0f);
                 EncumbranceTier tier = EncumbranceTier.fromWeightRatio(weightRatio);
+                ChatFormatting tierColor = tier.getChatFormatting();
 
-                ChatFormatting tierColor = switch (tier) {
-                    case NORMAL -> ChatFormatting.GREEN;
-                    case LIGHT -> ChatFormatting.YELLOW;
-                    case MEDIUM -> ChatFormatting.GOLD;
-                    case OVERBURDENED -> ChatFormatting.RED;
-                };
-
-                Component tierComponent = Component.literal(tier.getDisplayName()).withStyle(tierColor);
+                Component tierComponent = Component.translatable(tier.getTranslationKey()).withStyle(tierColor);
                 Component totalSuffix = Component.translatable("tooltip.humannature.weight_total_suffix", pct, tierComponent).withStyle(ChatFormatting.GRAY);
-                baseComponent.append(Component.literal(" ")).append(totalSuffix);
+                baseComponent.append(CommonComponents.SPACE).append(totalSuffix);
             }
         }
 

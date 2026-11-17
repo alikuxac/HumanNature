@@ -24,6 +24,10 @@ public enum LimbType {
         return displayName;
     }
 
+    public String getTranslationKey() {
+        return "humannature.limb." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     public static LimbType fromIndex(int index) {
         for (LimbType type : values()) {
             if (type.index == index) {

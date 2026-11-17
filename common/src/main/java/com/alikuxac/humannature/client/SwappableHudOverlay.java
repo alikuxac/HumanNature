@@ -7,6 +7,7 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
+import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
 import com.alikuxac.humannature.modules.physiology.ToxinType;
@@ -17,9 +18,11 @@ import com.alikuxac.humannature.modules.weight.EncumbranceTier;
 import com.alikuxac.humannature.modules.weight.PlayerWeightData;
 import com.alikuxac.humannature.modules.weight.WeightCalculator;
 import com.alikuxac.humannature.modules.weight.WeightModule;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -49,8 +52,23 @@ public class SwappableHudOverlay {
             return displayName;
         }
 
+        public String getTranslationKey() {
+            return "humannature.hud_mode." + name().toLowerCase(java.util.Locale.ROOT);
+        }
+
         public String getColorCode() {
             return colorCode;
+        }
+
+        public ChatFormatting getChatFormatting() {
+            return switch (this) {
+                case OFF -> ChatFormatting.DARK_GRAY;
+                case PHYSIOLOGY -> ChatFormatting.AQUA;
+                case ENVIRONMENT -> ChatFormatting.YELLOW;
+                case INJURY -> ChatFormatting.RED;
+                case WEIGHT -> ChatFormatting.GOLD;
+                case COMBINED -> ChatFormatting.GREEN;
+            };
         }
 
         public HudMode next() {
@@ -91,7 +109,11 @@ public class SwappableHudOverlay {
     public static void cycleHudMode(Player player) {
         currentMode = getCurrentMode().next();
         if (player != null) {
-            Component message = Component.literal("§8[§6HUD Mode§8]: " + currentMode.getColorCode() + currentMode.getDisplayName());
+            Component modeComp = Component.translatable(currentMode.getTranslationKey()).withStyle(currentMode.getChatFormatting());
+            Component message = Component.translatable(
+                    "message.humannature.hud_mode",
+                    modeComp
+            ).withStyle(ChatFormatting.DARK_GRAY);
             player.displayClientMessage(message, true);
             actionBarCooldown = 50;
         }
@@ -119,49 +141,51 @@ public class SwappableHudOverlay {
 
         actionBarCooldown = 70;
 
-        String wetLabel;
+        Component wetComponent;
         if (wetness >= 1.0f) {
-            wetLabel = "100% (Soaked)";
-        } else if (wetness >= 0.5f) {
-            wetLabel = String.format("%.0f%% (Damp)", wetness * 100.0f);
+            wetComponent = Component.translatable("actionbar.humannature.wetness_soaked");
         } else if (wetness > 0.0f) {
-            wetLabel = String.format("%.0f%% (Damp)", wetness * 100.0f);
+            wetComponent = Component.translatable("actionbar.humannature.wetness_damp", String.format(java.util.Locale.ROOT, "%.0f", wetness * 100.0f));
         } else {
-            wetLabel = "Dry";
+            wetComponent = Component.translatable("actionbar.humannature.wetness_dry");
         }
 
-        String tempLabel;
-        String tempColor;
+        Component tempComponent;
+        ChatFormatting tempChatColor;
         int freezeThresh = (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get());
+        String coreTempStr = String.format(java.util.Locale.ROOT, "%.1f", coreTemp);
         if (coreTemp > 42.0f) {
-            tempLabel = String.format("☠ Hyperthermia (%.1f°C)", coreTemp);
-            tempColor = "§c";
+            tempComponent = Component.translatable("actionbar.humannature.temp_hyperthermia", coreTempStr);
+            tempChatColor = ChatFormatting.RED;
         } else if (coreTemp > 39.5f) {
-            tempLabel = String.format("⚠ Heat Exhaustion (%.1f°C)", coreTemp);
-            tempColor = "§c";
+            tempComponent = Component.translatable("actionbar.humannature.temp_heat_exhaustion", coreTempStr);
+            tempChatColor = ChatFormatting.RED;
         } else if (hasBuff) {
-            tempLabel = "Warm (Stew Buff)";
-            tempColor = "§6";
+            tempComponent = Component.translatable("actionbar.humannature.temp_warm_buff");
+            tempChatColor = ChatFormatting.GOLD;
         } else if (ticksFrozen >= freezeThresh) {
-            tempLabel = "Freezing";
-            tempColor = "§c";
+            tempComponent = Component.translatable("actionbar.humannature.temp_freezing");
+            tempChatColor = ChatFormatting.RED;
         } else if (ticksFrozen > 0) {
-            tempLabel = "Chilly";
-            tempColor = "§b";
+            tempComponent = Component.translatable("actionbar.humannature.temp_chilly");
+            tempChatColor = ChatFormatting.AQUA;
         } else if (nearHeat) {
-            tempLabel = "Rewarming";
-            tempColor = "§6";
+            tempComponent = Component.translatable("actionbar.humannature.temp_rewarming");
+            tempChatColor = ChatFormatting.GOLD;
         } else if (coreTemp > 37.5f) {
-            tempLabel = String.format("Elevated (%.1f°C)", coreTemp);
-            tempColor = "§e";
+            tempComponent = Component.translatable("actionbar.humannature.temp_elevated", coreTempStr);
+            tempChatColor = ChatFormatting.YELLOW;
         } else {
-            tempLabel = "Normal";
-            tempColor = "§a";
+            tempComponent = Component.translatable("actionbar.humannature.temp_normal");
+            tempChatColor = ChatFormatting.GREEN;
         }
 
-        String wetColor = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : (wetness > 0.0f ? "§b" : "§a"));
+        ChatFormatting wetChatColor = wetness >= 1.0f ? ChatFormatting.RED : (wetness >= 0.5f ? ChatFormatting.YELLOW : (wetness > 0.0f ? ChatFormatting.AQUA : ChatFormatting.GREEN));
 
-        Component cue = Component.literal("§7Wetness: " + wetColor + wetLabel + " §7| Temp: " + tempColor + tempLabel);
+        Component cue = Component.translatable("message.humannature.environment_cue",
+                wetComponent.copy().withStyle(wetChatColor),
+                tempComponent.copy().withStyle(tempChatColor)
+        ).withStyle(ChatFormatting.GRAY);
         player.displayClientMessage(cue, true);
     }
 
@@ -231,7 +255,7 @@ public class SwappableHudOverlay {
         if (mode == HudMode.PHYSIOLOGY && !enablePhys) return;
         if (mode == HudMode.COMBINED && !enablePhys && !enableTemp && !enableInj && !enableWeight) return;
 
-        List<String> lines = new ArrayList<>();
+        List<Component> lines = new ArrayList<>();
 
         if (mode == HudMode.WEIGHT) {
             PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
@@ -245,7 +269,7 @@ public class SwappableHudOverlay {
             float weightPct = ratio * 100.0f;
             EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
 
-            lines.add("§6§l⚖ WEIGHT & ENCUMBRANCE");
+            lines.add(Component.translatable("hud.humannature.weight.title").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
             int totalSegments = 12;
             int filledSegments = Math.max(0, Math.min(totalSegments, Math.round(ratio * totalSegments)));
@@ -253,19 +277,33 @@ public class SwappableHudOverlay {
             for (int i = 0; i < totalSegments; i++) {
                 barBuilder.append(i < filledSegments ? "█" : "░");
             }
-            lines.add(tier.getColorCode() + "[" + barBuilder + "] " + String.format("%.1f/%.0fkg §8(%.0f%%§8)", curWeight, maxWeight, weightPct));
+            ChatFormatting tierChatColor = tier.getChatFormatting();
+            Component barComp = Component.literal("[" + barBuilder + "]").withStyle(tierChatColor);
+            Component curWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.1f", curWeight)).withStyle(tierChatColor);
+            Component maxWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f", maxWeight)).withStyle(ChatFormatting.GRAY);
+            Component weightPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f", weightPct)).withStyle(tierChatColor);
 
-            lines.add("§7Tier: " + tier.getColorCode() + tier.getDisplayName());
+            lines.add(Component.translatable("hud.humannature.weight.bar_line",
+                    barComp,
+                    curWeightComp,
+                    maxWeightComp,
+                    weightPctComp).withStyle(ChatFormatting.GRAY));
+
+            lines.add(Component.translatable("hud.humannature.weight.tier_line",
+                    Component.translatable(tier.getTranslationKey()).withStyle(tierChatColor)).withStyle(ChatFormatting.GRAY));
 
             if (tier == EncumbranceTier.NORMAL) {
-                lines.add("§a  ↳ Full Agility (No penalties)");
+                lines.add(Component.translatable("hud.humannature.weight.full_agility").withStyle(ChatFormatting.GREEN));
             } else {
-                lines.add(String.format("§c  ↳ Speed: -%.0f%%", tier.getSpeedPenalty() * 100.0f));
+                lines.add(Component.translatable("hud.humannature.weight.speed_penalty",
+                        String.format(java.util.Locale.ROOT, "%.0f", tier.getSpeedPenalty() * 100.0f)).withStyle(ChatFormatting.RED));
                 if (tier.getSinkPull() > 0.0) {
-                    lines.add(String.format("§c  ↳ Sink Pull: +%.0f%%", tier.getSinkPull() * 1000.0f));
+                    lines.add(Component.translatable("hud.humannature.weight.sink_penalty",
+                            String.format(java.util.Locale.ROOT, "%.0f", tier.getSinkPull() * 1000.0f)).withStyle(ChatFormatting.RED));
                 }
                 if (tier.getFallDamageMultiplier() > 1.0) {
-                    lines.add(String.format("§c  ↳ Fall Damage: %.2fx", tier.getFallDamageMultiplier()));
+                    lines.add(Component.translatable("hud.humannature.weight.fall_penalty",
+                            String.format(java.util.Locale.ROOT, "%.2f", tier.getFallDamageMultiplier())).withStyle(ChatFormatting.RED));
                 }
             }
 
@@ -279,20 +317,23 @@ public class SwappableHudOverlay {
             }
             float invWeight = Math.max(0.0f, curWeight - armorWeight - offhandWeight);
 
-            lines.add(String.format("§7Load: §fInv %.1fkg §8| §fArmor %.1fkg", invWeight, armorWeight));
+            lines.add(Component.translatable("hud.humannature.weight.load_breakdown",
+                    String.format(java.util.Locale.ROOT, "%.1f", invWeight),
+                    String.format(java.util.Locale.ROOT, "%.1f", armorWeight)));
 
             double baseCap = ServerConfig.WEIGHT_MAX_CAPACITY != null ? ServerConfig.WEIGHT_MAX_CAPACITY.get() : 500.0;
             if (maxWeight > baseCap) {
-                lines.add(String.format("§bBuffs: +%.0fkg bonus capacity", maxWeight - baseCap));
+                lines.add(Component.translatable("hud.humannature.weight.bonus_capacity",
+                        String.format(java.util.Locale.ROOT, "%.0f", maxWeight - baseCap)));
             }
         } else {
             PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
 
             if (enablePhys) {
                 if (physData.isAdrenalineActive()) {
-                    lines.add("§c§l⚡ ADRENALINE SURGE ⚡");
+                    lines.add(Component.translatable("hud.humannature.physiology.adrenaline_surge").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
                 } else if (physData.isPanicking()) {
-                    lines.add("§c§l⚠ SENSORY PANIC (0 LUX) ⚠");
+                    lines.add(Component.translatable("hud.humannature.physiology.sensory_panic").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
                 }
             }
 
@@ -300,15 +341,18 @@ public class SwappableHudOverlay {
                 PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
                 boolean hasTrauma = InjuryEventHandler.isFractureActive(player) || injuryData.hasAnyInjury();
                 if (hasTrauma) {
-                    StringBuilder injuredLimbs = new StringBuilder();
+                    MutableComponent injuredLimbs = Component.empty();
+                    boolean hasInjured = false;
                     for (LimbType limb : LimbType.values()) {
                         byte sev = injuryData.getSeverity(limb);
                         if (sev > 0) {
-                            if (!injuredLimbs.isEmpty()) injuredLimbs.append(", ");
-                            injuredLimbs.append(limb.getDisplayName()).append(" (T").append(sev).append(")");
+                            if (hasInjured) injuredLimbs.append(", ");
+                            hasInjured = true;
+                            injuredLimbs.append(Component.translatable(limb.getTranslationKey())).append(" (T" + sev + ")");
                         }
                     }
-                    String limbsTitle = injuredLimbs.isEmpty() ? "Trauma: Stabilized" : "§cInjured: §f" + injuredLimbs;
+                    Component limbsTitle = !hasInjured ? Component.translatable("hud.humannature.injury.trauma_stabilized").withStyle(ChatFormatting.GOLD)
+                            : Component.translatable("hud.humannature.injury.injured_prefix", injuredLimbs.withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.RED);
                     lines.add(limbsTitle);
 
                     int remainingTicks = InjuryEventHandler.getRemainingFractureTime(player);
@@ -320,15 +364,16 @@ public class SwappableHudOverlay {
                         boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
                         boolean isSplinted = injuryData.hasAnySplint();
                         boolean hasCalcium = physData.hasCalciumBuff();
-                        String healRate;
+                        Component healRate;
                         if (isResting) {
-                            healRate = (isSplinted && hasCalcium) ? "§bResting 4x (Osteo)" : "§aResting 2x";
+                            healRate = (isSplinted && hasCalcium) ? Component.translatable("hud.humannature.injury.heal_rate.resting_osteo") : Component.translatable("hud.humannature.injury.heal_rate.resting");
                         } else if (isMoving) {
-                            healRate = isSplinted ? (hasCalcium ? "§bMoving 2x (Osteo)" : "§aMoving 1x (Splint)") : "§cPaused";
+                            healRate = isSplinted ? (hasCalcium ? Component.translatable("hud.humannature.injury.heal_rate.moving_osteo") : Component.translatable("hud.humannature.injury.heal_rate.moving_splint")) : Component.translatable("hud.humannature.injury.heal_rate.paused");
                         } else {
-                            healRate = (isSplinted && hasCalcium) ? "§bStanding 2x (Osteo)" : "§eStanding 1x";
+                            healRate = (isSplinted && hasCalcium) ? Component.translatable("hud.humannature.injury.heal_rate.standing_osteo") : Component.translatable("hud.humannature.injury.heal_rate.standing");
                         }
-                        lines.add(String.format("§7Fracture Healing: §f%02d:%02d §8(%s§8)", minutes, seconds, healRate));
+                        String timeStr = String.format(java.util.Locale.ROOT, "%02d:%02d", minutes, seconds);
+                        lines.add(Component.translatable("hud.humannature.injury.fracture_healing", timeStr, healRate));
                     }
                 }
             }
@@ -337,102 +382,132 @@ public class SwappableHudOverlay {
                 long awakeTicks = physData.getAwakeTicks();
                 long awakeHours = awakeTicks / 1000L;
                 float fatigueScore = physData.getFatigueScore();
-                String fatigueLabel;
-                String fatigueColor;
+                String fatigueKey;
+                ChatFormatting fatigueChatColor;
                 if (fatigueScore >= 0.80f) {
-                    fatigueColor = "§c";
-                    fatigueLabel = "Drowsy";
+                    fatigueChatColor = ChatFormatting.RED;
+                    fatigueKey = "drowsy";
                 } else if (fatigueScore >= 0.50f) {
-                    fatigueColor = "§6";
-                    fatigueLabel = "Tired";
+                    fatigueChatColor = ChatFormatting.GOLD;
+                    fatigueKey = "tired";
                 } else if (fatigueScore >= 0.20f) {
-                    fatigueColor = "§e";
-                    fatigueLabel = "Mild";
+                    fatigueChatColor = ChatFormatting.YELLOW;
+                    fatigueKey = "mild";
                 } else {
-                    fatigueColor = "§a";
-                    fatigueLabel = "Rested";
+                    fatigueChatColor = ChatFormatting.GREEN;
+                    fatigueKey = "rested";
                 }
-                lines.add("§7Fatigue: §f" + awakeHours + "h awake " + fatigueColor + "(" + fatigueLabel + " " + String.format("%.0f%%", fatigueScore * 100.0f) + "§8)");
+                Component awakeText = Component.translatable("hud.humannature.physiology.fatigue_awake", awakeHours).withStyle(fatigueChatColor);
+                Component fatigueLabel = Component.translatable("humannature.fatigue." + fatigueKey).withStyle(fatigueChatColor);
+                Component fatiguePctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", fatigueScore * 100.0f)).withStyle(fatigueChatColor);
+                lines.add(Component.translatable("hud.humannature.physiology.fatigue_line",
+                        awakeText, fatigueLabel, fatiguePctComp).withStyle(ChatFormatting.GRAY));
 
                 if (PhysiologyModule.isToxinBuildupEnabled()) {
                     float toxinBuildup = physData.getToxinBuildup();
                     ToxinType toxinType = physData.getLastToxinType();
-                    int filledSegments = Math.max(0, Math.min(10, Math.round(toxinBuildup / 10.0f)));
-                    StringBuilder barBuilder = new StringBuilder();
-                    for (int i = 0; i < 10; i++) {
-                        barBuilder.append(i < filledSegments ? "█" : "░");
-                    }
-                    String stateLabel;
+                    Component stateLabel;
                     if (toxinBuildup <= 0.0f) {
-                        stateLabel = "Clear";
+                        stateLabel = Component.translatable("humannature.toxin.none");
                     } else {
                         int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS;
                         if (physData.getTicksSinceLastExposure() >= delayTicks) {
-                            boolean isNearHeat = com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler.isNearHeatSource(player);
+                            boolean isNearHeat = PhysiologyEventHandler.isNearHeatSource(player);
                             boolean isResting = player.isSleeping() || (player.isCrouching() && (player.walkDist - player.walkDistO <= 0.001F));
-                            stateLabel = (isNearHeat || isResting) ? "Decaying 3x" : "Decaying";
+                            stateLabel = (isNearHeat || isResting) ? Component.translatable("hud.humannature.physiology.toxicity_decaying_3x") : Component.translatable("hud.humannature.physiology.toxicity_decaying");
                         } else {
-                            stateLabel = "Active";
+                            stateLabel = Component.translatable("hud.humannature.physiology.toxicity_active");
                         }
                     }
-                    String toxinColor = toxinBuildup <= 0.0f ? "§a" : toxinType.getColorCode();
-                    lines.add("§7Toxicity: " + toxinColor + "[" + barBuilder + "] §f" + String.format("%.0f%%", toxinBuildup) + " §8(" + stateLabel + "§8)");
+                    ChatFormatting toxinChatColor = toxinBuildup <= 0.0f ? ChatFormatting.GREEN : (toxinType == ToxinType.WITHER ? ChatFormatting.DARK_PURPLE : ChatFormatting.RED);
+                    Component toxinPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", toxinBuildup)).withStyle(toxinChatColor);
+                    Component toxinStateComp = stateLabel.copy().withStyle(toxinChatColor);
+                    if (mode == HudMode.COMBINED) {
+                        lines.add(Component.translatable("hud.humannature.physiology.toxicity_compact_line",
+                                toxinPctComp, toxinStateComp).withStyle(ChatFormatting.GRAY));
+                    } else {
+                        int filledSegments = Math.max(0, Math.min(10, Math.round(toxinBuildup / 10.0f)));
+                        StringBuilder barBuilder = new StringBuilder();
+                        for (int i = 0; i < 10; i++) {
+                            barBuilder.append(i < filledSegments ? "█" : "░");
+                        }
+                        Component toxinBarComp = Component.literal("[" + barBuilder + "]").withStyle(toxinChatColor);
+                        lines.add(Component.translatable("hud.humannature.physiology.toxicity_line",
+                                toxinBarComp, toxinPctComp, toxinStateComp).withStyle(ChatFormatting.GRAY));
+                    }
                 }
 
                 if (ClientConfig.SHOW_CARDIAC_HUD != null && ClientConfig.SHOW_CARDIAC_HUD.get()) {
                     int bpm = DiagnosticScreen.calculateHeartRateBpm(player, physData);
-                    String bpmColor = bpm >= 140 ? "§c" : (bpm >= 110 ? "§6" : (bpm >= 80 ? "§e" : "§a"));
-                    String bpmLabel = bpm >= 140 ? "Tachycardia" : (bpm >= 110 ? "Elevated" : (bpm >= 80 ? "Moderate" : "Normal"));
-                    lines.add("§7Heart: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)");
+                    ChatFormatting bpmChatColor = bpm >= 140 ? ChatFormatting.RED : (bpm >= 110 ? ChatFormatting.GOLD : (bpm >= 80 ? ChatFormatting.YELLOW : ChatFormatting.GREEN));
+                    String bpmKey = bpm >= 140 ? "tachycardia" : (bpm >= 110 ? "elevated" : (bpm >= 80 ? "moderate" : "normal"));
+                    Component bpmComp = Component.literal("❤ " + bpm + " BPM").withStyle(bpmChatColor);
+                    Component bpmLabelComp = Component.translatable("humannature.heart." + bpmKey).copy().withStyle(bpmChatColor);
+                    lines.add(Component.translatable("hud.humannature.physiology.heart_line", bpmComp, bpmLabelComp).withStyle(ChatFormatting.GRAY));
                 }
 
                 float exertion = physData.getExertionScore();
                 boolean isFailure = physData.isMuscleFailure();
                 boolean isCramped = physData.isSwimmingCramped();
-                String exertionStr = isFailure ? "§cFailure" : (isCramped ? "§cCramp" : (exertion >= 50.0f ? "§6Strained" : "§aNormal"));
-                lines.add("§7Stamina: " + (isFailure ? "§c" : (exertion >= 50.0f ? "§6" : "§a")) + String.format("%.0f%%", 100.0f - exertion) + " §8(" + exertionStr + "§8)");
+                ChatFormatting staminaChatColor = isFailure ? ChatFormatting.RED : (exertion >= 50.0f ? ChatFormatting.GOLD : ChatFormatting.GREEN);
+                Component exertionStr = isFailure ? Component.translatable("humannature.stamina.failure").copy().withStyle(ChatFormatting.RED)
+                        : (isCramped ? Component.translatable("humannature.stamina.cramp").copy().withStyle(ChatFormatting.RED)
+                        : (exertion >= 50.0f ? Component.translatable("humannature.stamina.strained").copy().withStyle(ChatFormatting.GOLD)
+                        : Component.translatable("humannature.stamina.normal").copy().withStyle(ChatFormatting.GREEN)));
+                Component staminaPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", 100.0f - exertion)).withStyle(staminaChatColor);
+                lines.add(Component.translatable("hud.humannature.physiology.stamina_line",
+                        staminaPctComp,
+                        exertionStr).withStyle(ChatFormatting.GRAY));
 
                 boolean showMetabolic = ClientConfig.SHOW_METABOLIC_DETAILS == null || ClientConfig.SHOW_METABOLIC_DETAILS.get();
                 if (showMetabolic) {
                     float pendingNutr = physData.getPendingNutrition();
                     float pendingSat = physData.getPendingSaturation();
                     if (pendingNutr > 0.0f || pendingSat > 0.0f) {
-                        lines.add(String.format("§aDigestion Buffer: +%.0f🍗 / +%.1f sat §8(Absorbing...)", pendingNutr, pendingSat));
+                        lines.add(Component.translatable("hud.humannature.physiology.digestion_absorbing",
+                                String.format(java.util.Locale.ROOT, "%.0f", pendingNutr),
+                                String.format(java.util.Locale.ROOT, "%.1f", pendingSat)));
                     }
 
                     float indigestion = physData.getIndigestionBuildup();
                     if (indigestion > 0.0f) {
-                        String crampNotice = indigestion >= 50.0f ? " §c(Cramps Active!)" : " §6(Upset)";
-                        lines.add("§6Indigestion: §e" + String.format("%.0f%%", indigestion) + crampNotice);
+                        Component crampNotice = indigestion >= 50.0f ? Component.translatable("hud.humannature.physiology.cramps_active") : Component.translatable("hud.humannature.physiology.cramps_upset");
+                        lines.add(Component.translatable("hud.humannature.physiology.indigestion_line",
+                                String.format(java.util.Locale.ROOT, "%.0f", indigestion),
+                                crampNotice));
                     }
 
                     if (physData.hasCalciumBuff()) {
                         long calSec = physData.getCalciumAbsorptionTicks() / 20;
-                        lines.add(String.format("§bOsteogenesis: %02d:%02d §a(2x Bone Heal)", calSec / 60, calSec % 60));
+                        lines.add(Component.translatable("hud.humannature.physiology.osteogenesis_line",
+                                String.format(java.util.Locale.ROOT, "%02d:%02d", calSec / 60, calSec % 60)));
                     }
 
                     if (pendingNutr <= 0.0f && indigestion <= 0.0f && !physData.hasCalciumBuff()) {
                         var foodData = player.getFoodData();
-                        String digestionState = (foodData.getSaturationLevel() > 0.0f || (player.isHurt() && foodData.getFoodLevel() >= 18)) ? "§aActive" :
-                                (foodData.getFoodLevel() > 6 ? "§7Resting" : "§cHungry");
-                        lines.add("§7Digestion: " + digestionState);
+                        ChatFormatting digColor = (foodData.getSaturationLevel() > 0.0f || (player.isHurt() && foodData.getFoodLevel() >= 18)) ? ChatFormatting.GREEN :
+                                (foodData.getFoodLevel() > 6 ? ChatFormatting.GRAY : ChatFormatting.RED);
+                        Component digestionState = ((foodData.getSaturationLevel() > 0.0f || (player.isHurt() && foodData.getFoodLevel() >= 18)) ? Component.translatable("hud.humannature.physiology.digestion_active") :
+                                (foodData.getFoodLevel() > 6 ? Component.translatable("hud.humannature.physiology.digestion_resting") : Component.translatable("hud.humannature.physiology.digestion_hungry")))
+                                .copy().withStyle(digColor);
+                        lines.add(Component.translatable("hud.humannature.physiology.digestion_line", digestionState).withStyle(ChatFormatting.GRAY));
                     }
                 }
 
                 if (physData.isAdrenalineActive()) {
                     float remRush = physData.getAdrenalineTicks() / 20.0f;
-                    lines.add(String.format("§c⚡ Rush Duration: §f%.1fs §a(+35%% Spd, Sprinting)", remRush));
-                    lines.add("§c  ↳ Pain shock collapse imminent upon expiry");
+                    lines.add(Component.translatable("hud.humannature.physiology.rush_duration", String.format(java.util.Locale.ROOT, "%.1f", remRush)));
+                    lines.add(Component.translatable("hud.humannature.physiology.rush_collapse"));
                 } else if (physData.getAdrenalineCooldownTicks() > 0) {
                     int remCooldown = physData.getAdrenalineCooldownTicks() / 20;
-                    lines.add("§8⚡ Adrenaline Cooldown: " + remCooldown + "s");
+                    lines.add(Component.translatable("hud.humannature.physiology.adrenaline_cooldown", remCooldown));
                 }
 
                 if (physData.getClaustrophobiaTicks() > 0 || physData.isPanicking()) {
                     int panicThreshold = ServerConfig.PANIC_THRESHOLD_TICKS;
                     int panicPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) panicThreshold) * 100.0f));
-                    String panicDesc = physData.isPanicking() ? "§c§l100% Aim Tremors & Palpitations!" : "§e" + panicPct + "% (Seek Light/Heat/Pet)";
-                    lines.add("§c⚠ Claustrophobia: " + panicDesc);
+                    Component panicDesc = physData.isPanicking() ? Component.translatable("hud.humannature.physiology.claustrophobia_tremors") : Component.translatable("hud.humannature.physiology.claustrophobia_seeking", panicPct);
+                    lines.add(Component.translatable("hud.humannature.physiology.claustrophobia_line", panicDesc));
                 }
             }
 
@@ -446,29 +521,51 @@ public class SwappableHudOverlay {
                     for (int i = 0; i < 10; i++) {
                         barBuilder.append(i < filledSegments ? "█" : "░");
                     }
-                    String statusLabel;
+                    Component statusLabel;
                     if (tempData.isNearHeatSource()) {
-                        statusLabel = "§6Drying (Heat)";
+                        statusLabel = Component.translatable("hud.humannature.temperature.status_drying_heat");
                     } else if (player.isInWater() || player.isUnderWater()) {
-                        statusLabel = "§9Submerged";
+                        statusLabel = Component.translatable("hud.humannature.temperature.status_submerged");
                     } else if (player.level().isRainingAt(player.blockPosition())) {
-                        statusLabel = "§9Rain Soaking";
+                        statusLabel = Component.translatable("hud.humannature.temperature.status_rain");
                     } else if (ticksFrozen > 0) {
-                        statusLabel = "§bFreezing!";
+                        statusLabel = Component.translatable("hud.humannature.temperature.status_freezing");
                     } else {
-                        statusLabel = "§7Drying";
+                        statusLabel = Component.translatable("hud.humannature.temperature.status_drying");
                     }
-                    String color = wetness >= 1.0f ? "§c" : (wetness >= 0.5f ? "§e" : "§b");
-                    lines.add("§7Wetness: " + color + "[" + barBuilder + "] §f" + String.format("%.0f%%", wetness * 100.0f) + " §8(" + statusLabel + "§8)");
-                } else if (tempData.getCoreTemperature() > 42.0f) {
-                    lines.add(String.format("§c☠ Hyperthermia: %.1f°C §8(Heat Damage)", tempData.getCoreTemperature()));
-                } else if (tempData.getCoreTemperature() > 39.5f) {
-                    lines.add(String.format("§c⚠ Heat Exhaustion: %.1f°C §8(Panting)", tempData.getCoreTemperature()));
-                } else if (tempData.hasInternalWarming()) {
-                    int remSec = tempData.getInternalWarmingTicks() / 20;
-                    lines.add(String.format("§6♨ Internal Warming: %ds §8(Warm)", remSec));
+                    ChatFormatting wetChatColor = wetness >= 1.0f ? ChatFormatting.RED : (wetness >= 0.5f ? ChatFormatting.YELLOW : ChatFormatting.AQUA);
+                    Component wetBarComp = Component.literal("[" + barBuilder + "]").withStyle(wetChatColor);
+                    Component wetPctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", wetness * 100.0f)).withStyle(wetChatColor);
+                    lines.add(Component.translatable("hud.humannature.temperature.wetness_line", wetBarComp, wetPctComp, statusLabel.copy().withStyle(wetChatColor)).withStyle(ChatFormatting.GRAY));
                 } else {
-                    lines.add(String.format("§7Temperature: §aNormal §8(%.1f°C)", tempData.getCoreTemperature()));
+                    float coreTemp = tempData.getCoreTemperature();
+                    String coreTempStr = String.format(java.util.Locale.ROOT, "%.1f°C", coreTemp);
+                    if (coreTemp > 42.0f) {
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.RED);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.hyperthermia").withStyle(ChatFormatting.RED);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    } else if (coreTemp > 39.5f) {
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.RED);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.heat_exhaustion").withStyle(ChatFormatting.RED);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    } else if (tempData.hasInternalWarming()) {
+                        int remSec = tempData.getInternalWarmingTicks() / 20;
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.GOLD);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.warming", remSec).withStyle(ChatFormatting.GOLD);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    } else if (ticksFrozen > 0) {
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.AQUA);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.freezing").withStyle(ChatFormatting.AQUA);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    } else if (coreTemp < 35.0f) {
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.AQUA);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.hypothermia").withStyle(ChatFormatting.AQUA);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    } else {
+                        Component tempVal = Component.literal(coreTempStr).withStyle(ChatFormatting.GREEN);
+                        Component tempStatus = Component.translatable("hud.humannature.temperature.status.normal").withStyle(ChatFormatting.GREEN);
+                        lines.add(Component.translatable("hud.humannature.temperature.line", tempVal, tempStatus).withStyle(ChatFormatting.GRAY));
+                    }
                 }
             }
 
@@ -484,9 +581,22 @@ public class SwappableHudOverlay {
                 float weightPct = ratio * 100.0f;
                 EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
 
-                lines.add("§7Weight: " + tier.getColorCode() + String.format("%.1f/%.0fkg", curWeight, maxWeight) + " §8(" + tier.getColorCode() + tier.getDisplayName() + " " + String.format("%.0f%%", weightPct) + "§8)");
+                ChatFormatting tierChatColor = tier.getChatFormatting();
+                Component curWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.1f", curWeight)).withStyle(tierChatColor);
+                Component maxWeightComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f", maxWeight)).withStyle(ChatFormatting.GRAY);
+                Component tierComp = Component.translatable(tier.getTranslationKey()).withStyle(tierChatColor);
+                Component pctComp = Component.literal(String.format(java.util.Locale.ROOT, "%.0f%%", weightPct)).withStyle(tierChatColor);
+
+                lines.add(Component.translatable("hud.humannature.weight.compact_line",
+                        curWeightComp,
+                        maxWeightComp,
+                        tierComp,
+                        pctComp).withStyle(ChatFormatting.GRAY));
                 if (tier != EncumbranceTier.NORMAL) {
-                    lines.add(String.format("§c  ↳ -%.0f%% Spd, +%.0f%% Sink, %.2fx Fall", tier.getSpeedPenalty() * 100.0f, tier.getSinkPull() * 1000.0f, tier.getFallDamageMultiplier()));
+                    lines.add(Component.translatable("hud.humannature.weight.compact_penalties",
+                            String.format(java.util.Locale.ROOT, "%.0f", tier.getSpeedPenalty() * 100.0f),
+                            String.format(java.util.Locale.ROOT, "%.0f", tier.getSinkPull() * 1000.0f),
+                            String.format(java.util.Locale.ROOT, "%.2f", tier.getFallDamageMultiplier())).withStyle(ChatFormatting.RED));
                 }
             }
         }
@@ -501,12 +611,8 @@ public class SwappableHudOverlay {
 
         int maxWrapWidth = Math.max(120, Math.min(240, screenWidth - x - 16));
         List<FormattedCharSequence> wrappedLines = new ArrayList<>();
-        for (String line : lines) {
-            if (mc.font.width(line) <= maxWrapWidth) {
-                wrappedLines.add(Component.literal(line).getVisualOrderText());
-            } else {
-                wrappedLines.addAll(mc.font.split(Component.literal(line), maxWrapWidth));
-            }
+        for (Component line : lines) {
+            wrappedLines.addAll(mc.font.split(line, maxWrapWidth));
         }
 
         int maxLineWidth = 0;

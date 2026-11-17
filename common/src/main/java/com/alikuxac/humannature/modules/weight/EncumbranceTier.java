@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.modules.weight;
 
 import com.alikuxac.humannature.config.ServerConfig;
+import net.minecraft.ChatFormatting;
 
 public enum EncumbranceTier {
     NORMAL("Normal", "§a", 0.0, 0.0, 1.0),
@@ -26,8 +27,21 @@ public enum EncumbranceTier {
         return displayName;
     }
 
+    public String getTranslationKey() {
+        return "humannature.encumbrance." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     public String getColorCode() {
         return colorCode;
+    }
+
+    public ChatFormatting getChatFormatting() {
+        return switch (this) {
+            case NORMAL -> ChatFormatting.GREEN;
+            case LIGHT -> ChatFormatting.YELLOW;
+            case MEDIUM -> ChatFormatting.GOLD;
+            case OVERBURDENED -> ChatFormatting.RED;
+        };
     }
 
     public double getSpeedPenalty() {

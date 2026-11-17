@@ -4,6 +4,7 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -333,7 +334,7 @@ public class PhysiologyEventHandler {
                     } else if (data.getRecentEatsWhenFull() == 2) {
                         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 1.1F, 1.0F);
-                        player.displayClientMessage(Component.translatable("message.humannature.stomach_full"), true);
+                        player.displayClientMessage(Component.translatable("message.humannature.stomach_full").withStyle(ChatFormatting.GOLD), true);
                     } else if (data.getRecentEatsWhenFull() >= 3) {
                         player.getFoodData().setFoodLevel(Math.max(10, player.getFoodData().getFoodLevel() - 5));
                         player.getFoodData().setSaturation(0.0f);
