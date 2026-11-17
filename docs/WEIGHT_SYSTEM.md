@@ -96,22 +96,24 @@ The Diagnostic Screen displays total carried weight against maximum capacity alo
 
 #### Server (`humannature-server.toml`)
 
+Master module switch under `[general]`:
+- `enableWeight` (boolean, default: `true`): Master toggle for the inventory weight and encumbrance module.
+
+Core keys under `[weight]`:
+
 | Key | Default | Description |
 | :--- | :--- | :--- |
-| `enableWeight` | `true` | Master toggle for the weight and encumbrance system. |
-| `weightMaxCapacity` | `500.0` | Base player carry capacity in kilograms. |
-| `weightHeavyBlockBase` | `0.8` | Weight per item for heavy blocks tag. |
-| `weightMetallicItemBase` | `0.4` | Weight per item for metallic items tag. |
-| `weightLightItemBase` | `0.05` | Weight per item for light items tag. |
-| `weightDefaultItemBase` | `0.1` | Fallback weight per item. |
-| `weightLightThreshold` | `0.50` | Ratio threshold for Light encumbrance. |
-| `weightMediumThreshold` | `0.70` | Ratio threshold for Medium encumbrance. |
-| `weightOverburdenedThreshold` | `0.85` | Ratio threshold for Overburdened encumbrance. |
-| `weightLightSpeedPenalty` | `0.10` | Movement speed penalty at Light tier. |
-| `weightMediumSpeedPenalty` | `0.25` | Movement speed penalty at Medium tier. |
-| `weightOverburdenedSpeedPenalty` | `0.50` | Movement speed penalty at Overburdened tier. |
-| `burdenBearerCapacityBonus` | `150.0` | Capacity bonus per Burden Bearer effect level. |
-| `loadBearingCapacityBonus` | `50.0` | Capacity bonus per Load Bearing enchantment level. |
+| `maxCarryCapacityKg` | `500.0` (10.0–10000.0) | Baseline maximum carrying capacity in kilograms before encumbrance penalties apply. |
+| `weightPenaltyMultiplier` | `1.0` (0.0–10.0) | Global multiplier for encumbrance penalties (movement speed reduction, water sinking pull, and fall damage). Set to `0.0` to disable movement penalties while keeping weight tracking active. |
+
+#### Data Tags & Item Weights
+Item weights are managed through JSON data tags rather than config files:
+- `#c:heavy_blocks` / `#humannature:heavy_blocks`: 0.8 kg/item (anvil, stone, iron blocks).
+- `#c:metallic_items` / `#humannature:metallic_items`: 0.4 kg/item (ingots, armor, metal tools).
+- `#c:light_items` / `#humannature:light_items`: 0.005 kg/item (feathers, paper, string).
+- Default items: 0.05 kg/item fallback.
+
+Encumbrance thresholds (Light: 50%, Medium: 70%, Overburdened: 85%) and capacity bonuses (Burden Bearer: +150 kg/lvl, Load Bearing: +50 kg/lvl) are internal constants. All debuff severities scale with `weightPenaltyMultiplier`.
 
 #### Client (`humannature-client.toml`)
 

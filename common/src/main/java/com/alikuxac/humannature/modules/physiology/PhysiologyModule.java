@@ -35,31 +35,31 @@ public class PhysiologyModule implements IHumanModule {
     }
 
     public static boolean isSwimmingCrampsEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_SWIMMING_CRAMPS.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_SWIMMING_CRAMPS;
     }
 
     public static boolean isDigestionEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_DIGESTION_WINDOW.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_DIGESTION_WINDOW;
     }
 
     public static boolean isOvereatingEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_OVEREATING_REFLEX.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_OVEREATING_REFLEX;
     }
 
     public static boolean isIndigestionEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_INDIGESTION.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_INDIGESTION;
     }
 
     public static boolean isCalciumHealingEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CALCIUM_HEALING.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CALCIUM_HEALING;
     }
 
     public static boolean isClaustrophobiaEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC;
     }
 
     public static boolean isAdrenalineEnabled() {
-        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_ADRENALINE_SURGE.get();
+        return ServerConfig.ENABLE_PHYSIOLOGY.get() && ServerConfig.ENABLE_ADRENALINE_SURGE;
     }
 
     public static boolean isErupting(UUID playerId) {
@@ -165,12 +165,12 @@ public class PhysiologyModule implements IHumanModule {
 
     public static float calculateToxinMultiplier(UUID playerId) {
         PlayerPhysiologyData data = getOrCreatePhysiologyData(playerId);
-        float fatigueScore = (isSleepDeprivationEnabled() && ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING.get())
+        float fatigueScore = (isSleepDeprivationEnabled() && ServerConfig.ENABLE_TOXIN_FATIGUE_SCALING)
                 ? data.getFatigueScore()
                 : 0.0f;
         boolean isFractured = ServerConfig.ENABLE_INJURY.get() && InjuryModule.isFractureActive(playerId);
         double fractureMultiplier = isFractured
-                ? (ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER != null ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER.get() : 1.5)
+                ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER
                 : 1.0;
         return (float) ((1.0f + fatigueScore) * fractureMultiplier);
     }

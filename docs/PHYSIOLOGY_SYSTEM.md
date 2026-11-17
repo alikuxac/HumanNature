@@ -28,7 +28,7 @@ At 80% fatigue, moving players trigger a 1-second (20-tick) Darkness blink every
 Incoming `minecraft:poison` and `minecraft:wither` attacks add to a hidden 0–100% buildup gauge instead of applying immediate status effects. Other status effects apply normally.
 
 #### Buildup Calculation & State Scaling
-Each exposure calculates base buildup from effect duration and amplifier, with a configurable minimum (default 25%):
+Each exposure calculates base buildup from effect duration and amplifier, with a baseline minimum of 25%:
 
 $$\text{BaseValue} = \max(\text{baseHit}, \min(100, \text{durationFactor} \times \text{amplifierFactor}))$$
 
@@ -190,92 +190,29 @@ The diagnostic screen provides a detailed medical readout:
 
 ## Configuration
 
-Server settings are in `config/humannature-server.toml`:
+### Server (`humannature-server.toml`)
+
+Master module switch under `[general]`:
+- `enablePhysiology = true`: Master toggle for the physiology module (sleep deprivation, stamina, toxin buildup).
+
+Core settings under `[physiology]`:
 
 ```toml
 [physiology]
-    # Enable sleep deprivation and fatigue buildup
+    # Enable sleep deprivation and fatigue buildup over time
     enableSleepDeprivation = true
     # Ticks of being awake required to reach 100% fatigue (72000 ticks = 3 in-game days)
-    # Range: 1200 ~ 720000
+    # Range: 20 ~ 720000
     sleepDeprivationFullFatigueTicks = 72000
-    # Fatigue score threshold (0.0 to 1.0) above which darkness blinks begin occurring
-    # Range: 0.0 ~ 1.0
-    sleepFatigueBlinkThreshold = 0.8
-    # Minimum interval in ticks between darkness blinks (20 ticks = 1s)
-    # Range: 20 ~ 72000
-    sleepFatigueBlinkMinIntervalTicks = 300
-    # Maximum interval in ticks between darkness blinks
-    # Range: 40 ~ 72000
-    sleepFatigueBlinkMaxIntervalTicks = 800
-
     # Enable soulslike bad effect (poison/wither) buildup and transient gauge
     enableToxinBuildup = true
-    # Base minimum toxin buildup percentage added per exposure
-    # Range: 1.0 ~ 100.0
-    toxinBaseBuildupPerHit = 25.0
-    # Ticks of delay without exposure before toxin buildup begins decaying (80 ticks = 4s)
-    # Range: 1 ~ 72000
-    toxinDecayDelayTicks = 80
-    # Passive percentage decay of toxin buildup per second
-    # Range: 0.1 ~ 100.0
-    toxinDecayRatePerSecond = 2.0
-    # Toxin decay rate multiplier when near heat sources (campfires, lava) or resting
-    # Range: 1.0 ~ 20.0
-    toxinRestingHeatDecayMultiplier = 3.0
-    # Enable toxin buildup rate scaling based on sleep deprivation and fatigue score
-    enableToxinFatigueScaling = true
-    # Toxin buildup multiplier when the player suffers from bone fractures or trauma
-    # Range: 1.0 ~ 5.0
-    toxinFractureBuildupMultiplier = 1.5
-
-    # Enable physical exertion and muscle failure
+    # Enable physical exertion and muscle failure from continuous mining and sprinting
     enablePhysicalExertion = true
-    # Ticks of continuous chopping or mining required to trigger muscle failure (200 ticks = 10s)
-    exertionContinuousMiningTicks = 200
-    # Ticks standing still without actions to recover 100% muscle capacity (70 ticks = 3.5s)
-    exertionRestRecoveryTicks = 70
-    # Attack speed penalty fraction during muscle failure (0.50 = -50%)
-    exertionAttackSpeedPenalty = 0.50
-    # Mining break speed penalty fraction during muscle failure (0.50 = -50%)
-    exertionMiningSpeedPenalty = 0.50
-    # Stamina / exertion drain per tick while sprinting (0.08 = ~1.6% per sec, ~60s to deplete)
-    exertionSprintDrainPerTick = 0.08
-
-    # Enable temporary swimming cramps from prolonged continuous swimming/diving
-    enableSwimmingCramps = true
-    # Ticks of continuous swimming before leg cramp occurs (600 ticks = 30s)
-    swimmingCrampThresholdTicks = 600
-    # Swimming speed penalty fraction during cramp (0.40 = -40%)
-    swimmingCrampSpeedPenalty = 0.40
-    # Ticks resting on land or boat to recover from leg cramp (60 ticks = 3s)
-    swimmingCrampRecoveryTicks = 60
-
-    # Enable gradual digestion absorption window for eaten food
-    enableDigestionWindow = true
-    # Interval in ticks between digestion nutrition absorption (30 ticks = 1.5s)
-    digestionIntervalTicks = 30
-    # Enable overeating hiccups, speed debuff, and vomiting reflex when gorging food
-    enableOvereatingReflex = true
-    # Enable indigestion accumulation and stomach ache from raw/rotten meat
-    enableIndigestion = true
-    # Enable calcium absorption from bone broth and milk accelerating bone healing
-    enableCalciumHealing = true
-    # Healing rate multiplier for Tier 1 fractures with active calcium buff
-    calciumHealingMultiplier = 2.0
-
-    # Enable underground claustrophobia panic, heart rate spike, and aim tremor in dark caves (Y < 0, 0 lux)
-    enableClaustrophobiaPanic = true
-    # Ticks in pitch dark deep underground before panic triggers (100 ticks = 5s)
-    panicThresholdTicks = 100
-
-    # Enable 4-second adrenaline surge burst upon severe bone fracture
-    enableAdrenalineSurge = true
-    # Duration in ticks of the adrenaline surge (80 ticks = 4.0s)
-    adrenalineSurgeDurationTicks = 80
 ```
 
-Client settings are in `config/humannature-client.toml`:
+> **Physics Constants**: Subsystem parameters (such as the 80% blink threshold, 25% minimum toxin hit, 80-tick decay delay, 200-tick continuous mining limit, 600-tick swimming cramp threshold, 30-tick digestion cadence, 100-tick dark claustrophobia panic, and 80-tick adrenaline surge) are internal balance constants in code.
+
+### Client (`humannature-client.toml`)
 
 ```toml
 [hud]

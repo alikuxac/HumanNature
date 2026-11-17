@@ -44,6 +44,7 @@ public class TemperatureEventHandler {
     public static final TagKey<Item> HOT_STEWS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "hot_stews"));
     public static final TagKey<Item> COMMON_FOODS_SOUPS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "foods/soups"));
     public static final TagKey<Item> COMMON_SOUPS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "soups"));
+    public static final TagKey<Item> INSULATING_ARMOR = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "insulating_armor"));
 
     public static final ResourceLocation HYPOTHERMIA_ATTACK_SPEED_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "hypothermia_attack_speed");
     public static final ResourceLocation HYPOTHERMIA_BLOCK_RANGE_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "hypothermia_block_range");
@@ -79,7 +80,7 @@ public class TemperatureEventHandler {
             PlayerTemperatureData data = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
             data.setWetnessBuffer(data.getWetnessBuffer() * 0.5f);
             player.setTicksFrozen(0);
-            int durationTicks = ServerConfig.INTERNAL_WARMING_DURATION_TICKS.get();
+            int durationTicks = ServerConfig.INTERNAL_WARMING_DURATION_TICKS;
             data.setInternalWarmingTicks(durationTicks);
             removeHypothermiaDebuffs(player, data);
 
@@ -120,13 +121,16 @@ public class TemperatureEventHandler {
     private static void handleHeatRewarmingTick(Player player, PlayerTemperatureData data) {
         if (!TemperatureModule.isHeatRewarmingEnabled()) return;
 
-        double dryingTimeSec = Math.max(1.0, ServerConfig.HEAT_DRYING_TIME_SECONDS.get());
-        float dryingPerTick = (float) (1.0 / (dryingTimeSec * 20.0));
+        double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
+                ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
+
+        double dryingTimeSec = Math.max(1.0, ServerConfig.HEAT_DRYING_TIME_SECONDS);
+        float dryingPerTick = (float) ((1.0 / (dryingTimeSec * 20.0)) * rateMultiplier);
         data.reduceWetness(dryingPerTick);
 
         int currentFrozen = player.getTicksFrozen();
         if (currentFrozen > 0) {
-            int thawAmount = (int) Math.round(2.0 * ServerConfig.HEAT_THAW_MULTIPLIER.get());
+            int thawAmount = (int) Math.round(2.0 * ServerConfig.HEAT_THAW_MULTIPLIER * rateMultiplier);
             player.setTicksFrozen(Math.max(0, currentFrozen - thawAmount));
         }
 
@@ -143,21 +147,24 @@ public class TemperatureEventHandler {
         boolean inWater = player.isInWater() || player.isUnderWater();
         boolean inRain = player.level().isRainingAt(player.blockPosition());
 
+        double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
+                ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
+
         if (inWater) {
-            float delta = ServerConfig.WETNESS_WATER_ACCUMULATION_RATE.get().floatValue();
+            float delta = (float) (ServerConfig.WETNESS_WATER_ACCUMULATION_RATE * rateMultiplier);
             float reduction = calculateFreezeImmuneReduction(player);
             delta *= (1.0f - reduction);
             data.addWetness(delta);
         } else if (inRain) {
-            float delta = ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE.get().floatValue();
+            float delta = (float) (ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE * rateMultiplier);
             if (player.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
-                delta *= ServerConfig.WETNESS_NO_HELMET_MULTIPLIER.get().floatValue();
+                delta *= (float) ServerConfig.WETNESS_NO_HELMET_MULTIPLIER;
             }
             float reduction = calculateFreezeImmuneReduction(player);
             delta *= (1.0f - reduction);
             data.addWetness(delta);
         } else {
-            data.reduceWetness(0.0005F);
+            data.reduceWetness((float) (0.0005F * rateMultiplier));
         }
     }
 
@@ -180,13 +187,16 @@ public class TemperatureEventHandler {
         boolean isFullySoaked = data.getWetnessBuffer() >= 1.0f;
         boolean isRainingOrSnowing = player.level().isRainingAt(player.blockPosition());
 
+        double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
+                ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
+
         if (!data.isNearHeatSource() && (isFullySoaked || (isCold && (isWet || isRainingOrSnowing)))) {
             int currentFrozen = player.getTicksFrozen();
             int maxFreezeTicks = player.getTicksRequiredToFreeze() + 80;
             if (currentFrozen < maxFreezeTicks) {
                 float baseDelta = isFullySoaked ? 3.0f : (isCold && isWet ? 2.0f : 1.0f);
                 float insulationFactor = calculateArmorInsulationFactor(player, isWet, isCold);
-                int freezeDelta = Math.max(1, Math.round(baseDelta * insulationFactor));
+                int freezeDelta = Math.max(1, Math.round(baseDelta * insulationFactor * (float) rateMultiplier));
                 player.setTicksFrozen(Math.min(maxFreezeTicks, currentFrozen + freezeDelta));
             }
         }
@@ -198,7 +208,7 @@ public class TemperatureEventHandler {
         if (currentFrozen > 0) {
             float targetTemp = Math.max(30.0f, 37.0f - (currentFrozen / (float) requiredFreeze) * 7.0f);
             if (data.getCoreTemperature() > targetTemp) {
-                data.modifyCoreTemperature(-0.01f);
+                data.modifyCoreTemperature((float) (-0.01f * rateMultiplier));
             }
         }
 
@@ -220,7 +230,7 @@ public class TemperatureEventHandler {
     }
 
     private static void handleHeatStressTick(Player player, PlayerTemperatureData data) {
-        if (!TemperatureModule.isModuleEnabled() || !ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS.get()) {
+        if (!TemperatureModule.isModuleEnabled() || !ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS) {
             return;
         }
 
@@ -228,16 +238,17 @@ public class TemperatureEventHandler {
         boolean isOverburdened = tier == EncumbranceTier.OVERBURDENED;
         boolean hotBiome = isHotBiome(player.level(), player.blockPosition());
 
+        double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
+                ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
+
         if (isOverburdened && hotBiome) {
-            double riseRate = ServerConfig.HEAT_STRESS_TEMP_RISE_RATE != null ?
-                    ServerConfig.HEAT_STRESS_TEMP_RISE_RATE.get() : 0.0015;
+            double riseRate = ServerConfig.HEAT_STRESS_TEMP_RISE_RATE * rateMultiplier;
             int metalPieces = countMetallicPieces(player);
             float metalHeatFactor = 1.0f + (metalPieces * 0.15f);
             data.modifyCoreTemperature((float) (riseRate * metalHeatFactor));
 
             if (ServerConfig.ENABLE_PHYSIOLOGY.get() && PhysiologyModule.isExertionEnabled()) {
-                double exertionDrain = ServerConfig.HEAT_STRESS_EXERTION_DRAIN != null ?
-                        ServerConfig.HEAT_STRESS_EXERTION_DRAIN.get() : 0.10;
+                double exertionDrain = ServerConfig.HEAT_STRESS_EXERTION_DRAIN;
                 PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
                 physData.addExertion((float) exertionDrain);
                 if (physData.getExertionScore() >= 100.0f) {
@@ -248,7 +259,7 @@ public class TemperatureEventHandler {
                 }
             }
         } else if (data.getCoreTemperature() > 37.0f && !player.isOnFire()) {
-            float coolingRate = player.isInWater() ? 0.02f : (hotBiome ? 0.0005f : 0.005f);
+            float coolingRate = (player.isInWater() ? 0.02f : (hotBiome ? 0.0005f : 0.005f)) * (float) rateMultiplier;
             data.modifyCoreTemperature(-coolingRate);
             if (data.getCoreTemperature() < 37.0f) {
                 data.setCoreTemperature(37.0f);
@@ -275,8 +286,7 @@ public class TemperatureEventHandler {
 
         if (data.getCoreTemperature() > damageThreshold) {
             if (data.getHeatDamageCooldown() <= 0) {
-                int interval = ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS != null ?
-                        ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS.get() : 40;
+                int interval = ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS;
                 data.setHeatDamageCooldown(interval);
                 player.hurt(player.damageSources().dryOut(), 1.0f);
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -286,7 +296,7 @@ public class TemperatureEventHandler {
     }
 
     private static void applyHypothermiaDebuffs(Player player, PlayerTemperatureData data) {
-        if (ServerConfig.HYPOTHERMIA_MINING_FATIGUE.get()) {
+        if (ServerConfig.HYPOTHERMIA_MINING_FATIGUE) {
             player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 0, false, false, true));
         }
 
@@ -328,7 +338,7 @@ public class TemperatureEventHandler {
 
         Level level = player.level();
         BlockPos playerPos = player.blockPosition();
-        int radius = (int) Math.round(ServerConfig.HEAT_SOURCE_RADIUS.get());
+        int radius = (int) Math.round(ServerConfig.HEAT_SOURCE_RADIUS);
         int radiusY = Math.min(radius, 2);
 
         for (BlockPos pos : BlockPos.betweenClosed(
@@ -364,7 +374,7 @@ public class TemperatureEventHandler {
         EquipmentSlot[] armorSlots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (EquipmentSlot slot : armorSlots) {
             ItemStack stack = player.getItemBySlot(slot);
-            if (!stack.isEmpty() && stack.is(ItemTags.FREEZE_IMMUNE_WEARABLES)) {
+            if (!stack.isEmpty() && (stack.is(INSULATING_ARMOR) || stack.is(ItemTags.FREEZE_IMMUNE_WEARABLES))) {
                 count++;
             }
         }
@@ -403,15 +413,14 @@ public class TemperatureEventHandler {
     }
 
     public static float calculateArmorInsulationFactor(Player player, boolean isWet, boolean isCold) {
-        if (!ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION.get() || player == null) {
+        if (!ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION || player == null) {
             return 1.0f;
         }
 
         float factor = 1.0f;
         int leatherPieces = countLeatherPieces(player);
         if (leatherPieces > 0) {
-            double maxReduction = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION != null ?
-                    ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION.get() : 0.60;
+            double maxReduction = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION;
             float leatherReduction = (leatherPieces / 4.0f) * (float) maxReduction;
             factor *= (1.0f - leatherReduction);
         }
@@ -419,8 +428,7 @@ public class TemperatureEventHandler {
         if (isWet || isCold) {
             int metallicPieces = countMetallicPieces(player);
             if (metallicPieces > 0) {
-                double conductionMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER != null ?
-                        ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER.get() : 1.50;
+                double conductionMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER;
                 float metallicConduction = 1.0f + (metallicPieces / 4.0f) * (float) (conductionMult - 1.0);
                 factor *= metallicConduction;
             }
@@ -434,12 +442,12 @@ public class TemperatureEventHandler {
         EquipmentSlot[] armorSlots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (EquipmentSlot slot : armorSlots) {
             ItemStack stack = player.getItemBySlot(slot);
-            if (!stack.isEmpty() && stack.is(ItemTags.FREEZE_IMMUNE_WEARABLES)) {
+            if (!stack.isEmpty() && (stack.is(INSULATING_ARMOR) || stack.is(ItemTags.FREEZE_IMMUNE_WEARABLES))) {
                 freezeImmunePieces++;
             }
         }
         if (freezeImmunePieces == 0) return 0.0F;
-        float maxReduction = ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION.get().floatValue();
+        float maxReduction = (float) ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION;
         return (freezeImmunePieces / 4.0F) * maxReduction;
     }
 

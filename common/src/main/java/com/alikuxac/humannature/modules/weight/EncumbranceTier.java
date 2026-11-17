@@ -31,42 +31,44 @@ public enum EncumbranceTier {
     }
 
     public double getSpeedPenalty() {
-        return switch (this) {
-            case LIGHT -> ServerConfig.WEIGHT_LIGHT_SPEED_PENALTY != null ? ServerConfig.WEIGHT_LIGHT_SPEED_PENALTY.get() : defaultSpeedPenalty;
-            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_SPEED_PENALTY != null ? ServerConfig.WEIGHT_MEDIUM_SPEED_PENALTY.get() : defaultSpeedPenalty;
-            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_SPEED_PENALTY != null ? ServerConfig.WEIGHT_OVERBURDENED_SPEED_PENALTY.get() : defaultSpeedPenalty;
+        double mult = ServerConfig.WEIGHT_PENALTY_MULTIPLIER != null ? ServerConfig.WEIGHT_PENALTY_MULTIPLIER.get() : 1.0;
+        double base = switch (this) {
+            case LIGHT -> ServerConfig.WEIGHT_LIGHT_SPEED_PENALTY;
+            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_SPEED_PENALTY;
+            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_SPEED_PENALTY;
             default -> 0.0;
         };
+        return base * mult;
     }
 
     public double getSinkPull() {
-        return switch (this) {
-            case LIGHT -> ServerConfig.WEIGHT_LIGHT_SINK_PULL != null ? ServerConfig.WEIGHT_LIGHT_SINK_PULL.get() : defaultSinkPull;
-            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_SINK_PULL != null ? ServerConfig.WEIGHT_MEDIUM_SINK_PULL.get() : defaultSinkPull;
-            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_SINK_PULL != null ? ServerConfig.WEIGHT_OVERBURDENED_SINK_PULL.get() : defaultSinkPull;
+        double mult = ServerConfig.WEIGHT_PENALTY_MULTIPLIER != null ? ServerConfig.WEIGHT_PENALTY_MULTIPLIER.get() : 1.0;
+        double base = switch (this) {
+            case LIGHT -> ServerConfig.WEIGHT_LIGHT_SINK_PULL;
+            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_SINK_PULL;
+            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_SINK_PULL;
             default -> 0.0;
         };
+        return base * mult;
     }
 
     public double getFallDamageMultiplier() {
-        return switch (this) {
-            case LIGHT -> ServerConfig.WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER != null ? ServerConfig.WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER.get() : defaultFallDamageMultiplier;
-            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER != null ? ServerConfig.WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER.get() : defaultFallDamageMultiplier;
-            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER != null ? ServerConfig.WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER.get() : defaultFallDamageMultiplier;
+        double mult = ServerConfig.WEIGHT_PENALTY_MULTIPLIER != null ? ServerConfig.WEIGHT_PENALTY_MULTIPLIER.get() : 1.0;
+        double base = switch (this) {
+            case LIGHT -> ServerConfig.WEIGHT_LIGHT_FALL_DAMAGE_MULTIPLIER;
+            case MEDIUM -> ServerConfig.WEIGHT_MEDIUM_FALL_DAMAGE_MULTIPLIER;
+            case OVERBURDENED -> ServerConfig.WEIGHT_OVERBURDENED_FALL_DAMAGE_MULTIPLIER;
             default -> 1.0;
         };
+        return 1.0 + (base - 1.0) * mult;
     }
 
     public static EncumbranceTier fromWeightRatio(float ratio) {
-        double overburdenedThresh = ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD != null ? ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD.get() : 0.85;
-        double mediumThresh = ServerConfig.WEIGHT_MEDIUM_THRESHOLD != null ? ServerConfig.WEIGHT_MEDIUM_THRESHOLD.get() : 0.70;
-        double lightThresh = ServerConfig.WEIGHT_LIGHT_THRESHOLD != null ? ServerConfig.WEIGHT_LIGHT_THRESHOLD.get() : 0.50;
-
-        if (ratio >= overburdenedThresh) {
+        if (ratio >= ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD) {
             return OVERBURDENED;
-        } else if (ratio >= mediumThresh) {
+        } else if (ratio >= ServerConfig.WEIGHT_MEDIUM_THRESHOLD) {
             return MEDIUM;
-        } else if (ratio >= lightThresh) {
+        } else if (ratio >= ServerConfig.WEIGHT_LIGHT_THRESHOLD) {
             return LIGHT;
         }
         return NORMAL;

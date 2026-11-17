@@ -96,7 +96,6 @@ class AccessorContractTest {
         api.getTemperature().setWetnessBuffer(playerId, 0.8f);
         assertEquals(0.8f, api.getTemperature().getWetnessBuffer(playerId), 0.01f);
 
-        // Core temp clamping
         api.getTemperature().setCoreTemperature(playerId, 50.0f);
         assertEquals(45.0f, api.getTemperature().getCoreTemperature(playerId), 0.01f);
         assertTrue(api.getTemperature().isOverheating(playerId));
@@ -117,18 +116,15 @@ class AccessorContractTest {
         assertEquals(37.0f, data.getCoreTemperature(), 0.01f);
         assertEquals(37.0f, api.getTemperature().getCoreTemperature(playerId), 0.01f);
 
-        // Mutating through API updates PlayerTemperatureData
         api.getTemperature().modifyCoreTemperature(playerId, 3.2f);
         assertEquals(40.2f, data.getCoreTemperature(), 0.01f);
         assertEquals(40.2f, api.getTemperature().getCoreTemperature(playerId), 0.01f);
         assertTrue(api.getTemperature().isOverheating(playerId));
 
-        // Mutating directly in PlayerTemperatureData updates API
         data.setCoreTemperature(38.0f);
         assertEquals(38.0f, api.getTemperature().getCoreTemperature(playerId), 0.01f);
         assertFalse(api.getTemperature().isOverheating(playerId));
 
-        // Reset restores healthy 37.0C
         data.reset();
         assertEquals(37.0f, data.getCoreTemperature(), 0.01f);
         assertEquals(37.0f, api.getTemperature().getCoreTemperature(playerId), 0.01f);
@@ -136,16 +132,19 @@ class AccessorContractTest {
 
     @Test
     void testAIO580ServerConfigs() {
-        assertTrue(com.alikuxac.humannature.config.ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION.get());
-        assertEquals(0.60, com.alikuxac.humannature.config.ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION.get(), 0.001);
-        assertEquals(1.50, com.alikuxac.humannature.config.ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER.get(), 0.001);
+        assertTrue(com.alikuxac.humannature.config.ServerConfig.ENABLE_ARMOR_THERMAL_INSULATION);
+        assertEquals(0.60, com.alikuxac.humannature.config.ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION, 0.001);
+        assertEquals(1.50, com.alikuxac.humannature.config.ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER, 0.001);
 
-        assertTrue(com.alikuxac.humannature.config.ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS.get());
-        assertEquals(0.0015, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_TEMP_RISE_RATE.get(), 0.0001);
-        assertEquals(0.10, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_EXERTION_DRAIN.get(), 0.001);
+        assertTrue(com.alikuxac.humannature.config.ServerConfig.ENABLE_HEAVY_LOAD_HEAT_STRESS);
+        assertEquals(0.0015, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_TEMP_RISE_RATE, 0.0001);
+        assertEquals(0.10, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_EXERTION_DRAIN, 0.001);
         assertEquals(39.5, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_OVERHEAT_THRESHOLD.get(), 0.01);
         assertEquals(42.0, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_DAMAGE_THRESHOLD.get(), 0.01);
-        assertEquals(40, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS.get());
+        assertEquals(40, com.alikuxac.humannature.config.ServerConfig.HEAT_STRESS_DAMAGE_INTERVAL_TICKS);
+
+        assertEquals(1.0, com.alikuxac.humannature.config.ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get(), 0.001);
+        assertEquals(1.0, com.alikuxac.humannature.config.ServerConfig.WEIGHT_PENALTY_MULTIPLIER.get(), 0.001);
     }
 
     @Test

@@ -212,7 +212,7 @@ public class DiagnosticScreen extends Screen {
                         if (holder != null) {
                             var burden = player.getEffect(holder);
                             if (burden != null) {
-                                double bonus = (burden.getAmplifier() + 1) * (ServerConfig.BURDEN_BEARER_CAPACITY_BONUS != null ? ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get() : 150.0);
+                                double bonus = (burden.getAmplifier() + 1) * ServerConfig.BURDEN_BEARER_CAPACITY_BONUS;
                                 weightTooltip.add(Component.literal(String.format("§a• Burden Bearer (Potion): +%.0f kg", bonus)));
                             }
                         }
@@ -222,7 +222,7 @@ public class DiagnosticScreen extends Screen {
                         totalLoadBearing += WeightCalculator.getEnchantmentLevel(player.getItemBySlot(slot), com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
                     }
                     if (totalLoadBearing > 0) {
-                        double bonus = totalLoadBearing * (ServerConfig.LOAD_BEARING_CAPACITY_BONUS != null ? ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get() : 50.0);
+                        double bonus = totalLoadBearing * ServerConfig.LOAD_BEARING_CAPACITY_BONUS;
                         weightTooltip.add(Component.literal(String.format("§b• Load Bearing (Armor): +%.0f kg", bonus)));
                     }
                 }
@@ -323,7 +323,7 @@ public class DiagnosticScreen extends Screen {
                     float toxinMultiplier = PhysiologyModule.calculateToxinMultiplier(player.getUUID());
                     if (toxinBuildup > 0.0f) {
                         toxinTooltip.add(Component.literal("§7Accumulated Type: " + toxinType.getColorCode() + toxinType.getDisplayName()));
-                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
+                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS;
                         int elapsed = physData.getTicksSinceLastExposure();
                         if (elapsed < delayTicks) {
                             toxinTooltip.add(Component.literal(String.format("§7Decay Delay: %.1fs remaining", (delayTicks - elapsed) / 20.0)));
@@ -400,7 +400,7 @@ public class DiagnosticScreen extends Screen {
                         exertionTooltip.add(Component.literal("§c⚠ Swimming Cramp: -40% Swim Speed"));
                         exertionTooltip.add(Component.literal("§e⚡ Exit to shore or boat for 3s to relieve cramp"));
                     } else if (physData.getContinuousSwimmingTicks() > 200) {
-                        int crampThreshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS != null ? ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get() : 600;
+                        int crampThreshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS;
                         int remTicks = Math.max(0, crampThreshold - physData.getContinuousSwimmingTicks());
                         exertionTooltip.add(Component.literal(String.format("§7Swimming: %.1fs until leg cramp", remTicks / 20.0)));
                     }
@@ -476,7 +476,6 @@ public class DiagnosticScreen extends Screen {
                 heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
             }
 
-            // Compact metabolic and mental indicators
             List<String> tags = new ArrayList<>();
             if (physData.isAdrenalineActive()) {
                 tags.add("§c⚡ Adrenaline (" + String.format("%.1fs", physData.getAdrenalineTicks() / 20.0) + ")");
@@ -570,7 +569,7 @@ public class DiagnosticScreen extends Screen {
                 }
 
                 if (physData.isPanicking() || physData.getClaustrophobiaTicks() > 0) {
-                    int pThresh = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
+                    int pThresh = ServerConfig.PANIC_THRESHOLD_TICKS;
                     int pPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) pThresh) * 100.0f));
                     metabolismTooltip.add(Component.literal(String.format("§c• Underground Claustrophobia: %d%% %s", pPct,
                             physData.isPanicking() ? "§c[PANIC - AIM TREMORS]" : "§e[Building]")));
@@ -620,13 +619,11 @@ public class DiagnosticScreen extends Screen {
                     int leatherCount = TemperatureEventHandler.countLeatherPieces(player);
                     int metalCount = TemperatureEventHandler.countMetallicPieces(player);
                     if (leatherCount > 0) {
-                        double maxRed = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION != null ?
-                                ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION.get() : 0.60;
+                        double maxRed = ServerConfig.LEATHER_INSULATION_FREEZE_REDUCTION;
                         metabolismTooltip.add(Component.literal(String.format("§a  ↳ Leather Insulation: %.0f%% cold dampening (%d/4 pieces)", (leatherCount / 4.0f) * maxRed * 100.0f, leatherCount)));
                     }
                     if (metalCount > 0) {
-                        double condMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER != null ?
-                                ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER.get() : 1.50;
+                        double condMult = ServerConfig.METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER;
                         float extraCond = (metalCount / 4.0f) * (float) (condMult - 1.0) * 100.0f;
                         metabolismTooltip.add(Component.literal(String.format("§b  ↳ Metal Cold Conduction: +%.0f%% chill conduction (%d/4 pieces)", extraCond, metalCount)));
                     }

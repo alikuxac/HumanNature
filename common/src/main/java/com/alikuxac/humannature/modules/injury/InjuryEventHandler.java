@@ -107,7 +107,7 @@ public class InjuryEventHandler {
     );
 
     public static void updateSplintModifier() {
-        double reduction = ServerConfig.SPLINT_SPEED_REDUCTION.get();
+        double reduction = ServerConfig.SPLINT_SPEED_REDUCTION;
         SPLINT_SPEED_MODIFIER = new AttributeModifier(
                 SPLINT_SPEED_MODIFIER_ID,
                 -reduction,
@@ -286,7 +286,7 @@ public class InjuryEventHandler {
         if (isNaturalRestHeal) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
             if (data.hasAnySplint() && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                double multiplier = ServerConfig.CALCIUM_HEALING_MULTIPLIER != null ? ServerConfig.CALCIUM_HEALING_MULTIPLIER.get() : 2.0;
+                double multiplier = ServerConfig.CALCIUM_HEALING_MULTIPLIER;
                 amount = (int) Math.round(amount * multiplier);
             }
         }
@@ -952,7 +952,7 @@ public class InjuryEventHandler {
             double accumulated = STEP_DISTANCE_ACCUMULATOR.compute(player.getUUID(), (k, v) -> (v == null ? 0.0 : v) + deltaDistance);
             if (accumulated >= 50.0) {
                 STEP_DISTANCE_ACCUMULATOR.put(player.getUUID(), 0.0);
-                int drain = ServerConfig.SPLINT_DURABILITY_PER_50_STEPS != null ? ServerConfig.SPLINT_DURABILITY_PER_50_STEPS.get() : 1;
+                int drain = ServerConfig.SPLINT_DURABILITY_PER_50_STEPS;
                 for (LimbType leg : new LimbType[]{LimbType.LEFT_LEG, LimbType.RIGHT_LEG}) {
                     if (data.isSplinted(leg)) {
                         SplintTier tier = data.getSplint(leg);
@@ -984,7 +984,7 @@ public class InjuryEventHandler {
 
             double effective = baseAmount * maxSplintMultiplier;
             if (anySplinted && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                double calciumMult = ServerConfig.CALCIUM_HEALING_MULTIPLIER != null ? ServerConfig.CALCIUM_HEALING_MULTIPLIER.get() : 2.0;
+                double calciumMult = ServerConfig.CALCIUM_HEALING_MULTIPLIER;
                 effective *= calciumMult;
             }
 

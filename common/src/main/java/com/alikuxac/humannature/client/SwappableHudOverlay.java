@@ -366,7 +366,7 @@ public class SwappableHudOverlay {
                     if (toxinBuildup <= 0.0f) {
                         stateLabel = "Clear";
                     } else {
-                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
+                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS;
                         if (physData.getTicksSinceLastExposure() >= delayTicks) {
                             boolean isNearHeat = com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler.isNearHeatSource(player);
                             boolean isResting = player.isSleeping() || (player.isCrouching() && (player.walkDist - player.walkDistO <= 0.001F));
@@ -429,7 +429,7 @@ public class SwappableHudOverlay {
                 }
 
                 if (physData.getClaustrophobiaTicks() > 0 || physData.isPanicking()) {
-                    int panicThreshold = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
+                    int panicThreshold = ServerConfig.PANIC_THRESHOLD_TICKS;
                     int panicPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) panicThreshold) * 100.0f));
                     String panicDesc = physData.isPanicking() ? "§c§l100% Aim Tremors & Palpitations!" : "§e" + panicPct + "% (Seek Light/Heat/Pet)";
                     lines.add("§c⚠ Claustrophobia: " + panicDesc);

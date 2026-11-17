@@ -19,10 +19,10 @@ The server tracks moisture per tick on `wetnessBuffer` (0.0 to 1.0).
 #### Helmet Protection
 An empty helmet slot doubles rain accumulation (2.0x). Any helmet or wearable in the `HEAD` slot prevents this penalty.
 
-#### Leather Armor Insulation
-Items tagged `#minecraft:freeze_immune_wearables` reduce wetness accumulation up to 65%. Each equipped piece grants 16.25% reduction:
+#### Thermal & Leather Armor Insulation
+Items tagged `#humannature:insulating_armor` or `#minecraft:freeze_immune_wearables` reduce wetness accumulation up to 65%. Each equipped piece grants a 16.25% reduction:
 $$\text{Reduction} = \text{equippedPieces} \times 16.25\%$$
-Full leather armor extends rain soaking time from 20 seconds to ~57 seconds.
+Full insulating armor extends rain soaking time from 20 seconds to ~57 seconds. Custom modpack gear can be added via the `#humannature:insulating_armor` item tag.
 
 ---
 
@@ -85,30 +85,28 @@ Penalties clear as soon as `ticksFrozen` drops below 60%.
 
 ### 6. Configuration Options
 
-Configured in `humannature-server.toml` under `[temperature]`:
+#### Server (`humannature-server.toml`)
+
+Master module switch under `[general]`:
+- `enableTemperature` (boolean, default: `true`): Master toggle for the body temperature and climate module.
+
+Core thresholds and rate scaling under `[temperature]`:
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `enableWetnessAccumulation` | Boolean | `true` | Enables rain soaking and water wetness accumulation |
-| `wetnessRainAccumulationRate` | Double | `0.0025` | Base wetness added per tick under rain |
-| `wetnessWaterAccumulationRate` | Double | `0.015` | Wetness added per tick while in water |
-| `wetnessNoHelmetMultiplier` | Double | `2.0` | Multiplier for rain soaking with empty helmet slot |
-| `wetnessFreezeImmuneReduction` | Double | `0.65` | Maximum wetness reduction from full freeze-immune gear |
-| `enableHeatRewarming` | Boolean | `true` | Enables heat source detection and rapid drying |
-| `heatSourceRadius` | Double | `3.0` | Search radius in blocks for active heat sources |
-| `heatDryingTimeSeconds` | Double | `12.5` | Seconds required to dry 100% wetness near heat |
-| `heatThawMultiplier` | Double | `5.0` | Thaw rate multiplier for frozen ticks near heat |
-| `enableHypothermia` | Boolean | `true` | Enables freeze accumulation when 100% soaked |
-| `internalWarmingDurationTicks` | Integer | `1600` | Duration of internal warming buff from hot stews (80s) |
-| `hypothermiaPenaltyThreshold` | Double | `0.60` | Fraction of max freeze ticks triggering debuffs |
-| `hypothermiaMiningFatigue` | Boolean | `true` | Applies Mining Fatigue I during hypothermia |
-| `hypothermiaAttackSpeedPenalty` | Double | `0.35` | Attack speed penalty fraction during hypothermia |
-| `hypothermiaInteractionRangePenalty` | Double | `1.0` | Block reach penalty during hypothermia (blocks) |
+| `temperatureChangeRateMultiplier` | Double | `1.0` (0.1–10.0) | Global multiplier for temperature change rates, wetness accumulation, and heating/cooling speed. |
+| `hypothermiaThreshold` | Double | `0.60` (0.1–1.0) | Fraction of max freeze ticks required to trigger hypothermia physical penalties and shivering (60%). |
+| `heatExhaustionThreshold` | Double | `39.5` (37.5–43.0) | Core body temperature (°C) triggering heat exhaustion debuffs (panting, slowness). |
+| `heatDamageThreshold` | Double | `42.0` (39.0–45.0) | Core body temperature (°C) triggering periodic lethal hyperthermia damage. |
 
-Configured in `humannature-client.toml` under `[hud]` and `[camera]`:
+> Baseline physics values (drying duration: 12.5s, thaw multiplier: 5.0x, rain wetness: 0.0025/tick, water wetness: 0.015/tick) are hardcoded constants scaled by `temperatureChangeRateMultiplier`.
+
+#### Client (`humannature-client.toml`)
+
+Configured under `[hud]` and `[camera]`:
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `enableShiveringCamera` | Boolean | `true` | Enables screen shivering tremor during hypothermia |
-| `showActionBarEnvironmentCues` | Boolean | `true` | Enables action bar cues in ENVIRONMENT mode |
-| `defaultHudMode` | String | `"COMBINED"` | Initial HUD mode (`OFF`, `PHYSIOLOGY`, `ENVIRONMENT`, `INJURY`, `COMBINED`) |
+| `enableShiveringCamera` | Boolean | `true` | Shivering screen tremor during hypothermia. |
+| `showActionBarEnvironmentCues` | Boolean | `true` | Environmental action bar warnings in ENVIRONMENT mode. |
+| `defaultHudMode` | String | `"COMBINED"` | Initial HUD mode (`OFF`, `PHYSIOLOGY`, `ENVIRONMENT`, `INJURY`, `WEIGHT`, `COMBINED`). |

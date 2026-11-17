@@ -20,11 +20,8 @@ class WeightRecursiveContainerTest {
 
     @Test
     void testServerConfigContainerDefaults() {
-        assertNotNull(ServerConfig.WEIGHT_CONTAINER_RATIO);
-        assertEquals(1.0, ServerConfig.WEIGHT_CONTAINER_RATIO.get(), 0.001);
-
-        assertNotNull(ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION);
-        assertEquals(0.20, ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION.get(), 0.001);
+        assertEquals(1.0, ServerConfig.WEIGHT_CONTAINER_RATIO, 0.001);
+        assertEquals(0.20, ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION, 0.001);
     }
 
     @Test
@@ -38,19 +35,15 @@ class WeightRecursiveContainerTest {
 
     @Test
     void testEncumbranceRatioTiers() {
-        // Normal (< 50%)
         assertEquals(EncumbranceTier.NORMAL, EncumbranceTier.fromWeightRatio(0.40f));
         assertFalse(EncumbranceTier.fromWeightRatio(0.40f).isEncumbered());
 
-        // Light (50% - 70%)
         assertEquals(EncumbranceTier.LIGHT, EncumbranceTier.fromWeightRatio(0.68f));
         assertTrue(EncumbranceTier.fromWeightRatio(0.68f).isEncumbered());
 
-        // Medium (70% - 85%)
         assertEquals(EncumbranceTier.MEDIUM, EncumbranceTier.fromWeightRatio(0.75f));
         assertTrue(EncumbranceTier.fromWeightRatio(0.75f).isEncumbered());
 
-        // Overburdened (>= 85%)
         assertEquals(EncumbranceTier.OVERBURDENED, EncumbranceTier.fromWeightRatio(0.92f));
         assertTrue(EncumbranceTier.fromWeightRatio(0.92f).isEncumbered());
     }

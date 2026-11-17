@@ -108,5 +108,27 @@ When a player triggers a Totem of Undying to survive fatal fall damage:
       - Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
       - Drops any firework rockets held in either hand.
 
+---
+
+## Configuration
+
+### Server (`humannature-server.toml`)
+
+Master module switch under `[general]`:
+- `enableInjury` (boolean, default: `true`): Master toggle for the injury and trauma module.
+
+Core keys under `[injury]`:
+
+| Key | Default | Description |
+| :--- | :--- | :--- |
+| `enableSplint` | `true` | Enable splint mechanics and limb stabilization. |
+| `boneFractureDurationTicks` | `6000` (100–72000) | Base natural recovery duration for bone fractures in ticks (6000 ticks = 5 minutes). |
+| `enableTotemBypass` | `true` | Enable trauma totem bypass on lethal fall or blunt trauma. |
+| `enableGForceBlackout` | `true` | Enable high G-force blackout on sharp turns during high-speed elytra flight. |
+| `enableKineticCrash` | `true` | Enable kinetic crash trauma when impacting blocks at high speed with elytra. |
+
+> Splint speed penalty (10%), durability per 50 steps (1 point), and crouch recovery multiplier (0.5x) are internal balance constants in code.
+
+
 
 
