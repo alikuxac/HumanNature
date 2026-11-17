@@ -68,6 +68,7 @@ Physical actions drain stamina from a 0–100% capacity gauge. Reaching 100% exe
   - Jump threshold: Jumping requires at least 10% stamina (<90% exertion) and no active muscle failure. Otherwise, vertical jump velocity zeroes out and `generic.jump_strength` drops by 100%.
 - **Attacking**: Swings add 4.0% exertion per hit.
 - **Upstream Swimming**: Moving against fluid flow (`fluid.getFlow()`) adds 0.75% exertion per tick.
+- **Heavy-Load Heat Stress**: Moving while overburdened ($\ge 85\%$ carry load) in hot biomes (Nether, Badlands, Desert) adds $+0.10\%$ exertion per tick, accelerating stamina depletion alongside rising core body temperature.
 
 #### Muscle Failure Threshold
 At 100% exertion:
@@ -113,9 +114,11 @@ At 100% exertion:
 - Indigestion decays at 1% every 40 ticks (2 seconds), tracked by a dedicated per-player counter.
 - Milk clears 100% of accumulated indigestion; honey clears 30%.
 
-#### Calcium Bone Healing
-- Drinking Bone Broth (`humannature:bone_broth`), Milk, or items tagged `#humannature:calcium_foods` grants active calcium absorption for 3 minutes (3,600 ticks).
-- Doubles natural recovery speed for Tier 1 bone fractures exclusively during resting or sleeping. Calcium has no effect on external medical treatments (splints or bandages).
+#### Osteogenesis Buff
+Consuming Milk, Bone Broth, or `#humannature:calcium_foods` grants **Osteogenesis** for 3 minutes (3,600 ticks):
+- **Healing speed**: Splinted fractures heal $2.0\times$ faster (`ServerConfig.CALCIUM_HEALING_MULTIPLIER`), stacking with the splint tier multiplier.
+- **Instant reduction**: Eating calcium food with a splinted fracture immediately cuts remaining healing time by $35\%-50\%$.
+- **Requirement**: Fractures must be splinted to receive this bonus.
 
 #### Fracture Natural Regeneration Suppression
 - Active bone fractures cancel passive food-based health regeneration (`amount <= 1.0F`).
@@ -159,13 +162,26 @@ At 100% exertion:
 ### HUD & Diagnostic Interface
 
 #### Swappable HUD Overlay
-- A compact overlay displaying real-time survival stats, toggleable between four modes:
-  - `OFF`: Hides the overlay.
-  - `PHYSIOLOGY`: Displays fatigue, toxicity, heart rate, stamina, and digestion.
-  - `INJURY`: Displays active trauma, fractures, and limb penalties.
-  - `COMBINED`: Shows both physiological and injury status in a single box.
-- Long text lines wrap within the overlay box, and the box clamps against screen boundaries to avoid visual clipping.
-- Displays emergency alerts (Adrenaline Surge, Panic) at the top of the box.
+A compact overlay displaying real-time survival stats, toggleable between six modes:
+- `OFF`: Hides the overlay.
+- `PHYSIOLOGY`: Displays fatigue, toxicity, heart rate, stamina, and digestion.
+- `ENVIRONMENT`: Displays wetness and temperature in the action bar or compact readout.
+- `INJURY`: Displays active trauma, fractures, and limb penalties.
+- `WEIGHT`: Displays detailed weight, encumbrance bar, and capacity buffs.
+- `COMBINED`: Shows all active survival lines in a standardized layout:
+  - `Fatigue`: `Fatigue: %s (%s %s)` (colored awake duration, status tag, and percentage).
+  - `Toxicity`: `Toxicity: %s (%s)` (compact representation with active status).
+  - `Heart`: `Heart: %s (%s)` (colored BPM and cardiac rate status).
+  - `Stamina`: `Stamina: %s (%s)` (percentage and muscle/cramp condition).
+  - `Digestion`: `Digestion: %s` (Active, Resting, or Hungry).
+  - `Temperature`: `Temperature: %s (%s)` (core temp and climate tier).
+  - `Weight`: `Weight: %s/%skg (%s %s)` (current/max load and encumbrance tier).
+
+#### Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
+Hides the overlay when all vitals are nominal:
+- Rested (`fatigueScore <= 0.0f`), no toxins (`toxinBuildup <= 0.0f`), and full stamina (`exertionScore <= 0.0f`).
+- No active muscle failure, cramps, panic, or adrenaline surge.
+- Normal temperature, light/normal encumbrance, and no limb injuries.
 
 #### Transient HUD Overlays
 - **Stamina Crosshair Arc**: When stamina drops below 100%, a radial arc renders right of the crosshair (radius 19–23 px, angle -55° to +55°). Fades out over 1.5 seconds once stamina reaches 100%.
@@ -174,9 +190,10 @@ At 100% exertion:
 
 #### Body Diagnostics Screen (`H` Key)
 The diagnostic screen provides a detailed medical readout:
-- Interactive limb hitboxes showing bone fractures and trauma severity.
+- Interactive limb hitboxes showing bone fractures, trauma severity, and splint status.
 - Real-time cardiac heart rate, fatigue rating, muscle status, and digestion buffer.
 - `← Inventory` navigation button to return to the player inventory.
+- Full localization across 7 locales (`en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`).
 
 ---
 
@@ -218,6 +235,8 @@ Core settings under `[physiology]`:
 [hud]
     # Show injury & trauma status HUD overlay on screen
     enableHudOverlay = true
+    # Automatically suppress HUD rendering when fully healthy
+    autoHideHealthyHud = false
     # Screen X position of the injury HUD overlay
     hudX = 10
     # Screen Y position of the injury HUD overlay
@@ -228,7 +247,7 @@ Core settings under `[physiology]`:
     enableStaminaHudOverlay = true
     # Enable swappable HUD module cycling
     enableSwappableHud = true
-    # Default HUD mode on launch (OFF, PHYSIOLOGY, INJURY, COMBINED)
+    # Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)
     defaultHudMode = "COMBINED"
     # Screen X position of the swappable HUD mini box
     swappableHudX = 10

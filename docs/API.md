@@ -1,6 +1,6 @@
 # Public Extensibility API & Event Pipeline
 
-Public API and event system for Human Nature **v0.3.0** on Minecraft 1.21.1 (NeoForge and Forge).
+Public API and event system for Human Nature **v0.3.1** on Minecraft 1.21.1 (NeoForge and Forge).
 
 ---
 
@@ -52,7 +52,7 @@ import com.alikuxac.humannature.api.injury.InjuryTier;
 
 var injury = HumanNatureAPI.getInstance().getInjury();
 
-int headSeverity = injury.getLimbSeverity(player, LimbType.HEAD);
+byte headSeverity = injury.getLimbSeverity(player, LimbType.HEAD);
 injury.setLimbSeverity(player, LimbType.HEAD, 2);
 
 boolean hasFracture = injury.hasFracture(player);
@@ -60,6 +60,16 @@ InjuryTier tier = injury.getFractureTier(player);
 
 injury.treatLimb(player, LimbType.LEFT_LEG);
 injury.clearInjuries(player);
+```
+
+#### Limb Splint Management (`SplintTier`)
+Query active splints per limb (`SplintTier`):
+```java
+import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.item.SplintTier;
+
+SplintTier splint = InjuryModule.getSplint(player.getUUID(), LimbType.LEFT_LEG);
+boolean isSplinted = splint != null;
 ```
 
 ### 2. Nutrition & Physiology (`INutritionAccessor`)
@@ -83,18 +93,23 @@ float exertion = nutrition.getExertionScore(player);
 
 ### 3. Temperature (`ITemperatureAccessor`)
 
-Query core body temperature, wetness buffer, and environmental heat proximity.
+Read and write core body temperature, wetness buffer, and heat source proximity. Core temperature lives in `PlayerTemperatureData`, clamped to `[25.0°C, 45.0°C]` around a `37.0°C` baseline.
 
 ```java
 import com.alikuxac.humannature.api.HumanNatureAPI;
 
 var temp = HumanNatureAPI.getInstance().getTemperature();
 
+// Core body temperature
 float coreTemp = temp.getCoreTemperature(player);
+temp.setCoreTemperature(player, 38.5f);
+temp.modifyCoreTemperature(player, -0.5f);
+
 boolean freezing = temp.isFreezing(player);
 boolean overheating = temp.isOverheating(player);
 boolean nearHeat = temp.isNearHeatSource(player);
 
+// Wetness buffer (0.0 to 1.0)
 float wetness = temp.getWetnessBuffer(player);
 temp.setWetnessBuffer(player, 0.5f);
 ```
@@ -189,3 +204,43 @@ PlayerEvents.tick(event => {
     }
 })
 ```
+
+---
+
+## Domain Enums & Formatting
+
+| Enum | Translation Key Pattern | Style / Formatting | Description |
+| :--- | :--- | :--- | :--- |
+| `LimbType` | `humannature.limb.<name>` | `ChatFormatting` | Represents 6 tracked body parts (`HEAD`, `TORSO`, `MAIN_ARM`, etc.). |
+| `EncumbranceTier` | `humannature.encumbrance.<name>` | Green, Yellow, Gold, Red | Carried weight load tier (`NORMAL`, `LIGHT`, `MEDIUM`, `OVERBURDENED`). |
+| `TraumaSeverity` | `humannature.severity.<name>` | Gray, Gold, Dark Red | Injury degree (`NONE`, `SPRAIN`, `FRACTURE`). |
+| `SplintTier` | `humannature.splint_tier.<name>` | Wood, Iron, Gold, Diamond, Netherite | Medical splint grade (`WOODEN`, `REINFORCED`, `GOLDEN`, `DIAMOND`, `NETHERITE`). |
+| `ToxinType` | `humannature.toxin.<name>` | Dark Green, Dark Purple | Active poison or wither toxin accumulation. |
+| `HudMode` | `humannature.hud_mode.<name>` | White, Aqua, Gold | HUD overlay display mode (`OFF`, `PHYSIOLOGY`, `ENVIRONMENT`, `INJURY`, `WEIGHT`, `COMBINED`). |
+
+---
+
+## Network Payloads
+
+Custom payloads dispatched via `NetworkHandler`:
+
+| Payload ID | Direction | Purpose | Contents |
+| :--- | :--- | :--- | :--- |
+| `humannature:treat_limb` (`TreatLimbPayload`) | Client $\rightarrow$ Server | Dispatched when clicking an injured limb in the body silhouette UI to treat with an inventory splint. | `byte limbIndex` |
+| `humannature:sync_injury` (`SyncInjuryPayload`) | Server $\rightarrow$ Client | Synchronizes limb trauma severities and active splint tiers to the client. | 6 limb severities + 6 limb splint tier indices |
+
+---
+
+## Data Tags
+
+Item tags for datapacks and modpacks:
+
+| Tag | Target | Purpose |
+| :--- | :--- | :--- |
+| `#humannature:calcium_foods` | Items | Foods that trigger or refresh the `Osteogenesis` fracture healing buff (3 minutes, 2.0x healing rate). |
+| `#humannature:insulating_armor` | Items / Armor | Wearables providing thermal insulation against rain wetness and hypothermia freeze ticks. Defaults to `#minecraft:freeze_immune_wearables`. |
+| `#c:metallic_items` / `#humannature:metallic_items` | Items / Armor | Metallic items that accelerate cold conduction in sub-zero biomes and overheat under heavy physical loads. |
+| `#humannature:enchantable/load_bearing` | Items / Containers | Armor pieces, Shulker Boxes, and Bundles eligible for the `Load Bearing` enchantment. |
+| `#c:heavy_blocks` / `#humannature:heavy_blocks` | Items / Blocks | High-density blocks calculated at 0.8 kg/item. |
+| `#c:light_items` / `#humannature:light_items` | Items | Low-density items calculated at 0.005 kg/item. |
+| `#humannature:hot_stews` | Items / Soups | Hot soups granting the `Internal Warming` buff. |

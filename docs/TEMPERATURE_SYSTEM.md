@@ -24,11 +24,17 @@ Items tagged `#humannature:insulating_armor` or `#minecraft:freeze_immune_wearab
 $$\text{Reduction} = \text{equippedPieces} \times 16.25\%$$
 Full insulating armor extends rain soaking time from 20 seconds to ~57 seconds. Custom modpack gear can be added via the `#humannature:insulating_armor` item tag.
 
+#### Armor Insulation & Conduction
+Equipped armor modifies thermal conductivity:
+- **Leather Armor** (`#humannature:insulating_armor` / `#minecraft:freeze_immune_wearables`): Cuts hypothermia freeze tick rate by $15\%$ per piece (up to $60\%$, `LEATHER_INSULATION_FREEZE_REDUCTION`).
+- **Metallic Armor** (`#c:metallic_items` / `#humannature:metallic_items`): Increases cold conduction by $+12.5\%$ per piece (up to $+50\%$, `METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER`) when wet or in cold biomes (`coldEnoughToSnow` or base temperature $< 0.15$).
+
 ---
 
-### 2. Heat Sources & Drying
+### 2. Heat Sources, Drying & Core Body Temperature
 
-The server scans blocks within 3 blocks of the player every 20 ticks (1 second).
+#### Core Body Temperature
+Core body temperature is tracked in `PlayerTemperatureData`, clamped between $25.0^\circ\text{C}$ and $45.0^\circ\text{C}$ around a $37.0^\circ\text{C}$ baseline. Temperature persists across player reconnects and resets to $37.0^\circ\text{C}$ on respawn.
 
 #### Heat Sources
 - **Campfires**: Block tagged `#minecraft:campfires` with `lit=true`.
@@ -38,7 +44,7 @@ The server scans blocks within 3 blocks of the player every 20 ticks (1 second).
 - **Magma Blocks**: `Blocks.MAGMA_BLOCK`.
 - **Direct Burning**: `player.isOnFire()` or `player.isInLava()`.
 
-#### Rewarming Rates
+#### Rewarming & Thawing Rates
 - **Heat Drying**: Drains `wetnessBuffer` at ~0.004 / tick (12.5 seconds to dry 100%).
 - **Rapid Thaw**: Decrements vanilla `ticksFrozen` by 10 ticks per tick (5x natural thaw rate).
 - **Sound**: Plays `SoundEvents.FIRE_EXTINGUISH` every 35 ticks while drying or thawing near heat.
@@ -56,17 +62,27 @@ Eating hot stew (`Mushroom Stew`, `Rabbit Stew`, `Beetroot Soup`, `Suspicious St
 
 ---
 
-### 4. Hypothermia & Freezing Penalties
+### 4. Hypothermia, Freezing Penalties & Heat Stress
 
-When `wetnessBuffer` reaches 1.0 (100% soaked) away from heat sources, hypothermia accumulates vanilla `ticksFrozen` (+3 per tick, capped at `ticksRequiredToFreeze + 80`).
+#### Hypothermia & Freezing
+When `wetnessBuffer` reaches 1.0 (100% soaked) away from heat sources, hypothermia accumulates vanilla `ticksFrozen` (+3 per tick, capped at `ticksRequiredToFreeze + 80`). Metallic armor amplifies this rate in cold environments.
 
 Once `ticksFrozen` reaches 60% of `ticksRequiredToFreeze` (84/140 ticks by default):
 - **Mining Fatigue I**: Applied continuously while hypothermic.
 - **Physical Penalties**: -35% attack speed (`Attributes.ATTACK_SPEED`) and -1.0 block interaction range (`Attributes.BLOCK_INTERACTION_RANGE`).
 - **Camera Tremor**: High-frequency screen shivering on client (`enableShiveringCamera`).
 - **Cold Stumble**: Periodic stumble every 15 to 20 seconds while walking on ground (brief `Slowness I` and freeze sound).
+- **Core Temp Drop**: Severe prolonged freezing steadily drains core temperature below $35.0^\circ\text{C}$.
 
 Penalties clear as soon as `ticksFrozen` drops below 60%.
+
+#### Heavy-Load Heat Stress & Hyperthermia
+Moving while `OVERBURDENED` (weight ratio $\ge 0.85$) in hot biomes (Nether, Badlands, Desert, or biome temperature $\ge 1.5$):
+- Core temperature rises by $+0.0015^\circ\text{C}$/tick (`HEAT_STRESS_TEMP_RISE_RATE`), faster if wearing metallic armor.
+- Stamina drains at $+0.10$ exertion/tick (`HEAT_STRESS_EXERTION_DRAIN`), accelerating muscle failure.
+- **Heat Exhaustion** ($> 39.5^\circ\text{C}$): Continuous `Slowness I` and panting audio (`SoundEvents.PLAYER_BREATH`).
+- **Lethal Hyperthermia** ($> 42.0^\circ\text{C}$): Deals 1.0 dry-out damage and plays hurt audio every 40 ticks (`HEAT_STRESS_DAMAGE_INTERVAL_TICKS`).
+- Core temperature cools toward $37.0^\circ\text{C}$ when resting, unburdened, or in water.
 
 ---
 
@@ -74,12 +90,20 @@ Penalties clear as soon as `ticksFrozen` drops below 60%.
 
 #### Swappable HUD Modes
 - **`ENVIRONMENT` Mode**: Minimalist Action Bar cue. Shows `[HUD Mode]: ENVIRONMENT` on switch, then outputs `Wetness: X% | Temp: Normal/Chilly/Freezing` only when wet, cold, or buffed. Auto-hides when dry and warm.
-- **`COMBINED` Mode**: Displays active wetness progress bar and temperature state inside the top-left HUD box alongside physiology and trauma lines.
-- **`OFF` / `PHYSIOLOGY` / `INJURY`**: Hides temperature lines.
+- **`COMBINED` Mode**: Displays active wetness progress bar and standardized temperature line `Temperature: %s (%s)` (e.g. `Temperature: 37.0°C (Normal)`) styled with the tier's designated color code.
+- **`OFF` / `PHYSIOLOGY` / `INJURY` / `WEIGHT`**: Hides temperature lines.
+
+#### Smart Auto-Hide HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
+When enabled, the temperature display automatically suppresses when conditions are healthy:
+- `wetnessBuffer <= 0.0f`
+- `ticksFrozen <= 0`
+- `coreTemperature` is stable between $36.5^\circ\text{C}$ and $37.5^\circ\text{C}$
+- No active hypothermia debuff, internal warming buff, or nearby heat source
 
 #### Diagnostic Screen (`H` Key)
-- Quick overview panel displays warning tags (`Wetness: Damp/Soaked`, `Freezing`, `Internal Warming`) when abnormal.
+- Quick overview panel displays warning tags (`Wetness: Damp/Soaked`, `Freezing`, `Heat Exhaustion`, `Hyperthermia`, `Internal Warming`) when abnormal.
 - Detailed temperature and wetness rows with exact percentages and stage indicators appear in the body metrics breakdown.
+- Fully localized across 7 languages (`en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`).
 
 ---
 
@@ -99,7 +123,7 @@ Core thresholds and rate scaling under `[temperature]`:
 | `heatExhaustionThreshold` | Double | `39.5` (37.5–43.0) | Core body temperature (°C) triggering heat exhaustion debuffs (panting, slowness). |
 | `heatDamageThreshold` | Double | `42.0` (39.0–45.0) | Core body temperature (°C) triggering periodic lethal hyperthermia damage. |
 
-> Baseline physics values (drying duration: 12.5s, thaw multiplier: 5.0x, rain wetness: 0.0025/tick, water wetness: 0.015/tick) are hardcoded constants scaled by `temperatureChangeRateMultiplier`.
+> Internal constants scaled by `temperatureChangeRateMultiplier`: drying duration (12.5s), thaw multiplier (5.0x), rain wetness (0.0025/tick), water wetness (0.015/tick), leather freeze reduction (60%), metallic cold conduction multiplier (+50%), heat stress rise rate (+0.0015°C/tick), heat stress exertion drain (+0.10/tick), and heat damage interval (40 ticks).
 
 #### Client (`humannature-client.toml`)
 
@@ -109,4 +133,5 @@ Configured under `[hud]` and `[camera]`:
 | :--- | :--- | :--- | :--- |
 | `enableShiveringCamera` | Boolean | `true` | Shivering screen tremor during hypothermia. |
 | `showActionBarEnvironmentCues` | Boolean | `true` | Environmental action bar warnings in ENVIRONMENT mode. |
+| `autoHideHealthyHud` | Boolean | `false` | Automatically suppress HUD rendering when the player is completely healthy. |
 | `defaultHudMode` | String | `"COMBINED"` | Initial HUD mode (`OFF`, `PHYSIOLOGY`, `ENVIRONMENT`, `INJURY`, `WEIGHT`, `COMBINED`). |

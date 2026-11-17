@@ -48,27 +48,42 @@ Tracks skeletal trauma across 6 body regions with localized penalties, armor mit
 
 ---
 
-### 5. Splints
+### 5. Splints & Limb Retention
 
-Hold right-click for 2 seconds (40 ticks) to apply in-world, or click an injured limb in the diagnostic screen.
+Hold right-click for 2 seconds (40 ticks) to apply in-world, or click an injured limb in the Diagnostic Screen (`H` key).
 
-| Tier | Item ID | Durability | Effects |
-| :--- | :--- | :--- | :--- |
-| **Wooden Splint** | `humannature:wooden_splint` | 1 | Heals fracture; applies $-10\%$ movement speed penalty |
-| **Reinforced Splint** | `humannature:reinforced_splint` | 4 | Cuts timer by $50\%$; grants Resistance I (30s) |
-| **Golden Splint** | `humannature:golden_splint` | 8 | Cuts timer by $67\%$; grants Absorption I (2 hearts) and Regeneration I (5s) |
-| **Diamond Splint** | `humannature:diamond_splint` | 16 | Instant full recovery; grants Resistance II (20s) and Knockback Resistance $+0.5$ (60s) |
-| **Netherite Splint** | `humannature:netherite_splint` | 24 | Instant full recovery; grants Speed II and Resistance I (45s) |
+Splints attach to a specific limb, immobilizing fractures. Splinting a broken leg cuts the movement speed penalty from $-45\%$/$-85\%$ down to $-10\%$ (`SPLINT_SPEED_REDUCTION`). The splint clears automatically when the limb heals to severity 0.
+
+| Tier | Item ID | Max Durability | Sprint Dislodge | Light Fall Dislodge | Natural Heal Mult | Sprint Drain Interval | Application Effects |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Wooden Splint** | `humannature:wooden_splint` | 1 | $15\%$ | $40\%$ | $1.0\times$ | 20 ticks | Fracture stabilized; $-10\%$ speed |
+| **Reinforced Splint** | `humannature:reinforced_splint` | 4 | $2\%$ | $5\%$ | $1.25\times$ | 100 ticks | $-50\%$ timer cut; Resistance I (30s) |
+| **Golden Splint** | `humannature:golden_splint` | 8 | $1\%$ | $2\%$ | $1.50\times$ | 150 ticks | $-67\%$ timer cut; Absorption I (2 hearts), Regen I (5s) |
+| **Diamond Splint** | `humannature:diamond_splint` | 16 | $0\%$ | $0\%$ | $1.75\times$ | 400 ticks | Instant full recovery; Resistance II (20s), Knockback Resist $+0.5$ (60s) |
+| **Netherite Splint** | `humannature:netherite_splint` | 24 | $0\%$ | $0\%$ | $2.0\times$ | 0 (Unbreakable) | Instant full recovery; Speed II, Resistance I (45s) |
+
+#### Splint Stability & Dislodging
+- **Sprint dislodge**: Sprinting rolls a check per step to dislodge the splint ($15\%$ Wooden, $2\%$ Reinforced, $1\%$ Golden).
+- **Light fall dislodge**: Falls between 1.5 blocks and the safe damage threshold risk knocking the splint off ($40\%$ Wooden, $5\%$ Reinforced, $2\%$ Golden).
+- **Durability drain**: Sprinting drains splint durability every `sprintDurabilityDrainInterval` ticks. At 0 durability, the splint snaps.
+- Diamond and Netherite splints never dislodge ($0\%$) and do not wear down from sprinting.
 
 ---
 
-### 6. Food Recovery Reductions
+### 6. Osteogenesis & Food Recovery
 
-Consuming recovery items instantly cuts the remaining healing timer:
+#### Osteogenesis Buff
+Consuming Milk Buckets, Bone Broth, or `#humannature:calcium_foods` grants **Osteogenesis** for 3 minutes (3,600 ticks):
+- **Healing speed**: Splinted fractures heal $2.0\times$ faster (`ServerConfig.CALCIUM_HEALING_MULTIPLIER`), stacking with the splint tier multiplier (up to $4.0\times$ on Netherite).
+- **Instant reduction**: Eating calcium food with a splinted fracture immediately cuts remaining healing time by $35\%-50\%$.
+- **Requirement**: Fractures must be splinted to benefit from Osteogenesis.
+
+#### Food Recovery Reductions
+Recovery foods reduce remaining fracture time on consumption:
 
 | Item | Reduction | Audio |
 | :--- | :--- | :--- |
-| **Milk Bucket** | $50\%$ | Bone meal sound |
+| **Milk Bucket / Bone Broth** | $50\%$ (triggers Osteogenesis) | Bone meal sound |
 | **Soups & Stews** (`rabbit_stew`, `mushroom_stew`, `beetroot_soup`, `suspicious_stew`) | $30\%$ | Bone meal sound |
 | **Golden Apples** (`golden_apple`, `enchanted_golden_apple`) | $75\%$ | Bone meal sound |
 | **Potions** (Healing or Regeneration) | $40\%$ | Bone meal sound |
@@ -77,13 +92,17 @@ Consuming recovery items instantly cuts the remaining healing timer:
 
 ### 7. Diagnostic UI
 
-- **HUD Overlay**: Anchored at `x=10, y=10`. Shows active limb injuries and remaining healing time.
-- **Diagnostic Screen**:
-  - Opened with `H` key or the inventory tab button.
-  - Pixel-art silhouette showing limb status: Green (Healthy), Yellow (Minor), Red (Severe).
-  - Hovering a limb shows active debuffs.
-  - Clicking an injured limb uses an available splint from inventory (2-second cooldown).
-  - Press `E` or click `← Inventory` to return to the inventory screen.
+- **Interactive Body Silhouette**:
+  - Open with `H` or the inventory tab button (`DiagnosticScreen`).
+  - Silhouette colors show limb status: Green (Healthy), Yellow (Minor / Sprain), Red (Severe / Fracture).
+  - Splinted limbs display a cyan border (`#00FFFF`), the splint tier, and remaining durability.
+  - Clicking an injured limb uses the first suitable splint from inventory via `TreatLimbPayload`.
+  - Hovering a limb shows context hints: `[Click to Treat with Splint]` or `[Need Splint to Treat]`.
+  - Active Osteogenesis shows a bone icon with remaining duration.
+- **Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)**:
+  - When enabled, hides the HUD overlay whenever the player is fully healthy (no active injuries, fractures, temperature debuffs, or physiological stress).
+- **Localization**:
+  - All limb names, severities, splint tiers, and action hints support 7 locales (`en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`).
 
 ---
 
@@ -127,7 +146,18 @@ Core keys under `[injury]`:
 | `enableGForceBlackout` | `true` | Enable high G-force blackout on sharp turns during high-speed elytra flight. |
 | `enableKineticCrash` | `true` | Enable kinetic crash trauma when impacting blocks at high speed with elytra. |
 
-> Splint speed penalty (10%), durability per 50 steps (1 point), and crouch recovery multiplier (0.5x) are internal balance constants in code.
+> Splint speed penalty (10%), durability per 50 steps (1 point), crouch recovery multiplier (0.5x), and calcium healing multiplier (2.0x) are internal balance constants in code.
+
+### Client (`humannature-client.toml`)
+
+Configured under `[hud]`:
+
+| Setting | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enableHudOverlay` | Boolean | `true` | Show injury & trauma status HUD overlay on screen. |
+| `autoHideHealthyHud` | Boolean | `false` | Automatically suppress HUD rendering when the player is completely healthy. |
+| `hudX` | Integer | `10` | Screen X position of the injury HUD overlay. |
+| `hudY` | Integer | `10` | Screen Y position of the injury HUD overlay. |
 
 
 
