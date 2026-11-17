@@ -109,4 +109,6 @@ public class ServerConfig {
 
     public static Supplier<Double> BURDEN_BEARER_CAPACITY_BONUS = () -> 150.0;
     public static Supplier<Double> LOAD_BEARING_CAPACITY_BONUS = () -> 50.0;
+    public static Supplier<Double> WEIGHT_CONTAINER_RATIO = () -> 1.0;
+    public static Supplier<Double> LOAD_BEARING_CONTAINER_REDUCTION = () -> 0.20;
 }

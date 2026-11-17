@@ -26,5 +26,6 @@
   "enchantment.humannature.load_bearing": "Load Bearing",
   "tooltip.humannature.weight_single": "Weight: %s kg",
   "tooltip.humannature.weight_stack": "Weight: %s kg (%s kg each)",
-  "tooltip.humannature.weight_container": "Weight: %s kg (Contents: %s kg)"
+  "tooltip.humannature.weight_container": "Weight: %s kg (Contents: %s kg)",
+  "tooltip.humannature.weight_total_suffix": "(Total: %s%% - %s)"
 }

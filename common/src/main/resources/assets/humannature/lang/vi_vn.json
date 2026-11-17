@@ -26,5 +26,6 @@
   "enchantment.humannature.load_bearing": "Tải Lực",
   "tooltip.humannature.weight_single": "Khối lượng: %s kg",
   "tooltip.humannature.weight_stack": "Khối lượng: %s kg (%s kg/cái)",
-  "tooltip.humannature.weight_container": "Khối lượng: %s kg (Vật phẩm: %s kg)"
+  "tooltip.humannature.weight_container": "Khối lượng: %s kg (Vật phẩm: %s kg)",
+  "tooltip.humannature.weight_total_suffix": "(Tổng: %s%% - %s)"
 }

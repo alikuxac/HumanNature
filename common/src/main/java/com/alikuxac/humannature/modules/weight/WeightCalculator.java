@@ -72,23 +72,35 @@ public class WeightCalculator {
 
     public static float getContentsWeight(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0.0f;
-        float contents = 0.0f;
+        float rawContents = 0.0f;
 
         ItemContainerContents container = stack.get(DataComponents.CONTAINER);
         if (container != null) {
             for (ItemStack content : container.nonEmptyItems()) {
-                contents += calculateStackWeight(content) * stack.getCount();
+                rawContents += calculateStackWeight(content);
             }
         }
 
         BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
         if (bundle != null) {
             for (ItemStack content : bundle.items()) {
-                contents += calculateStackWeight(content) * stack.getCount();
+                rawContents += calculateStackWeight(content);
             }
         }
 
-        return contents;
+        if (rawContents <= 0.0f) return 0.0f;
+
+        double ratio = ServerConfig.WEIGHT_CONTAINER_RATIO != null ? ServerConfig.WEIGHT_CONTAINER_RATIO.get() : 1.0;
+        float contents = (float) (rawContents * ratio);
+
+        int loadBearingLvl = getEnchantmentLevel(stack, com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
+        if (loadBearingLvl > 0) {
+            double reductionPerLvl = ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION != null ? ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION.get() : 0.20;
+            double reduction = Math.min(1.0, loadBearingLvl * reductionPerLvl);
+            contents *= (float) (1.0 - reduction);
+        }
+
+        return contents * stack.getCount();
     }
 
     public static float calculateStackWeight(ItemStack stack) {
