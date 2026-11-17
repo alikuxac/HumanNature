@@ -3,6 +3,7 @@ package com.alikuxac.humannature.client.gui;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.SplintItem;
+import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.network.NetworkHandler;
@@ -668,7 +669,20 @@ public class DiagnosticScreen extends Screen {
                     case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
                     case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
                 }
-                if (hasSplint) {
+                if (data.isSplinted(hoveredBox.limb())) {
+                    SplintTier st = data.getSplint(hoveredBox.limb());
+                    tooltip.add(Component.literal("§bSplinted: " + (st != null ? st.getDisplayName() : "Splint") + " (" + data.getSplintDurability(hoveredBox.limb()) + " dura)"));
+                    if (PhysiologyModule.hasCalciumBuff(player.getUUID())) {
+                        tooltip.add(Component.literal("§d• Osteogenesis Active (Accelerated Healing)"));
+                    }
+                    if (hasSplint) {
+                        if (isOnCooldown) {
+                            tooltip.add(Component.literal("§c[Splint on Cooldown]"));
+                        } else {
+                            tooltip.add(Component.literal("§e[Click to Replace with " + availableSplint.getHoverName().getString() + "]"));
+                        }
+                    }
+                } else if (hasSplint) {
                     if (isOnCooldown) {
                         tooltip.add(Component.literal("§c[Splint on Cooldown]"));
                     } else {

@@ -2,6 +2,7 @@ package com.alikuxac.humannature.modules.injury;
 
 import com.alikuxac.humannature.api.injury.InjuryTier;
 import com.alikuxac.humannature.api.injury.LimbType;
+import com.alikuxac.humannature.item.SplintTier;
 
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
@@ -117,5 +118,29 @@ public class InjuryModule implements IHumanModule {
         if (data != null) {
             data.clear();
         }
+    }
+
+    public static boolean isLimbSplinted(UUID playerId, LimbType limb) {
+        return getOrCreateInjuryData(playerId).isSplinted(limb);
+    }
+
+    public static boolean hasAnySplint(UUID playerId) {
+        return getOrCreateInjuryData(playerId).hasAnySplint();
+    }
+
+    public static SplintTier getLimbSplint(UUID playerId, LimbType limb) {
+        return getOrCreateInjuryData(playerId).getSplint(limb);
+    }
+
+    public static void setLimbSplint(UUID playerId, LimbType limb, SplintTier tier, int durability) {
+        PlayerInjuryData data = getOrCreateInjuryData(playerId);
+        data.setSplint(limb, tier, durability);
+        setInjuryData(playerId, data);
+    }
+
+    public static void removeLimbSplint(UUID playerId, LimbType limb) {
+        PlayerInjuryData data = getOrCreateInjuryData(playerId);
+        data.removeSplint(limb);
+        setInjuryData(playerId, data);
     }
 }

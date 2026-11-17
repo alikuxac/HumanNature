@@ -46,6 +46,12 @@ public class PhysiologyEventHandler {
 
     public static final TagKey<Item> CALCIUM_FOODS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "calcium_foods"));
 
+    public static void triggerOsteogenesis(Player player) {
+        if (player == null) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        data.setCalciumAbsorptionTicks(3600);
+    }
+
     public record FoodSnapshot(int foodLevel, float saturationLevel) {}
     private static final Map<UUID, FoodSnapshot> FOOD_SNAPSHOTS = new ConcurrentHashMap<>();
 
@@ -270,7 +276,7 @@ public class PhysiologyEventHandler {
 
         if (PhysiologyModule.isCalciumHealingEnabled()) {
             if (stack.is(CALCIUM_FOODS) || stack.is(ModItems.BONE_BROTH.get()) || stack.is(Items.MILK_BUCKET)) {
-                data.setCalciumAbsorptionTicks(3600);
+                triggerOsteogenesis(player);
                 if (stack.is(ModItems.BONE_BROTH.get())) {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.8F);

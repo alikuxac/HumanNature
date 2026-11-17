@@ -1,8 +1,10 @@
 package com.alikuxac.humannature.client.gui;
 
 import com.alikuxac.humannature.item.SplintItem;
+import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.network.NetworkHandler;
 import com.alikuxac.humannature.network.TreatLimbPayload;
 import com.alikuxac.humannature.api.injury.LimbType;
@@ -69,7 +71,8 @@ public class BodySilhouettePanel {
             int bx = originX + box.relX();
             int by = originY + box.relY();
             guiGraphics.fill(bx, by, bx + box.width(), by + box.height(), color);
-            guiGraphics.renderOutline(bx, by, box.width(), box.height(), isHovered ? 0xFFFFFFFF : 0xFF1E1E1E);
+            int outlineColor = isHovered ? 0xFFFFFFFF : (data.isSplinted(box.limb()) ? 0xFF55FFFF : 0xFF1E1E1E);
+            guiGraphics.renderOutline(bx, by, box.width(), box.height(), outlineColor);
         }
 
         guiGraphics.pose().popPose();
@@ -92,11 +95,23 @@ public class BodySilhouettePanel {
                     case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
                     case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
                 }
-                ItemStack splint = InjuryEventHandler.findFirstSplint(player);
-                if (!splint.isEmpty()) {
-                    tooltip.add(Component.literal("§e[Click to Treat with Splint]"));
+                if (data.isSplinted(hoveredBox.limb())) {
+                    SplintTier st = data.getSplint(hoveredBox.limb());
+                    tooltip.add(Component.literal("§bSplinted: " + (st != null ? st.getDisplayName() : "Splint") + " (" + data.getSplintDurability(hoveredBox.limb()) + " dura)"));
+                    if (PhysiologyModule.hasCalciumBuff(player.getUUID())) {
+                        tooltip.add(Component.literal("§d• Osteogenesis Active (Accelerated Healing)"));
+                    }
+                    ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+                    if (!splint.isEmpty()) {
+                        tooltip.add(Component.literal("§e[Click to Replace with " + splint.getHoverName().getString() + "]"));
+                    }
                 } else {
-                    tooltip.add(Component.literal("§8[Need Splint to Treat]"));
+                    ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+                    if (!splint.isEmpty()) {
+                        tooltip.add(Component.literal("§e[Click to Treat with " + splint.getHoverName().getString() + "]"));
+                    } else {
+                        tooltip.add(Component.literal("§8[Need Splint to Treat]"));
+                    }
                 }
             } else {
                 tooltip.add(Component.literal("§aNo active fractures"));

@@ -318,8 +318,16 @@ public class SwappableHudOverlay {
                         int seconds = totalSeconds % 60;
                         boolean isMoving = player.walkDist - player.walkDistO > 0.001F;
                         boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
-                        String healRate = isResting ? (physData.hasCalciumBuff() ? "§bResting 4x (Calcium)" : "§aResting 2x") :
-                                (isMoving ? "§cPaused" : "§eStanding 1x");
+                        boolean isSplinted = injuryData.hasAnySplint();
+                        boolean hasCalcium = physData.hasCalciumBuff();
+                        String healRate;
+                        if (isResting) {
+                            healRate = (isSplinted && hasCalcium) ? "§bResting 4x (Osteo)" : "§aResting 2x";
+                        } else if (isMoving) {
+                            healRate = isSplinted ? (hasCalcium ? "§bMoving 2x (Osteo)" : "§aMoving 1x (Splint)") : "§cPaused";
+                        } else {
+                            healRate = (isSplinted && hasCalcium) ? "§bStanding 2x (Osteo)" : "§eStanding 1x";
+                        }
                         lines.add(String.format("§7Fracture Healing: §f%02d:%02d §8(%s§8)", minutes, seconds, healRate));
                     }
                 }
@@ -400,7 +408,7 @@ public class SwappableHudOverlay {
 
                     if (physData.hasCalciumBuff()) {
                         long calSec = physData.getCalciumAbsorptionTicks() / 20;
-                        lines.add(String.format("§bBone Calcium: %02d:%02d §a(2x Bone Heal)", calSec / 60, calSec % 60));
+                        lines.add(String.format("§bOsteogenesis: %02d:%02d §a(2x Bone Heal)", calSec / 60, calSec % 60));
                     }
 
                     if (pendingNutr <= 0.0f && indigestion <= 0.0f && !physData.hasCalciumBuff()) {

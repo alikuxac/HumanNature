@@ -1,8 +1,10 @@
 package com.alikuxac.humannature.item;
 
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
@@ -126,38 +128,49 @@ public class SplintItem extends Item {
     }
 
     private void applySplintTreatment(Player player, ItemStack stack) {
-        switch (tier) {
-            case WOODEN:
-                InjuryEventHandler.clearFractureTimer(player);
-                break;
-            case REINFORCED:
-                int time = InjuryModule.getRemainingFractureTime(player.getUUID());
-                InjuryModule.reduceFractureTimer(player.getUUID(), (int) (time * 0.5));
-                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));
-                InjuryEventHandler.updatePlayerAttributesAndPose(player);
-                break;
-            case GOLDEN:
-                int goldenTime = InjuryModule.getRemainingFractureTime(player.getUUID());
-                InjuryModule.reduceFractureTimer(player.getUUID(), (int) (goldenTime * 0.67));
-                player.setAbsorptionAmount(player.getAbsorptionAmount() + tier.getAbsorptionAmount());
-                player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, tier.getPrimaryBuffDuration(), 0));
-                InjuryEventHandler.updatePlayerAttributesAndPose(player);
-                break;
-            case DIAMOND:
-                InjuryEventHandler.clearFractureTimer(player);
-                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 1));
-                AttributeInstance kbAttr = player.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
-                if (kbAttr != null) {
-                    ResourceLocation diamondKbId = ResourceLocation.fromNamespaceAndPath("humannature", "diamond_splint_knockback");
-                    kbAttr.removeModifier(diamondKbId);
-                    kbAttr.addTransientModifier(new AttributeModifier(diamondKbId, 0.5, AttributeModifier.Operation.ADD_VALUE));
+        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        LimbType targetLimb = null;
+
+        if (data.getSeverity(LimbType.LEFT_LEG) > 0 && !data.isSplinted(LimbType.LEFT_LEG)) {
+            targetLimb = LimbType.LEFT_LEG;
+        } else if (data.getSeverity(LimbType.RIGHT_LEG) > 0 && !data.isSplinted(LimbType.RIGHT_LEG)) {
+            targetLimb = LimbType.RIGHT_LEG;
+        } else {
+            int maxSev = 0;
+            for (LimbType limb : LimbType.values()) {
+                if (data.getSeverity(limb) > maxSev && !data.isSplinted(limb)) {
+                    maxSev = data.getSeverity(limb);
+                    targetLimb = limb;
                 }
-                break;
-            case NETHERITE:
-                InjuryEventHandler.clearFractureTimer(player);
-                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, tier.getPrimaryBuffDuration(), 1));
-                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));
-                break;
+            }
+        }
+
+        if (targetLimb != null) {
+            InjuryEventHandler.applySplintToLimb(player, targetLimb, tier);
+        }
+
+        if (tier.getPrimaryBuffDuration() > 0) {
+            switch (tier) {
+                case REINFORCED -> player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));
+                case GOLDEN -> {
+                    player.setAbsorptionAmount(player.getAbsorptionAmount() + tier.getAbsorptionAmount());
+                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, tier.getPrimaryBuffDuration(), 0));
+                }
+                case DIAMOND -> {
+                    player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 1));
+                    AttributeInstance kbAttr = player.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
+                    if (kbAttr != null) {
+                        ResourceLocation diamondKbId = ResourceLocation.fromNamespaceAndPath("humannature", "diamond_splint_knockback");
+                        kbAttr.removeModifier(diamondKbId);
+                        kbAttr.addTransientModifier(new AttributeModifier(diamondKbId, 0.5, AttributeModifier.Operation.ADD_VALUE));
+                    }
+                }
+                case NETHERITE -> {
+                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, tier.getPrimaryBuffDuration(), 1));
+                    player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, tier.getPrimaryBuffDuration(), 0));
+                }
+                default -> {}
+            }
         }
     }
 

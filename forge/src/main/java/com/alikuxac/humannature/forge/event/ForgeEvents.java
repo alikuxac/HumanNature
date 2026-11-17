@@ -269,20 +269,9 @@ public class ForgeEvents {
         }
 
         if (ServerConfig.ENABLE_INJURY.get()) {
-            InjuryEventHandler.onPlayerTick(player);
-            InjuryEventHandler.recordFlightTick(player);
-
             boolean isResting = isSleeping || (isCrouching && isStandingStill);
-            boolean canHeal = isSleeping || isStandingStill;
-
-            if (InjuryEventHandler.isFractureActive(player)) {
-                InjuryEventHandler.updatePlayerAttributesAndPose(player);
-
-                if (canHeal) {
-                    int reductionAmount = isResting ? 2 : 1;
-                    InjuryEventHandler.reduceFractureTimer(player, reductionAmount, true);
-                }
-            }
+            boolean isSprinting = player.isSprinting();
+            InjuryEventHandler.handleFractureTick(player, isResting, isStandingStill, isMoving, isSprinting, Math.max(0.0, delta));
         }
 
         PREV_WALK_DIST.put(playerId, currentWalkDist);
