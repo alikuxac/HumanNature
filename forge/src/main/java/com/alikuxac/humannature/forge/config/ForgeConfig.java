@@ -451,6 +451,12 @@ public class ForgeConfig {
         ForgeConfigSpec.BooleanValue showCardiacHud = clientBuilder
                 .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
                 .define("showCardiacHud", true);
+        ForgeConfigSpec.BooleanValue enableBloodScreenEffects = clientBuilder
+                .comment("Desaturate and narrow vision during severe hypovolemic shock")
+                .define("enableBloodScreenEffects", true);
+        ForgeConfigSpec.DoubleValue bloodScreenEffectIntensity = clientBuilder
+                .comment("Strength of the blood-loss screen effect (0 disables it)")
+                .defineInRange("bloodScreenEffectIntensity", 1.0, 0.0, 1.0);
         ForgeConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
@@ -482,6 +488,8 @@ public class ForgeConfig {
         ClientConfig.SWAPPABLE_HUD_Y = safe(CLIENT_SPEC, swappableHudY, 10);
         ClientConfig.SHOW_METABOLIC_DETAILS = safe(CLIENT_SPEC, showMetabolicDetails, true);
         ClientConfig.SHOW_CARDIAC_HUD = safe(CLIENT_SPEC, showCardiacHud, true);
+        ClientConfig.ENABLE_BLOOD_SCREEN_EFFECTS = safe(CLIENT_SPEC, enableBloodScreenEffects, true);
+        ClientConfig.BLOOD_SCREEN_EFFECT_INTENSITY = safe(CLIENT_SPEC, bloodScreenEffectIntensity, 1.0);
         ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = safe(CLIENT_SPEC, showActionBarEnvironmentCues, true);
         ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = safe(CLIENT_SPEC, showActionBarWeightWarnings, true);
         ClientConfig.ENABLE_CAMERA_LIMPING = safe(CLIENT_SPEC, enableCameraLimping, true);

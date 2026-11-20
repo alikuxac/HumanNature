@@ -3,9 +3,11 @@ package com.alikuxac.humannature.client.gui;
 import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.network.TreatLimbPayload;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
@@ -29,6 +31,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,6 +107,10 @@ public class DiagnosticScreen extends Screen {
         guiGraphics.renderOutline(silX, silY, 70, 124, 0xFF2A2A2A);
 
         LimbHitbox hoveredBox = null;
+        byte activeBleedTier = PhysiologyModule.isBloodSystemEnabled()
+                ? PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getBleedingTier() : 0;
+        boolean dropVisible = (Util.getMillis() / 400) % 2 == 0;
+        List<Component> nutritionTooltip = null;
 
         for (LimbHitbox box : HITBOXES) {
             byte sevLevel = data.getSeverity(box.limb());
@@ -119,6 +127,38 @@ public class DiagnosticScreen extends Screen {
             int by = silY + box.relY();
             guiGraphics.fill(bx, by, bx + box.width(), by + box.height(), color);
             guiGraphics.renderOutline(bx, by, box.width(), box.height(), isHovered ? 0xFFFFFFFF : 0xFF222222);
+
+            if (activeBleedTier > 0 && sevLevel > 0 && dropVisible) {
+                int dx = bx + box.width() - 5;
+                int dy = by + 2;
+                guiGraphics.fill(dx + 1, dy, dx + 4, dy + 1, 0xFFFF2A2A);
+                guiGraphics.fill(dx, dy + 1, dx + 5, dy + 4, 0xFFFF2A2A);
+                guiGraphics.fill(dx + 1, dy + 4, dx + 4, dy + 5, 0xFFFF2A2A);
+                guiGraphics.fill(dx + 2, dy + 5, dx + 3, dy + 6, 0xFFFF2A2A);
+            }
+        }
+
+        if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
+            PlayerPhysiologyData reserves = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+            byte[] values = { reserves.getCalcium(), reserves.getCarbohydrates(), reserves.getVitamins() };
+            int[] barColors = { 0xFF56C4E8, 0xFFE8C439, 0xFF64D966 };
+            String[] names = { "Calcium", "Carbohydrates", "Vitamins" };
+            int reserveBarY = silY + 126;
+            for (int i = 0; i < values.length; i++) {
+                int barBottom = reserveBarY + i * 4 + 2;
+                guiGraphics.fill(silX, reserveBarY + i * 4, silX + 70, barBottom, 0xFF101010);
+                int filled = (int) (70L * Math.max(0, Math.min(100, values[i])) / 100L);
+                if (filled > 0) {
+                    guiGraphics.fill(silX, reserveBarY + i * 4, silX + filled, barBottom, barColors[i]);
+                }
+                guiGraphics.renderOutline(silX, reserveBarY + i * 4, 70, 2, 0xFF2A2A2A);
+                if (mouseX >= silX && mouseX < silX + 70 && mouseY >= reserveBarY + i * 4 && mouseY < barBottom) {
+                    nutritionTooltip = List.of(
+                            Component.literal("§b" + names[i] + ": " + values[i] + " / 100"),
+                            Component.literal("§7Buff strength scales with this reserve.")
+                    );
+                }
+            }
         }
 
         int infoX = leftPos + 84;
@@ -488,8 +528,11 @@ public class DiagnosticScreen extends Screen {
                 String bleedStr = bleedTier > 0 ? "§cBleed " + bleedTier : "§aNormal";
                 String bloodColor = bloodVol >= 4000 ? "§c" : (bloodVol >= 2500 ? "§e" : "§4");
 
-                String bloodText = "§7Blood: " + bloodColor + bloodVol + "ml §8(" + typeStr + "§8, " + bleedStr + "§8)";
                 int bloodLabelY = curY;
+                guiGraphics.drawString(this.font, "§7Blood Type: §c" + typeStr + " §8(" + bleedStr + "§8)", infoX, curY, 0xFFFFFF, false);
+                curY += 9;
+                String bloodText = String.format("§7Volume: %s%,d / 5,000 ml (%.0f%%)", bloodColor, (int) bloodVol,
+                        Math.max(0.0f, Math.min(1.0f, bloodVol / 5000.0f)) * 100.0f);
                 guiGraphics.drawString(this.font, bloodText, infoX, curY, 0xFFFFFF, false);
                 curY += 9;
 
@@ -736,6 +779,8 @@ public class DiagnosticScreen extends Screen {
             guiGraphics.renderComponentTooltip(this.font, bloodTooltip, mouseX, mouseY);
         } else if (weightTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, weightTooltip, mouseX, mouseY);
+        } else if (nutritionTooltip != null) {
+            guiGraphics.renderComponentTooltip(this.font, nutritionTooltip, mouseX, mouseY);
         } else if (metabolismTooltip != null) {
             guiGraphics.renderComponentTooltip(this.font, metabolismTooltip, mouseX, mouseY);
         }
@@ -795,15 +840,33 @@ public class DiagnosticScreen extends Screen {
 
             for (LimbHitbox box : HITBOXES) {
                 if (box.contains((int) mouseX, (int) mouseY, silX, silY)) {
-                    ItemStack splint = InjuryEventHandler.findFirstSplint(player);
-                    if (!splint.isEmpty()) {
-                        InjuryEventHandler.handleQuickTreat(player, box.limb(), splint);
+                    byte treatment = findTreatmentType(player);
+                    if (treatment >= 0 && this.minecraft.getConnection() != null) {
+                        this.minecraft.getConnection().send(new ServerboundCustomPayloadPacket(
+                                new TreatLimbPayload((byte) box.limb().getIndex(), treatment)));
                         return true;
                     }
                 }
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private static byte findTreatmentType(Player player) {
+        ItemStack[] candidates = {
+                player.containerMenu.getCarried(),
+                player.getMainHandItem(),
+                player.getOffhandItem()
+        };
+        for (ItemStack stack : candidates) {
+            if (SplintItem.isValidSplint(stack)) return TreatLimbPayload.TYPE_SPLINT;
+            if (stack.getItem() instanceof ClothBandageItem) return TreatLimbPayload.TYPE_BANDAGE;
+        }
+        for (ItemStack stack : player.getInventory().items) {
+            if (SplintItem.isValidSplint(stack)) return TreatLimbPayload.TYPE_SPLINT;
+            if (stack.getItem() instanceof ClothBandageItem) return TreatLimbPayload.TYPE_BANDAGE;
+        }
+        return -1;
     }
 
     @Override

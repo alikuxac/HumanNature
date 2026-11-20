@@ -2,14 +2,17 @@ package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
+import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.network.SyncBloodPayload;
+import com.alikuxac.humannature.network.SyncNutritionPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +46,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.Map;
@@ -505,9 +509,11 @@ public class PhysiologyEventHandler {
             data.setCalcium(nutritionTag.getByte("Calcium"));
             data.setCarbohydrates(nutritionTag.getByte("Carbohydrates"));
             data.setVitamins(nutritionTag.getByte("Vitamins"));
+            syncNutritionToClient(player, data);
             return;
         }
         savePlayerNutritionNbt(player, data);
+        syncNutritionToClient(player, data);
     }
 
     public static void savePlayerNutritionNbt(Player player, PlayerPhysiologyData data) {
@@ -528,6 +534,30 @@ public class PhysiologyEventHandler {
             SyncBloodPayload payload = new SyncBloodPayload(data.getBloodVolume(), typeId, data.getBleedingTier());
             serverPlayer.connection.send(new ClientboundCustomPayloadPacket(payload));
             data.markBloodSynced();
+        }
+    }
+
+    public static void syncNutritionToClient(Player player, PlayerPhysiologyData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            SyncNutritionPayload payload = new SyncNutritionPayload(data.getCalcium(), data.getCarbohydrates(), data.getVitamins());
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(payload));
+        }
+    }
+
+    public static void handleDiagnosticTreat(ServerPlayer patient, int limbIndex, int treatmentType) {
+        LimbType limb = LimbType.fromIndex(limbIndex);
+        if (treatmentType == 0) {
+            ItemStack splint = InjuryEventHandler.findFirstSplint(patient);
+            if (splint.isEmpty() || !InjuryEventHandler.handleQuickTreat(patient, limb, splint)) return;
+            InjuryEventHandler.syncInjuriesToClient(patient, InjuryModule.getOrCreateInjuryData(patient.getUUID()));
+        } else if (treatmentType == 1) {
+            if (!PhysiologyModule.isBloodSystemEnabled()) return;
+            if (PhysiologyModule.getBleedingTier(patient.getUUID()) <= 0) return;
+            ItemStack bandage = InjuryEventHandler.findFirstBandage(patient);
+            if (bandage.isEmpty() || patient.getCooldowns().isOnCooldown(bandage.getItem())) return;
+            applyClothBandageTreatment(patient);
+            patient.getCooldowns().addCooldown(bandage.getItem(), ClothBandageItem.CHANNEL_DURATION);
+            bandage.consume(1, patient);
         }
     }
 
@@ -709,7 +739,7 @@ public class PhysiologyEventHandler {
             double py = player.getY() + 0.7 + (player.getRandom().nextDouble() - 0.5) * 0.2;
             double pz = player.getZ() + (player.getRandom().nextDouble() - 0.5) * 0.3;
             serverLevel.sendParticles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState()),
+                    new DustParticleOptions(new Vector3f(0.55F, 0.02F, 0.03F), 1.0F),
                     px, py, pz,
                     3, 0.05, 0.0, 0.05, 0.02
             );

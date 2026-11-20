@@ -44,6 +44,7 @@ public final class NutritionEventHandler {
         if (stack.is(VEGETABLE_FOODS) || stack.is(FRUIT_FOODS)) {
             data.modifyVitamins(gain(ServerConfig.VITAMIN_FOOD_GAIN, 20));
         }
+        PhysiologyEventHandler.syncNutritionToClient(player, data);
     }
 
     public static void handlePlayerTick(Player player, PlayerPhysiologyData data) {
@@ -61,6 +62,7 @@ public final class NutritionEventHandler {
             data.modifyCalcium(-amount);
             data.modifyCarbohydrates(-amount);
             data.modifyVitamins(-amount);
+            PhysiologyEventHandler.syncNutritionToClient(player, data);
         }
     }
 

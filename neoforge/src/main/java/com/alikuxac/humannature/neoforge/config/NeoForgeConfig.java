@@ -449,6 +449,12 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue showCardiacHud = clientBuilder
                 .comment("Show real-time cardiac heart rate BPM on the HUD overlay")
                 .define("showCardiacHud", true);
+        ModConfigSpec.BooleanValue enableBloodScreenEffects = clientBuilder
+                .comment("Desaturate and narrow vision during severe hypovolemic shock")
+                .define("enableBloodScreenEffects", true);
+        ModConfigSpec.DoubleValue bloodScreenEffectIntensity = clientBuilder
+                .comment("Strength of the blood-loss screen effect (0 disables it)")
+                .defineInRange("bloodScreenEffectIntensity", 1.0, 0.0, 1.0);
         ModConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
@@ -480,6 +486,8 @@ public class NeoForgeConfig {
         ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;
         ClientConfig.SHOW_METABOLIC_DETAILS = showMetabolicDetails::get;
         ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
+        ClientConfig.ENABLE_BLOOD_SCREEN_EFFECTS = enableBloodScreenEffects::get;
+        ClientConfig.BLOOD_SCREEN_EFFECT_INTENSITY = bloodScreenEffectIntensity::get;
         ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
         ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = showActionBarWeightWarnings::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;

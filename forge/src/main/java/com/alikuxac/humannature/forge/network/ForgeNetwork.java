@@ -2,11 +2,14 @@ package com.alikuxac.humannature.forge.network;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.forge.client.ForgeClientPayloadHandler;
+import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.network.SyncBloodPayload;
 import com.alikuxac.humannature.network.SyncInjuryPayload;
+import com.alikuxac.humannature.network.SyncNutritionPayload;
 import com.alikuxac.humannature.network.TreatLimbPayload;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.Channel;
 import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.ChannelBuildable;
@@ -31,14 +34,30 @@ public class ForgeNetwork {
                         });
                         context.setPacketHandled(true);
                     })
+                    .add(SyncNutritionPayload.TYPE, SyncNutritionPayload.STREAM_CODEC.cast(), (payload, context) -> {
+                        context.enqueueWork(() -> {
+                            if (context.isClientSide()) {
+                                ForgeClientPayloadHandler.handleSyncNutrition(payload);
+                            }
+                        });
+                        context.setPacketHandled(true);
+                    })
                     .add(SyncInjuryPayload.TYPE, SyncInjuryPayload.STREAM_CODEC.cast(), (payload, context) -> {
-                        context.enqueueWork(() -> {});
+                        context.enqueueWork(() -> {
+                            if (context.isClientSide()) {
+                                ForgeClientPayloadHandler.handleSyncInjury(payload);
+                            }
+                        });
                         context.setPacketHandled(true);
                     });
 
             protocol.serverbound()
                     .add(TreatLimbPayload.TYPE, TreatLimbPayload.STREAM_CODEC.cast(), (payload, context) -> {
-                        context.enqueueWork(() -> {});
+                        context.enqueueWork(() -> {
+                            if (context.getSender() instanceof ServerPlayer serverPlayer) {
+                                PhysiologyEventHandler.handleDiagnosticTreat(serverPlayer, payload.limbIndex(), payload.treatmentType());
+                            }
+                        });
                         context.setPacketHandled(true);
                     });
         });
@@ -52,4 +71,3 @@ public class ForgeNetwork {
         return CHANNEL;
     }
 }
-

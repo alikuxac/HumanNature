@@ -5,12 +5,15 @@ import com.alikuxac.humannature.api.injury.LimbType;
 
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
+import com.alikuxac.humannature.network.SyncInjuryPayload;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -25,6 +28,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.item.ArmorMaterial;
@@ -900,6 +904,29 @@ public class InjuryEventHandler {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    public static ItemStack findFirstBandage(Player player) {
+        ItemStack cursor = player.containerMenu.getCarried();
+        if (cursor.getItem() instanceof ClothBandageItem) return cursor;
+
+        ItemStack main = player.getMainHandItem();
+        if (main.getItem() instanceof ClothBandageItem) return main;
+        ItemStack off = player.getOffhandItem();
+        if (off.getItem() instanceof ClothBandageItem) return off;
+
+        for (ItemStack item : player.getInventory().items) {
+            if (item.getItem() instanceof ClothBandageItem) {
+                return item;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public static void syncInjuriesToClient(Player player, PlayerInjuryData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(new SyncInjuryPayload(data.getRawData())));
+        }
     }
 
     public static boolean shouldCancelNaturalRegen(Player player, float amount) {
