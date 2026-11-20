@@ -149,6 +149,46 @@ public class ForgeConfig {
         ForgeConfigSpec.DoubleValue calciumHealingMultiplier = serverBuilder
                 .comment("Healing rate multiplier for Tier 1 fractures with active calcium buff")
                 .defineInRange("calciumHealingMultiplier", 2.0, 1.0, 5.0);
+
+        serverBuilder.comment("3-tier macro-nutrient reserves (Conventional Tags food pipeline)").push("nutrition");
+        ForgeConfigSpec.BooleanValue enableNutrientReserves = serverBuilder
+                .comment("Enable calcium / carbohydrate / vitamin reserves and their cross-module buffs")
+                .define("enableNutrientReserves", true);
+        ForgeConfigSpec.IntValue nutrientDepletionIntervalTicks = serverBuilder
+                .comment("Ticks between slow passive nutrient reserve depletion steps (150 ticks = 7.5s)")
+                .defineInRange("nutrientDepletionIntervalTicks", 150, 100, 200);
+        ForgeConfigSpec.IntValue nutrientDepletionAmount = serverBuilder
+                .comment("Reserve points lost per depletion step")
+                .defineInRange("nutrientDepletionAmount", 1, 1, 10);
+        ForgeConfigSpec.IntValue calciumFoodGain = serverBuilder
+                .comment("Calcium reserve gained from #c:foods/calcium_rich")
+                .defineInRange("calciumFoodGain", 25, 1, 100);
+        ForgeConfigSpec.IntValue carbohydrateFoodGain = serverBuilder
+                .comment("Carbohydrate reserve gained from #c:foods/carbohydrates")
+                .defineInRange("carbohydrateFoodGain", 25, 1, 100);
+        ForgeConfigSpec.IntValue vitaminFoodGain = serverBuilder
+                .comment("Vitamin reserve gained from #c:foods/vegetables or #c:foods/fruits")
+                .defineInRange("vitaminFoodGain", 20, 1, 100);
+        ForgeConfigSpec.DoubleValue nutritionCalciumKnittingBonus = serverBuilder
+                .comment("Bone knitting speed bonus at full calcium reserve (0.25 = +25%)")
+                .defineInRange("nutritionCalciumKnittingBonus", 0.25, 0.0, 2.0);
+        ForgeConfigSpec.DoubleValue nutritionCalciumFallBonusBlocks = serverBuilder
+                .comment("Extra safe fall distance in blocks at full calcium reserve")
+                .defineInRange("nutritionCalciumFallBonusBlocks", 2.0, 0.0, 20.0);
+        ForgeConfigSpec.DoubleValue nutritionCalciumFallDamageReduction = serverBuilder
+                .comment("Fall damage reduction at full calcium reserve (0.25 = -25%)")
+                .defineInRange("nutritionCalciumFallDamageReduction", 0.25, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue nutritionCarbsStaminaBonus = serverBuilder
+                .comment("Stamina / exertion buffer capacity added at full carbohydrate reserve")
+                .defineInRange("nutritionCarbsStaminaBonus", 50.0, 0.0, 200.0);
+        ForgeConfigSpec.DoubleValue nutritionVitaminColdReduction = serverBuilder
+                .comment("Cold absorption reduction at full vitamin reserve (0.50 = -50%)")
+                .defineInRange("nutritionVitaminColdReduction", 0.50, 0.0, 1.0);
+        ForgeConfigSpec.DoubleValue nutritionVitaminToxinBonus = serverBuilder
+                .comment("Extra toxin elimination rate at full vitamin reserve (1.0 = 2x total)")
+                .defineInRange("nutritionVitaminToxinBonus", 1.0, 0.0, 5.0);
+        serverBuilder.pop();
+
         ForgeConfigSpec.BooleanValue enableClaustrophobiaPanic = serverBuilder
                 .comment("Enable underground claustrophobia panic, heart rate spike, and aim tremor in dark caves (Y < 0, 0 lux)")
                 .define("enableClaustrophobiaPanic", true);
@@ -319,6 +359,18 @@ public class ForgeConfig {
         ServerConfig.ENABLE_INDIGESTION = safe(SERVER_SPEC, enableIndigestion, true);
         ServerConfig.ENABLE_CALCIUM_HEALING = safe(SERVER_SPEC, enableCalciumHealing, true);
         ServerConfig.CALCIUM_HEALING_MULTIPLIER = safe(SERVER_SPEC, calciumHealingMultiplier, 2.0);
+        ServerConfig.ENABLE_NUTRIENT_RESERVES = safe(SERVER_SPEC, enableNutrientReserves, true);
+        ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS = safe(SERVER_SPEC, nutrientDepletionIntervalTicks, 150);
+        ServerConfig.NUTRIENT_DEPLETION_AMOUNT = safe(SERVER_SPEC, nutrientDepletionAmount, 1);
+        ServerConfig.CALCIUM_FOOD_GAIN = safe(SERVER_SPEC, calciumFoodGain, 25);
+        ServerConfig.CARBOHYDRATE_FOOD_GAIN = safe(SERVER_SPEC, carbohydrateFoodGain, 25);
+        ServerConfig.VITAMIN_FOOD_GAIN = safe(SERVER_SPEC, vitaminFoodGain, 20);
+        ServerConfig.NUTRITION_CALCIUM_KNITTING_BONUS = safe(SERVER_SPEC, nutritionCalciumKnittingBonus, 0.25);
+        ServerConfig.NUTRITION_CALCIUM_FALL_BONUS_BLOCKS = safe(SERVER_SPEC, nutritionCalciumFallBonusBlocks, 2.0);
+        ServerConfig.NUTRITION_CALCIUM_FALL_DAMAGE_REDUCTION = safe(SERVER_SPEC, nutritionCalciumFallDamageReduction, 0.25);
+        ServerConfig.NUTRITION_CARBS_STAMINA_BONUS = safe(SERVER_SPEC, nutritionCarbsStaminaBonus, 50.0);
+        ServerConfig.NUTRITION_VITAMIN_COLD_REDUCTION = safe(SERVER_SPEC, nutritionVitaminColdReduction, 0.50);
+        ServerConfig.NUTRITION_VITAMIN_TOXIN_BONUS = safe(SERVER_SPEC, nutritionVitaminToxinBonus, 1.0);
         ServerConfig.ENABLE_CLAUSTROPHOBIA_PANIC = safe(SERVER_SPEC, enableClaustrophobiaPanic, true);
         ServerConfig.PANIC_THRESHOLD_TICKS = safe(SERVER_SPEC, panicThresholdTicks, 100);
         ServerConfig.ENABLE_ADRENALINE_SURGE = safe(SERVER_SPEC, enableAdrenalineSurge, true);

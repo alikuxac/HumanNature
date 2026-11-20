@@ -89,6 +89,10 @@ public class ForgeEvents {
             if (mult > 1.0f) {
                 event.setDamageMultiplier(event.getDamageMultiplier() * mult);
             }
+            float nutritionMult = InjuryEventHandler.getNutritionFallDamageMultiplier(player);
+            if (nutritionMult < 1.0f) {
+                event.setDamageMultiplier(event.getDamageMultiplier() * nutritionMult);
+            }
         }
     }
 
@@ -186,6 +190,9 @@ public class ForgeEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         WeightEventHandler.onPlayerLoggedIn(event.getEntity());
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PhysiologyEventHandler.onPlayerLoggedIn(event.getEntity());
+        }
     }
 
     @SubscribeEvent

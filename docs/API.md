@@ -79,6 +79,18 @@ float toxin = nutrition.getToxinBuildup(player);
 float exertion = nutrition.getExertionScore(player);
 ```
 
+#### 3-Tier Reserve Buffs
+
+Three `byte` reserves (0–100) live in `HumanNatureNutrition` player NBT: calcium, carbohydrates, vitamins. Tagged foods fill them on `LivingEntityUseItemEvent.Finish`:
+
+| Reserve | Tag | Effect at full |
+| :--- | :--- | :--- |
+| Calcium | `#c:foods/calcium_rich` | fracture healing +25%, safe fall +2 blocks, fall damage −25% |
+| Carbohydrates | `#c:foods/carbohydrates` | exertion cap 100 → 150 |
+| Vitamins | `#c:foods/vegetables`, `#c:foods/fruits` | cold buildup −50%, toxin decay ×2 |
+
+Each reserve drops by 1 every `nutrientDepletionIntervalTicks` (default 150). Empty just turns the buff off — no damage or debuff. Strength scales with the current reserve; gains, intervals and multipliers are in `ServerConfig` under `nutrition`.
+
 ### 3. Temperature (`ITemperatureAccessor`)
 
 Query core body temperature, wetness buffer, and environmental heat proximity.

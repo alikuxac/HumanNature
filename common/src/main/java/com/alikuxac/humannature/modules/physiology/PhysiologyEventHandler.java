@@ -140,6 +140,8 @@ public class PhysiologyEventHandler {
             data.decrementCalciumAbsorptionTicks();
         }
 
+        NutritionEventHandler.handlePlayerTick(player, data);
+
         if (PhysiologyModule.isSleepDeprivationEnabled() && !isSleeping) {
             data.incrementAwakeTicks();
 
@@ -181,6 +183,7 @@ public class PhysiologyEventHandler {
                             (ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER != null ?
                                     ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER.get() : 3.0)
                             : 1.0;
+                    multiplier *= data.getToxinEliminationMultiplier();
                     double ratePerSec = ServerConfig.TOXIN_DECAY_RATE_PER_SECOND != null ?
                             ServerConfig.TOXIN_DECAY_RATE_PER_SECOND.get() : 2.0;
                     float decayPerTick = (float) ((ratePerSec / 20.0) * multiplier);
@@ -267,6 +270,8 @@ public class PhysiologyEventHandler {
     public static void handleItemConsumption(Player player, ItemStack stack) {
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+
+        NutritionEventHandler.handleItemConsumption(player, stack);
 
         if (PhysiologyModule.isToxinBuildupEnabled() && data.getToxinBuildup() > 0.0f) {
             if (stack.is(Items.MILK_BUCKET)) {
@@ -410,6 +415,7 @@ public class PhysiologyEventHandler {
     public static void onPlayerDeath(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        savePlayerNutritionNbt(player, data);
         data.resetBlood(false);
         savePlayerBloodNbt(player, data);
         syncBloodToClient(player, data);
@@ -426,12 +432,18 @@ public class PhysiologyEventHandler {
         savePlayerBloodNbt(player, data);
         syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
+        initOrLoadNutritionNbt(player, data);
         removeExertionModifiers(player);
         removeBloodModifiers(player);
     }
 
     public static void onPlayerLoggedOut(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        savePlayerNutritionNbt(player, PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()));
+    }
+
+    public static void onPlayerLoggedIn(Player player) {
+        initOrLoadNutritionNbt(player, PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()));
     }
 
     public static void initOrLoadPlayerBlood(Player player, PlayerPhysiologyData data) {
@@ -481,6 +493,32 @@ public class PhysiologyEventHandler {
         bloodTag.putInt("BloodRegenBoostTicks", data.getBloodRegenBoostTicks());
 
         persisted.put("HumanNatureBlood", bloodTag);
+        root.put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    public static void initOrLoadNutritionNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        if (persisted.contains("HumanNatureNutrition")) {
+            CompoundTag nutritionTag = persisted.getCompound("HumanNatureNutrition");
+            data.setCalcium(nutritionTag.getByte("Calcium"));
+            data.setCarbohydrates(nutritionTag.getByte("Carbohydrates"));
+            data.setVitamins(nutritionTag.getByte("Vitamins"));
+            return;
+        }
+        savePlayerNutritionNbt(player, data);
+    }
+
+    public static void savePlayerNutritionNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        CompoundTag nutritionTag = persisted.getCompound("HumanNatureNutrition");
+        nutritionTag.putByte("Calcium", data.getCalcium());
+        nutritionTag.putByte("Carbohydrates", data.getCarbohydrates());
+        nutritionTag.putByte("Vitamins", data.getVitamins());
+        persisted.put("HumanNatureNutrition", nutritionTag);
         root.put(Player.PERSISTED_NBT_TAG, persisted);
     }
 
@@ -744,7 +782,7 @@ public class PhysiologyEventHandler {
                 Vec3 motion = player.getDeltaMovement();
                 if (flow.dot(motion) < -0.01) {
                     data.addExertion(0.75f);
-                    if (data.getExertionScore() >= 100.0f) {
+                    if (data.getExertionScore() >= data.getStaminaCapacity()) {
                         data.setMuscleFailure(true);
                     }
                 }
@@ -759,7 +797,7 @@ public class PhysiologyEventHandler {
                 double drain = ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK != null ?
                         ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK.get() : 0.08;
                 data.addExertion((float) drain);
-                if (data.getExertionScore() >= 100.0f) {
+                if (data.getExertionScore() >= data.getStaminaCapacity()) {
                     data.setMuscleFailure(true);
                     player.setSprinting(false);
                 }
@@ -769,7 +807,7 @@ public class PhysiologyEventHandler {
         if (!isMoving && player.onGround() && data.getTicksSinceLastMining() > 10 && data.getTicksSinceLastJump() > 10 && !isSprinting) {
             data.incrementRestTicks();
             int reqRest = ServerConfig.EXERTION_REST_RECOVERY_TICKS != null ? ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() : 70;
-            data.decayExertion(100.0f / (float) reqRest);
+            data.decayExertion(data.getStaminaCapacity() / (float) reqRest);
             if (data.getRestTicks() >= reqRest) {
                 data.resetExertion();
                 removeExertionModifiers(player);
@@ -849,7 +887,7 @@ public class PhysiologyEventHandler {
         data.setTicksSinceLastMining(0);
         data.resetRestTicks();
         int limit = ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS != null ? ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() : 200;
-        data.addExertion(100.0f / (float) limit);
+        data.addExertion(data.getStaminaCapacity() / (float) limit);
         if (data.getContinuousMiningTicks() >= limit) {
             data.setMuscleFailure(true);
         }
@@ -868,7 +906,7 @@ public class PhysiologyEventHandler {
         if (!PhysiologyModule.isExertionEnabled()) return;
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-        if (data.isMuscleFailure() || (100.0f - data.getExertionScore()) < 10.0f) {
+        if (data.isMuscleFailure() || (data.getStaminaCapacity() - data.getExertionScore()) < 10.0f) {
             Vec3 motion = player.getDeltaMovement();
             player.setDeltaMovement(motion.x, Math.min(0.0, motion.y), motion.z);
             player.hurtMarked = true;
@@ -893,7 +931,7 @@ public class PhysiologyEventHandler {
             jumpCost += Math.min(6.0f, 1.0f * (data.getConsecutiveJumps() - 2));
         }
         data.addExertion(jumpCost);
-        if (data.getExertionScore() >= 100.0f || data.getConsecutiveJumps() >= 8) {
+        if (data.getExertionScore() >= data.getStaminaCapacity() || data.getConsecutiveJumps() >= 8) {
             data.setMuscleFailure(true);
         }
     }
@@ -1046,7 +1084,7 @@ public class PhysiologyEventHandler {
                 player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 40, 0, false, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 25, 0, false, false, true));
 
-                data.setExertionScore(100.0f);
+                data.setExertionScore(data.getStaminaCapacity());
                 data.setMuscleFailure(true);
                 player.setSprinting(false);
 

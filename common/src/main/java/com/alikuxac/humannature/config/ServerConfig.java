@@ -50,6 +50,19 @@ public class ServerConfig {
     public static Supplier<Boolean> ENABLE_CALCIUM_HEALING = () -> true;
     public static Supplier<Double> CALCIUM_HEALING_MULTIPLIER = () -> 2.0;
 
+    public static Supplier<Boolean> ENABLE_NUTRIENT_RESERVES = () -> true;
+    public static Supplier<Integer> NUTRIENT_DEPLETION_INTERVAL_TICKS = () -> 150;
+    public static Supplier<Integer> NUTRIENT_DEPLETION_AMOUNT = () -> 1;
+    public static Supplier<Integer> CALCIUM_FOOD_GAIN = () -> 25;
+    public static Supplier<Integer> CARBOHYDRATE_FOOD_GAIN = () -> 25;
+    public static Supplier<Integer> VITAMIN_FOOD_GAIN = () -> 20;
+    public static Supplier<Double> NUTRITION_CALCIUM_KNITTING_BONUS = () -> 0.25;
+    public static Supplier<Double> NUTRITION_CALCIUM_FALL_BONUS_BLOCKS = () -> 2.0;
+    public static Supplier<Double> NUTRITION_CALCIUM_FALL_DAMAGE_REDUCTION = () -> 0.25;
+    public static Supplier<Double> NUTRITION_CARBS_STAMINA_BONUS = () -> 50.0;
+    public static Supplier<Double> NUTRITION_VITAMIN_COLD_REDUCTION = () -> 0.50;
+    public static Supplier<Double> NUTRITION_VITAMIN_TOXIN_BONUS = () -> 1.0;
+
     public static Supplier<Boolean> ENABLE_CLAUSTROPHOBIA_PANIC = () -> true;
     public static Supplier<Integer> PANIC_THRESHOLD_TICKS = () -> 100;
 

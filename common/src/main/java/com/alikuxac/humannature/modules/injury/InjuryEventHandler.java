@@ -264,14 +264,19 @@ public class InjuryEventHandler {
     }
 
     public static void reduceFractureTimer(Player player, int amount, boolean isNaturalRestHeal) {
-        if (isNaturalRestHeal && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-            InjuryTier tier = InjuryModule.getFractureTier(player.getUUID());
-            if (tier == InjuryTier.TIER_1_SINGLE_LEG) {
-                double multiplier = ServerConfig.CALCIUM_HEALING_MULTIPLIER != null ? ServerConfig.CALCIUM_HEALING_MULTIPLIER.get() : 2.0;
-                amount = (int) Math.round(amount * multiplier);
+        double multiplier = 1.0;
+        if (isNaturalRestHeal) {
+            if (PhysiologyModule.hasCalciumBuff(player.getUUID())) {
+                InjuryTier tier = InjuryModule.getFractureTier(player.getUUID());
+                if (tier == InjuryTier.TIER_1_SINGLE_LEG) {
+                    multiplier *= ServerConfig.CALCIUM_HEALING_MULTIPLIER != null ? ServerConfig.CALCIUM_HEALING_MULTIPLIER.get() : 2.0;
+                }
+            }
+            if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
+                multiplier *= PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getCalciumKnittingMultiplier();
             }
         }
-        InjuryModule.reduceFractureTimer(player.getUUID(), amount);
+        InjuryModule.reduceFractureTimerScaled(player.getUUID(), amount * multiplier);
         if (!InjuryModule.isFractureActive(player.getUUID())) {
             clearFractureTimer(player);
         }
@@ -432,6 +437,11 @@ public class InjuryEventHandler {
         }
     }
 
+    public static float getNutritionFallDamageMultiplier(Player player) {
+        if (!ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) return 1.0f;
+        return PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getFallDamageMultiplier();
+    }
+
     public static void onLivingFall(LivingEntity entity, float distance, float damageMultiplier) {
         if (!(entity instanceof Player player)) return;
         if (!ServerConfig.ENABLE_INJURY.get()) return;
@@ -446,6 +456,10 @@ public class InjuryEventHandler {
         ItemStack leggings = player.getItemBySlot(EquipmentSlot.LEGS);
         if (isDiamondOrNetheriteArmor(leggings)) {
             safeThreshold += 1.5F;
+        }
+
+        if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
+            safeThreshold += PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getCalciumFallBonusBlocks();
         }
 
         float excessDistance = distance - safeThreshold;

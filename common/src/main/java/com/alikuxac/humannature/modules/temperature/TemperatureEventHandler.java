@@ -2,6 +2,7 @@ package com.alikuxac.humannature.modules.temperature;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -129,11 +130,14 @@ public class TemperatureEventHandler {
 
         boolean inWater = player.isInWater() || player.isUnderWater();
         boolean inRain = player.level().isRainingAt(player.blockPosition());
+        float coldMultiplier = ServerConfig.ENABLE_NUTRIENT_RESERVES.get()
+                ? PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getColdAbsorptionMultiplier()
+                : 1.0f;
 
         if (inWater) {
             float delta = ServerConfig.WETNESS_WATER_ACCUMULATION_RATE.get().floatValue();
             float reduction = calculateFreezeImmuneReduction(player);
-            delta *= (1.0f - reduction);
+            delta *= (1.0f - reduction) * coldMultiplier;
             data.addWetness(delta);
         } else if (inRain) {
             float delta = ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE.get().floatValue();
@@ -141,7 +145,7 @@ public class TemperatureEventHandler {
                 delta *= ServerConfig.WETNESS_NO_HELMET_MULTIPLIER.get().floatValue();
             }
             float reduction = calculateFreezeImmuneReduction(player);
-            delta *= (1.0f - reduction);
+            delta *= (1.0f - reduction) * coldMultiplier;
             data.addWetness(delta);
         } else {
             data.reduceWetness(0.0005F);

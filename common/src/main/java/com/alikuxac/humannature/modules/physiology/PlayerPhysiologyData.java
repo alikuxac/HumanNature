@@ -50,6 +50,7 @@ public class PlayerPhysiologyData {
     private byte calcium;
     private byte carbohydrates;
     private byte vitamins;
+    private int nutrientTickCounter;
 
     private int claustrophobiaTicks;
     private boolean panicking;
@@ -93,6 +94,7 @@ public class PlayerPhysiologyData {
         this.calcium = 0;
         this.carbohydrates = 0;
         this.vitamins = 0;
+        this.nutrientTickCounter = 0;
 
         this.claustrophobiaTicks = 0;
         this.panicking = false;
@@ -271,8 +273,8 @@ public class PlayerPhysiologyData {
     }
 
     public void setExertionScore(float exertionScore) {
-        this.exertionScore = Math.max(0.0f, Math.min(100.0f, exertionScore));
-        if (this.exertionScore >= 100.0f) {
+        this.exertionScore = Math.max(0.0f, Math.min(getStaminaCapacity(), exertionScore));
+        if (this.exertionScore >= getStaminaCapacity()) {
             this.muscleFailure = true;
         } else if (this.exertionScore <= 0.0f) {
             this.muscleFailure = false;
@@ -298,7 +300,7 @@ public class PlayerPhysiologyData {
     public void setMuscleFailure(boolean muscleFailure) {
         this.muscleFailure = muscleFailure;
         if (muscleFailure) {
-            this.exertionScore = 100.0f;
+            this.exertionScore = getStaminaCapacity();
         }
     }
 
@@ -602,6 +604,7 @@ public class PlayerPhysiologyData {
         this.calcium = 0;
         this.carbohydrates = 0;
         this.vitamins = 0;
+        this.nutrientTickCounter = 0;
     }
 
     public byte getCalcium() {
@@ -638,6 +641,44 @@ public class PlayerPhysiologyData {
 
     public void modifyVitamins(int delta) {
         setVitamins(this.vitamins + delta);
+    }
+
+    public int getNutrientTickCounter() {
+        return nutrientTickCounter;
+    }
+
+    public void incrementNutrientTickCounter() {
+        if (this.nutrientTickCounter < Integer.MAX_VALUE) {
+            this.nutrientTickCounter++;
+        }
+    }
+
+    public void resetNutrientTickCounter() {
+        this.nutrientTickCounter = 0;
+    }
+
+    public double getCalciumKnittingMultiplier() {
+        return NutritionBuffs.knittingMultiplier(this.calcium);
+    }
+
+    public float getCalciumFallBonusBlocks() {
+        return NutritionBuffs.fallBonusBlocks(this.calcium);
+    }
+
+    public float getFallDamageMultiplier() {
+        return NutritionBuffs.fallDamageMultiplier(this.calcium);
+    }
+
+    public float getStaminaCapacity() {
+        return NutritionBuffs.staminaCapacity(this.carbohydrates);
+    }
+
+    public float getColdAbsorptionMultiplier() {
+        return NutritionBuffs.coldAbsorptionMultiplier(this.vitamins);
+    }
+
+    public float getToxinEliminationMultiplier() {
+        return NutritionBuffs.toxinEliminationMultiplier(this.vitamins);
     }
 
     public int getClaustrophobiaTicks() {

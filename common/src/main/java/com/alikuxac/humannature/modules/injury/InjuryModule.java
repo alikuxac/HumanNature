@@ -13,6 +13,7 @@ public class InjuryModule implements IHumanModule {
     private static final Map<UUID, Integer> FRACTURE_TIMERS = new HashMap<>();
     private static final Map<UUID, InjuryTier> FRACTURE_TIERS = new HashMap<>();
     private static final Map<UUID, PlayerInjuryData> INJURY_DATA = new HashMap<>();
+    private static final Map<UUID, Float> FRACTURE_HEAL_REMAINDER = new HashMap<>();
 
     @Override
     public void init() {
@@ -100,6 +101,15 @@ public class InjuryModule implements IHumanModule {
         }
     }
 
+    public static void reduceFractureTimerScaled(UUID playerId, double amount) {
+        double total = amount + FRACTURE_HEAL_REMAINDER.getOrDefault(playerId, 0.0f);
+        int whole = (int) Math.floor(total);
+        FRACTURE_HEAL_REMAINDER.put(playerId, (float) (total - whole));
+        if (whole > 0) {
+            reduceFractureTimer(playerId, whole);
+        }
+    }
+
     public static int getRemainingFractureTime(UUID playerId) {
         if (!FRACTURE_TIMERS.containsKey(playerId)) return 0;
         return FRACTURE_TIMERS.get(playerId);
@@ -113,6 +123,7 @@ public class InjuryModule implements IHumanModule {
     public static void clearFractureTimer(UUID playerId) {
         FRACTURE_TIMERS.remove(playerId);
         FRACTURE_TIERS.remove(playerId);
+        FRACTURE_HEAL_REMAINDER.remove(playerId);
         PlayerInjuryData data = INJURY_DATA.get(playerId);
         if (data != null) {
             data.clear();
