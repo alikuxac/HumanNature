@@ -3,6 +3,7 @@ package com.alikuxac.humannature.neoforge.event;
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.BloodScreenEffectHandler;
+import com.alikuxac.humannature.client.BloodVolumeHudOverlay;
 import com.alikuxac.humannature.client.HeartbeatAudioHandler;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
@@ -51,6 +52,7 @@ public class NeoForgeClientEvents {
         StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
 
         SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
+        BloodVolumeHudOverlay.render(event.getGuiGraphics());
         BloodScreenEffectHandler.process(partialTick);
     }
 

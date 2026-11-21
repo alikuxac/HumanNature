@@ -99,6 +99,29 @@ public class BloodBagItem extends Item {
         return (short) getData(stack).storedMl();
     }
 
+    public static float fillRatioForStored(int storedMl) {
+        return (float) Math.max(0, Math.min(MAX_CAPACITY, storedMl)) / MAX_CAPACITY;
+    }
+
+    public static int barWidthForStored(int storedMl) {
+        return Math.round(fillRatioForStored(storedMl) * 13.0F);
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return getData(stack).storedMl() > 0;
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return barWidthForStored(getData(stack).storedMl());
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return 0xDC143C;
+    }
+
     public static ItemStack createFilled(BloodType bloodType, short volume) {
         ItemStack stack = new ItemStack(ModItems.BLOOD_BAG.get());
         setData(stack, new BloodBagData(volume, bloodType));
