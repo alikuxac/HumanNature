@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.forge;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.command.HumanNatureCommands;
 import com.alikuxac.humannature.forge.config.ForgeConfig;
 import com.alikuxac.humannature.forge.event.ForgeHumanNatureEventBridge;
 import com.alikuxac.humannature.forge.init.ForgeCreativeTabs;
@@ -9,6 +10,8 @@ import com.alikuxac.humannature.forge.init.ForgeModItems;
 import com.alikuxac.humannature.forge.init.ForgeModPotions;
 import com.alikuxac.humannature.forge.init.ForgeModSounds;
 import com.alikuxac.humannature.forge.network.ForgeNetwork;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -27,6 +30,7 @@ public class HumanNatureForge {
         ForgeModSounds.register(modBus);
         ForgeCreativeTabs.register(modBus);
         modBus.addListener(ForgeCreativeTabs::onBuildCreativeModeTabContents);
+        MinecraftForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> HumanNatureCommands.register(event.getDispatcher()));
     }
 }
 

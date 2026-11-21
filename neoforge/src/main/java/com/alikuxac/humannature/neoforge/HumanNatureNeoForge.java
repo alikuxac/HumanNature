@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.neoforge;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.command.HumanNatureCommands;
 import com.alikuxac.humannature.neoforge.config.NeoForgeConfig;
 import com.alikuxac.humannature.neoforge.event.NeoForgeHumanNatureEventBridge;
 import com.alikuxac.humannature.neoforge.init.NeoForgeCreativeTabs;
@@ -11,7 +12,9 @@ import com.alikuxac.humannature.neoforge.init.NeoForgeModSounds;
 import com.alikuxac.humannature.neoforge.network.NeoForgeNetwork;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 @Mod(HumanNatureCommon.MOD_ID)
 public class HumanNatureNeoForge {
@@ -26,6 +29,7 @@ public class HumanNatureNeoForge {
         NeoForgeCreativeTabs.register(modBus);
         modBus.addListener(NeoForgeCreativeTabs::onBuildCreativeModeTabContents);
         modBus.addListener(NeoForgeNetwork::onRegisterPayloadHandlers);
+        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> HumanNatureCommands.register(event.getDispatcher()));
     }
 }
 
