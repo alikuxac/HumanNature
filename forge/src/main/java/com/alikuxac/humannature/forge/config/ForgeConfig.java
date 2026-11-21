@@ -457,6 +457,9 @@ public class ForgeConfig {
         ForgeConfigSpec.DoubleValue bloodScreenEffectIntensity = clientBuilder
                 .comment("Strength of the blood-loss screen effect (0 disables it)")
                 .defineInRange("bloodScreenEffectIntensity", 1.0, 0.0, 1.0);
+        ForgeConfigSpec.BooleanValue enableHeartbeatAudio = clientBuilder
+                .comment("Play the heartbeat sound when blood volume drops below 4000 ml")
+                .define("enableHeartbeatAudio", true);
         ForgeConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
@@ -490,6 +493,7 @@ public class ForgeConfig {
         ClientConfig.SHOW_CARDIAC_HUD = safe(CLIENT_SPEC, showCardiacHud, true);
         ClientConfig.ENABLE_BLOOD_SCREEN_EFFECTS = safe(CLIENT_SPEC, enableBloodScreenEffects, true);
         ClientConfig.BLOOD_SCREEN_EFFECT_INTENSITY = safe(CLIENT_SPEC, bloodScreenEffectIntensity, 1.0);
+        ClientConfig.ENABLE_HEARTBEAT_AUDIO = safe(CLIENT_SPEC, enableHeartbeatAudio, true);
         ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = safe(CLIENT_SPEC, showActionBarEnvironmentCues, true);
         ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = safe(CLIENT_SPEC, showActionBarWeightWarnings, true);
         ClientConfig.ENABLE_CAMERA_LIMPING = safe(CLIENT_SPEC, enableCameraLimping, true);

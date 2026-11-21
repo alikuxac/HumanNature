@@ -3,6 +3,7 @@ package com.alikuxac.humannature.forge.event;
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.BloodScreenEffectHandler;
+import com.alikuxac.humannature.client.HeartbeatAudioHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
@@ -85,5 +86,6 @@ public class ForgeClientEvents {
             SwappableHudOverlay.cycleHudMode(mc.player);
         }
         SwappableHudOverlay.onClientTick(mc.player);
+        HeartbeatAudioHandler.onClientTick(mc.player);
     }
 }

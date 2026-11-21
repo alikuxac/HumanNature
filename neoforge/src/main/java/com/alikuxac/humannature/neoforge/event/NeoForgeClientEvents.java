@@ -3,6 +3,7 @@ package com.alikuxac.humannature.neoforge.event;
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
 import com.alikuxac.humannature.client.BloodScreenEffectHandler;
+import com.alikuxac.humannature.client.HeartbeatAudioHandler;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
@@ -93,5 +94,6 @@ public class NeoForgeClientEvents {
             SwappableHudOverlay.cycleHudMode(mc.player);
         }
         SwappableHudOverlay.onClientTick(mc.player);
+        HeartbeatAudioHandler.onClientTick(mc.player);
     }
 }

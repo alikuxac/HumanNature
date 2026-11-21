@@ -455,6 +455,9 @@ public class NeoForgeConfig {
         ModConfigSpec.DoubleValue bloodScreenEffectIntensity = clientBuilder
                 .comment("Strength of the blood-loss screen effect (0 disables it)")
                 .defineInRange("bloodScreenEffectIntensity", 1.0, 0.0, 1.0);
+        ModConfigSpec.BooleanValue enableHeartbeatAudio = clientBuilder
+                .comment("Play the heartbeat sound when blood volume drops below 4000 ml")
+                .define("enableHeartbeatAudio", true);
         ModConfigSpec.BooleanValue showActionBarEnvironmentCues = clientBuilder
                 .comment("Show concise environmental cues on the action bar when HUD mode is ENVIRONMENT")
                 .define("showActionBarEnvironmentCues", true);
@@ -488,6 +491,7 @@ public class NeoForgeConfig {
         ClientConfig.SHOW_CARDIAC_HUD = showCardiacHud::get;
         ClientConfig.ENABLE_BLOOD_SCREEN_EFFECTS = enableBloodScreenEffects::get;
         ClientConfig.BLOOD_SCREEN_EFFECT_INTENSITY = bloodScreenEffectIntensity::get;
+        ClientConfig.ENABLE_HEARTBEAT_AUDIO = enableHeartbeatAudio::get;
         ClientConfig.SHOW_ACTIONBAR_ENVIRONMENT_CUES = showActionBarEnvironmentCues::get;
         ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS = showActionBarWeightWarnings::get;
         ClientConfig.ENABLE_CAMERA_LIMPING = enableCameraLimping::get;

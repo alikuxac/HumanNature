@@ -14,6 +14,8 @@ public final class BloodScreenEffectHandler {
     private static PostChain chain;
     private static int lastWidth = -1;
     private static int lastHeight = -1;
+    private static int failures;
+    private static long disabledUntil;
 
     private BloodScreenEffectHandler() {
     }
@@ -27,6 +29,7 @@ public final class BloodScreenEffectHandler {
 
     public static void process(float partialTick) {
         if (!ClientConfig.ENABLE_BLOOD_SCREEN_EFFECTS.get()) return;
+        if (System.currentTimeMillis() < disabledUntil) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
@@ -50,6 +53,7 @@ public final class BloodScreenEffectHandler {
             chain.setUniform("Intensity", intensity);
             chain.process(partialTick);
             mainTarget.bindWrite(true);
+            failures = 0;
         } catch (Exception ignored) {
             if (chain != null) {
                 chain.close();
@@ -57,6 +61,10 @@ public final class BloodScreenEffectHandler {
             }
             lastWidth = -1;
             lastHeight = -1;
+            if (++failures >= 3) {
+                disabledUntil = System.currentTimeMillis() + 30_000L;
+                failures = 0;
+            }
         }
     }
 }

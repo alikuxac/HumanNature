@@ -471,7 +471,6 @@ public class PhysiologyEventHandler {
                 return;
             }
         }
-        // First initialization for the player
         BloodType rolled = BloodType.getRandom(player.getRandom());
         data.setBloodType(rolled);
         data.setBloodVolume(PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME);
@@ -720,12 +719,10 @@ public class PhysiologyEventHandler {
             }
         }
 
-        // Blood regeneration boost countdown
         if (data.getBloodRegenBoostTicks() > 0) {
             data.decrementBloodRegenBoostTicks();
         }
 
-        // Natural blood generation when full and not bleeding (+1 ml/tick base, +3 ml/tick boosted)
         if (!data.isBleeding() && data.getBloodVolume() < PlayerPhysiologyData.MAX_BLOOD_VOLUME && player.getFoodData().getFoodLevel() >= 18) {
             int baseRegen = ServerConfig.BLOOD_REGEN_PER_TICK != null ? ServerConfig.BLOOD_REGEN_PER_TICK.get() : 1;
             int mult = data.getBloodRegenBoostTicks() > 0 ?
@@ -733,7 +730,6 @@ public class PhysiologyEventHandler {
             data.modifyBloodVolume(baseRegen * mult);
         }
 
-        // In-world falling blood drops/particles for Arterial bleeding (Tier 2+)
         if (bleedTier >= 2 && player.tickCount % 8 == 0 && player.level() instanceof ServerLevel serverLevel) {
             double px = player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.3;
             double py = player.getY() + 0.7 + (player.getRandom().nextDouble() - 0.5) * 0.2;
@@ -745,38 +741,23 @@ public class PhysiologyEventHandler {
             );
         }
 
-        // Update vanilla 20 HP Max Health AttributeModifier with 4.0 HP safety floor
         updateBloodMaxHealthModifier(player, data);
 
-        // Mortality Check: 0 ml blood -> cardiac arrest
         short vol = data.getBloodVolume();
         if (vol <= 0) {
             player.kill();
             return;
         }
 
-        // Hypovolemic Shock Threshold Effects
         if (vol < 2000) {
-            // < 40% (2,000 ml): Ngất xỉu (blackout)
             player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0, false, false, true));
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 3, false, false, true));
             player.setSprinting(false);
         } else if (vol < 3000) {
-            // < 60% (3,000 ml): Tunnel vision & desaturation
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
         }
 
-        if (vol < 4000) {
-            // < 80% (4,000 ml): Tim đập nhanh (tachycardia)
-            if (player.tickCount % 25 == 0) {
-                float pitch = 1.0F + (float) ((4000 - vol) / 4000.0) * 0.5F;
-                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 0.9F, pitch);
-            }
-        }
-
-        // Bleeding deduction every 20 ticks (1 second)
         if (player.tickCount % 20 == 0) {
             if (bleedTier > 0) {
                 int loss = switch (bleedTier) {

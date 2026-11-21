@@ -5,6 +5,7 @@
 [![Forge 52.1.20+](https://img.shields.io/badge/Forge-52.1.20+-blue.svg?style=flat-square)](https://files.minecraftforge.net/)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/Models-CC%20BY--NC--ND%204.0-yellow.svg?style=flat-square)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+[![License: CC0 1.0](https://img.shields.io/badge/Audio-CC0%201.0-green.svg?style=flat-square)](https://creativecommons.org/publicdomain/zero/1.0/)
 
 **Human Nature** is a survival-realism mod for Minecraft 1.21.1 supporting both **NeoForge (21.1.77+)** and **Minecraft Forge (52.1.20+)**. It adds localized skeletal injuries, environmental temperature, inventory encumbrance, and metabolic recovery.
 
@@ -118,3 +119,6 @@ Output JAR files are generated in:
 - **3D Item Models**
   - [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-yellow.svg?style=flat-square)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
   - Custom 3D item models are licensed under **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)**.
+- **Audio Assets**
+  - [![License: CC0 1.0](https://img.shields.io/badge/License-CC0%201.0-green.svg?style=flat-square)](https://creativecommons.org/publicdomain/zero/1.0/)
+  - All sounds are an original, procedurally generated work created for this project and released under **CC0 1.0 Universal** (public domain dedication). No third-party audio samples are used.
