@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:first_aid",
+  "display": {
+    "icon": {
+      "id": "humannature:bone_broth"
+    },
+    "title": {
+      "translate": "advancements.humannature.iron_bones.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.iron_bones.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "fracture_healed": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "fracture_healed"
+      }
+    }
+  }
+}

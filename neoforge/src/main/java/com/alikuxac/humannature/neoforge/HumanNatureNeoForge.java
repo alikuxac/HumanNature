@@ -5,6 +5,7 @@ import com.alikuxac.humannature.command.HumanNatureCommands;
 import com.alikuxac.humannature.neoforge.config.NeoForgeConfig;
 import com.alikuxac.humannature.neoforge.event.NeoForgeHumanNatureEventBridge;
 import com.alikuxac.humannature.neoforge.init.NeoForgeCreativeTabs;
+import com.alikuxac.humannature.neoforge.init.NeoForgeModCriteria;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModEffects;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModItems;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModPotions;
@@ -21,6 +22,7 @@ public class HumanNatureNeoForge {
     public HumanNatureNeoForge(IEventBus modBus, ModContainer container) {
         NeoForgeConfig.register(container);
         HumanNatureCommon.init();
+        NeoForgeModCriteria.register(modBus);
         NeoForgeHumanNatureEventBridge.register();
         NeoForgeModEffects.register(modBus);
         NeoForgeModPotions.register(modBus);

@@ -2,6 +2,7 @@ package com.alikuxac.humannature.item;
 
 import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
@@ -265,6 +266,9 @@ public class BloodBagItem extends Item {
             } else {
                 setData(stack, new BloodBagData(newStored, playerType));
             }
+            if (ServerConfig.ENABLE_BLOOD_BAG.get()) {
+                HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.BLOOD_TRANSFUSED);
+            }
         }
 
         return stack;
@@ -281,7 +285,6 @@ public class BloodBagItem extends Item {
             BloodBagData data = getData(stack);
 
             if (player.isShiftKeyDown()) {
-                // Shift + Right Click on teammate: Draw from teammate
                 if (data.isFull()) {
                     if (!level.isClientSide()) {
                         player.displayClientMessage(Component.translatable("message.humannature.blood_bag_full").withStyle(ChatFormatting.RED), true);
@@ -337,7 +340,10 @@ public class BloodBagItem extends Item {
                 }
 
                 if (!level.isClientSide()) {
-                    performTransfusion(targetPlayer, data.bloodType(), (short) data.storedMl());
+                    if (performTransfusionWithResult(targetPlayer, data.bloodType(), (short) data.storedMl())
+                            && !player.getUUID().equals(targetPlayer.getUUID())) {
+                        HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.BLOOD_TRANSFUSED);
+                    }
                     level.playSound(null, targetPlayer.getX(), targetPlayer.getY(), targetPlayer.getZ(),
                             SoundEvents.HONEY_DRINK, SoundSource.PLAYERS, 1.0F, 1.0F);
 
@@ -359,10 +365,16 @@ public class BloodBagItem extends Item {
     }
 
     public static void performTransfusion(Player recipient, BloodType donorType, short volume) {
+        performTransfusionWithResult(recipient, donorType, volume);
+    }
+
+    private static boolean performTransfusionWithResult(Player recipient, BloodType donorType, short volume) {
+        if (recipient.level().isClientSide() || donorType == null || volume <= 0) return false;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(recipient.getUUID());
         PhysiologyEventHandler.initOrLoadPlayerBlood(recipient, data);
         BloodType recipientType = data.getBloodType();
         if (recipientType == null) recipientType = BloodType.O_POSITIVE;
+        short previousVolume = data.getBloodVolume();
 
         if (recipientType.canReceiveFrom(donorType)) {
             data.modifyBloodVolume(volume);
@@ -381,6 +393,7 @@ public class BloodBagItem extends Item {
 
         PhysiologyEventHandler.savePlayerBloodNbt(recipient, data);
         PhysiologyEventHandler.syncBloodToClient(recipient, data);
+        return recipientType.canReceiveFrom(donorType) && data.getBloodVolume() > previousVolume;
     }
 
     @Override

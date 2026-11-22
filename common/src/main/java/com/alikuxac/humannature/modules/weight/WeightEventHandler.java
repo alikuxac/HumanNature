@@ -3,6 +3,12 @@ package com.alikuxac.humannature.modules.weight;
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
+import com.alikuxac.humannature.init.ModEnchantments;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -33,6 +39,7 @@ public class WeightEventHandler {
         EncumbranceTier currentTier = data.getEncumbranceTier();
 
         if (currentTier == EncumbranceTier.OVERBURDENED && prevTier != EncumbranceTier.OVERBURDENED) {
+            HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.OVERBURDENED);
             boolean showWarning = ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS == null || ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS.get();
             if (showWarning) {
                 int pct = Math.round(data.getWeightRatio() * 100.0f);
@@ -117,10 +124,30 @@ public class WeightEventHandler {
 
     public static void onEquipmentChange(Player player) {
         recalculateWeight(player);
+        checkLoadBearingEquipment(player);
     }
 
     public static void onPlayerLoggedIn(Player player) {
         recalculateWeight(player);
+        checkLoadBearingEquipment(player);
+    }
+
+    private static void checkLoadBearingEquipment(Player player) {
+        if (!(player instanceof ServerPlayer) || !ServerConfig.ENABLE_WEIGHT.get()
+                || player.isCreative() || player.isSpectator()) return;
+        var enchantment = player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .get(ModEnchantments.LOAD_BEARING);
+        if (enchantment.isEmpty()) return;
+        int maximum = enchantment.get().value().getMaxLevel();
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+                EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            var stack = player.getItemBySlot(slot);
+            if (stack.getItem() instanceof ArmorItem
+                    && WeightCalculator.getEnchantmentLevel(stack, ModEnchantments.LOAD_BEARING) >= maximum) {
+                HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.MAX_LOAD_BEARING);
+                return;
+            }
+        }
     }
 
     public static void onPlayerRespawn(Player player) {

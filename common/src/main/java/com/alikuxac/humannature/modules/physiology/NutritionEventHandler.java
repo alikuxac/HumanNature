@@ -1,6 +1,7 @@
 package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -30,10 +31,11 @@ public final class NutritionEventHandler {
 
     public static void handleItemConsumption(Player player, ItemStack stack) {
         if (!isEnabled()) return;
-        if (player == null || player.isCreative() || player.isSpectator()) return;
+        if (player == null || player.level().isClientSide() || player.isCreative() || player.isSpectator()) return;
         if (stack == null || stack.isEmpty()) return;
 
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        boolean wasMaxNutrition = hasMaxNutrition(data);
 
         if (stack.is(CALCIUM_RICH_FOODS)) {
             data.modifyCalcium(gain(ServerConfig.CALCIUM_FOOD_GAIN, 25));
@@ -44,7 +46,14 @@ public final class NutritionEventHandler {
         if (stack.is(VEGETABLE_FOODS) || stack.is(FRUIT_FOODS)) {
             data.modifyVitamins(gain(ServerConfig.VITAMIN_FOOD_GAIN, 20));
         }
+        if (!wasMaxNutrition && hasMaxNutrition(data)) {
+            HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.MAX_NUTRITION);
+        }
         PhysiologyEventHandler.syncNutritionToClient(player, data);
+    }
+
+    private static boolean hasMaxNutrition(PlayerPhysiologyData data) {
+        return data.getCalcium() == 100 && data.getCarbohydrates() == 100 && data.getVitamins() == 100;
     }
 
     public static void handlePlayerTick(Player player, PlayerPhysiologyData data) {

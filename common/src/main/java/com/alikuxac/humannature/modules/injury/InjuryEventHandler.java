@@ -4,6 +4,7 @@ import com.alikuxac.humannature.api.injury.InjuryTier;
 import com.alikuxac.humannature.api.injury.LimbType;
 
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.init.ModItems;
 import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
@@ -280,7 +281,13 @@ public class InjuryEventHandler {
                 multiplier *= PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getCalciumKnittingMultiplier();
             }
         }
-        InjuryModule.reduceFractureTimerScaled(player.getUUID(), amount * multiplier);
+        if (isNaturalRestHeal) {
+            if (InjuryModule.reduceNaturalFractureTimer(player.getUUID(), amount, multiplier)) {
+                HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.FRACTURE_HEALED);
+            }
+        } else {
+            InjuryModule.reduceFractureTimerScaled(player.getUUID(), amount);
+        }
         if (!InjuryModule.isFractureActive(player.getUUID())) {
             clearFractureTimer(player);
         }
@@ -849,7 +856,8 @@ public class InjuryEventHandler {
     }
 
     public static boolean handleQuickTreat(Player player, LimbType limb, ItemStack splintStack) {
-        if (!ServerConfig.ENABLE_SPLINT.get() || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
+        if (player.level().isClientSide() || !ServerConfig.ENABLE_INJURY.get() || !ServerConfig.ENABLE_SPLINT.get()
+                || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
             return false;
         }
 
@@ -874,6 +882,7 @@ public class InjuryEventHandler {
         player.getCooldowns().addCooldown(splintItem, SplintItem.CHANNEL_DURATION);
 
         splintStack.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+        HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.SPLINT_APPLIED);
 
         player.level().playSound(
                 null,

@@ -2,6 +2,7 @@ package com.alikuxac.humannature.modules.temperature;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -195,6 +196,9 @@ public class TemperatureEventHandler {
     }
 
     private static void applyHypothermiaDebuffs(Player player, PlayerTemperatureData data) {
+        if (!data.isHypothermiaDebuffActive()) {
+            HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.HYPOTHERMIA);
+        }
         if (ServerConfig.HYPOTHERMIA_MINING_FATIGUE.get()) {
             player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 0, false, false, true));
         }

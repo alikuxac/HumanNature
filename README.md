@@ -66,6 +66,7 @@ Tracks sleep deprivation and fatigue buildup over time, triggering brief involun
 ## Documentation
 For detailed module specifications, refer to:
 - [Extensibility API & Event Pipeline](docs/API.md)
+- [Advancements & Gameplay Milestones](docs/ADVANCEMENTS.md)
 - [Injury System Documentation](docs/INJURY_SYSTEM.md)
 - [Physiology System Documentation](docs/PHYSIOLOGY_SYSTEM.md)
 - [Temperature System Documentation](docs/TEMPERATURE_SYSTEM.md)

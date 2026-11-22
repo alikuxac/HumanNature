@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:root",
+  "display": {
+    "icon": {
+      "id": "humannature:blood_bag"
+    },
+    "title": {
+      "translate": "advancements.humannature.life_giver.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.life_giver.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "blood_transfused": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "blood_transfused"
+      }
+    }
+  }
+}

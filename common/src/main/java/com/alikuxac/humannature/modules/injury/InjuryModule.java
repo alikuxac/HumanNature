@@ -7,6 +7,8 @@ import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.core.IHumanModule;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class InjuryModule implements IHumanModule {
@@ -14,6 +16,7 @@ public class InjuryModule implements IHumanModule {
     private static final Map<UUID, InjuryTier> FRACTURE_TIERS = new HashMap<>();
     private static final Map<UUID, PlayerInjuryData> INJURY_DATA = new HashMap<>();
     private static final Map<UUID, Float> FRACTURE_HEAL_REMAINDER = new HashMap<>();
+    private static final Set<UUID> CALCIUM_ASSISTED_RECOVERY = new HashSet<>();
 
     @Override
     public void init() {
@@ -57,6 +60,7 @@ public class InjuryModule implements IHumanModule {
     }
 
     public static void startFractureTimer(UUID playerId, InjuryTier tier) {
+        CALCIUM_ASSISTED_RECOVERY.remove(playerId);
         FRACTURE_TIMERS.put(playerId, ServerConfig.BONE_FRACTURE_DURATION.get());
         FRACTURE_TIERS.put(playerId, tier);
         PlayerInjuryData data = getOrCreateInjuryData(playerId);
@@ -110,6 +114,16 @@ public class InjuryModule implements IHumanModule {
         }
     }
 
+    public static boolean reduceNaturalFractureTimer(UUID playerId, int amount, double calciumMultiplier) {
+        if (amount <= 0 || !isFractureActive(playerId)) return false;
+        if (calciumMultiplier > 1.0 && getRemainingFractureTime(playerId) > amount) {
+            CALCIUM_ASSISTED_RECOVERY.add(playerId);
+        }
+        boolean calciumAssisted = CALCIUM_ASSISTED_RECOVERY.contains(playerId);
+        reduceFractureTimerScaled(playerId, amount * calciumMultiplier);
+        return calciumAssisted && !isFractureActive(playerId);
+    }
+
     public static int getRemainingFractureTime(UUID playerId) {
         if (!FRACTURE_TIMERS.containsKey(playerId)) return 0;
         return FRACTURE_TIMERS.get(playerId);
@@ -121,6 +135,7 @@ public class InjuryModule implements IHumanModule {
     }
 
     public static void clearFractureTimer(UUID playerId) {
+        CALCIUM_ASSISTED_RECOVERY.remove(playerId);
         FRACTURE_TIMERS.remove(playerId);
         FRACTURE_TIERS.remove(playerId);
         FRACTURE_HEAL_REMAINDER.remove(playerId);
