@@ -1,10 +1,23 @@
 package com.alikuxac.humannature.modules.physiology;
 
+import com.alikuxac.humannature.api.blood.BloodType;
 import com.alikuxac.humannature.config.ServerConfig;
 
 public class PlayerPhysiologyData {
+    public static final short DEFAULT_BLOOD_VOLUME = 5000;
+    public static final short MAX_BLOOD_VOLUME = 5000;
+
     private long awakeTicks;
     private int blinkCooldown;
+
+    private short bloodVolume;
+    private BloodType bloodType;
+    private byte bleedingTier;
+    private int clottingTicks;
+    private int bloodRegenBoostTicks;
+    private short lastSyncedBloodVolume;
+    private byte lastSyncedBleedingTier;
+    private BloodType lastSyncedBloodType;
 
     private float toxinBuildup;
     private ToxinType lastToxinType;
@@ -37,6 +50,7 @@ public class PlayerPhysiologyData {
     private byte calcium;
     private byte carbohydrates;
     private byte vitamins;
+    private int nutrientTickCounter;
 
     private int claustrophobiaTicks;
     private boolean panicking;
@@ -80,6 +94,7 @@ public class PlayerPhysiologyData {
         this.calcium = 0;
         this.carbohydrates = 0;
         this.vitamins = 0;
+        this.nutrientTickCounter = 0;
 
         this.claustrophobiaTicks = 0;
         this.panicking = false;
@@ -88,6 +103,15 @@ public class PlayerPhysiologyData {
         this.adrenalineTicks = 0;
         this.adrenalineActive = false;
         this.adrenalineCooldownTicks = 0;
+
+        this.bloodVolume = DEFAULT_BLOOD_VOLUME;
+        this.bloodType = null;
+        this.bleedingTier = 0;
+        this.clottingTicks = 0;
+        this.bloodRegenBoostTicks = 0;
+        this.lastSyncedBloodVolume = -1;
+        this.lastSyncedBleedingTier = -1;
+        this.lastSyncedBloodType = null;
     }
 
     public PlayerPhysiologyData(long initialAwakeTicks) {
@@ -126,7 +150,7 @@ public class PlayerPhysiologyData {
     }
 
     public boolean isBlinkEligible() {
-        return getFatigueScore() >= (float) ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD;
+        return getFatigueScore() >= ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD.get().floatValue();
     }
 
     public int getBlinkCooldown() {
@@ -158,6 +182,7 @@ public class PlayerPhysiologyData {
         resetCalcium();
         resetPanic();
         resetAdrenaline();
+        resetBlood(false);
     }
 
     public float getToxinBuildup() {
@@ -246,8 +271,8 @@ public class PlayerPhysiologyData {
     }
 
     public void setExertionScore(float exertionScore) {
-        this.exertionScore = Math.max(0.0f, Math.min(100.0f, exertionScore));
-        if (this.exertionScore >= 100.0f) {
+        this.exertionScore = Math.max(0.0f, Math.min(getStaminaCapacity(), exertionScore));
+        if (this.exertionScore >= getStaminaCapacity()) {
             this.muscleFailure = true;
         } else if (this.exertionScore <= 0.0f) {
             this.muscleFailure = false;
@@ -255,7 +280,11 @@ public class PlayerPhysiologyData {
     }
 
     public void addExertion(float amount) {
-        setExertionScore(this.exertionScore + Math.max(0.0f, amount));
+        float effective = amount;
+        if (this.bloodVolume < 4000) {
+            effective *= 2.0f;
+        }
+        setExertionScore(this.exertionScore + Math.max(0.0f, effective));
     }
 
     public void decayExertion(float amount) {
@@ -269,7 +298,7 @@ public class PlayerPhysiologyData {
     public void setMuscleFailure(boolean muscleFailure) {
         this.muscleFailure = muscleFailure;
         if (muscleFailure) {
-            this.exertionScore = 100.0f;
+            this.exertionScore = getStaminaCapacity();
         }
     }
 
@@ -573,6 +602,7 @@ public class PlayerPhysiologyData {
         this.calcium = 0;
         this.carbohydrates = 0;
         this.vitamins = 0;
+        this.nutrientTickCounter = 0;
     }
 
     public byte getCalcium() {
@@ -609,6 +639,44 @@ public class PlayerPhysiologyData {
 
     public void modifyVitamins(int delta) {
         setVitamins(this.vitamins + delta);
+    }
+
+    public int getNutrientTickCounter() {
+        return nutrientTickCounter;
+    }
+
+    public void incrementNutrientTickCounter() {
+        if (this.nutrientTickCounter < Integer.MAX_VALUE) {
+            this.nutrientTickCounter++;
+        }
+    }
+
+    public void resetNutrientTickCounter() {
+        this.nutrientTickCounter = 0;
+    }
+
+    public double getCalciumKnittingMultiplier() {
+        return NutritionBuffs.knittingMultiplier(this.calcium);
+    }
+
+    public float getCalciumFallBonusBlocks() {
+        return NutritionBuffs.fallBonusBlocks(this.calcium);
+    }
+
+    public float getFallDamageMultiplier() {
+        return NutritionBuffs.fallDamageMultiplier(this.calcium);
+    }
+
+    public float getStaminaCapacity() {
+        return NutritionBuffs.staminaCapacity(this.carbohydrates);
+    }
+
+    public float getColdAbsorptionMultiplier() {
+        return NutritionBuffs.coldAbsorptionMultiplier(this.vitamins);
+    }
+
+    public float getToxinEliminationMultiplier() {
+        return NutritionBuffs.toxinEliminationMultiplier(this.vitamins);
     }
 
     public int getClaustrophobiaTicks() {
@@ -702,5 +770,105 @@ public class PlayerPhysiologyData {
         this.adrenalineTicks = 0;
         this.adrenalineActive = false;
         this.adrenalineCooldownTicks = 0;
+    }
+
+    public short getBloodVolume() {
+        return bloodVolume;
+    }
+
+    public void setBloodVolume(short bloodVolume) {
+        this.bloodVolume = (short) Math.max(0, Math.min(MAX_BLOOD_VOLUME, bloodVolume));
+    }
+
+    public void modifyBloodVolume(int delta) {
+        setBloodVolume((short) (this.bloodVolume + delta));
+    }
+
+    public BloodType getBloodType() {
+        return bloodType;
+    }
+
+    public void setBloodType(BloodType bloodType) {
+        this.bloodType = bloodType;
+    }
+
+    public byte getBleedingTier() {
+        return bleedingTier;
+    }
+
+    public void setBleedingTier(byte bleedingTier) {
+        byte newTier = (byte) Math.max(0, Math.min(3, bleedingTier));
+        if (newTier == 1 && this.bleedingTier != 1) {
+            this.clottingTicks = 700;
+        } else if (newTier != 1) {
+            this.clottingTicks = 0;
+        }
+        this.bleedingTier = newTier;
+    }
+
+    public int getClottingTicks() {
+        return clottingTicks;
+    }
+
+    public void setClottingTicks(int clottingTicks) {
+        this.clottingTicks = Math.max(0, clottingTicks);
+    }
+
+    public void decrementClottingTicks() {
+        if (this.clottingTicks > 0) {
+            this.clottingTicks--;
+        }
+    }
+
+    public int getBloodRegenBoostTicks() {
+        return bloodRegenBoostTicks;
+    }
+
+    public void setBloodRegenBoostTicks(int bloodRegenBoostTicks) {
+        this.bloodRegenBoostTicks = Math.max(0, bloodRegenBoostTicks);
+    }
+
+    public void decrementBloodRegenBoostTicks() {
+        if (this.bloodRegenBoostTicks > 0) {
+            this.bloodRegenBoostTicks--;
+        }
+    }
+
+    public boolean isBleeding() {
+        return this.bleedingTier > 0;
+    }
+
+    public short getLastSyncedBloodVolume() {
+        return lastSyncedBloodVolume;
+    }
+
+    public byte getLastSyncedBleedingTier() {
+        return lastSyncedBleedingTier;
+    }
+
+    public BloodType getLastSyncedBloodType() {
+        return lastSyncedBloodType;
+    }
+
+    public boolean isBloodDeltaThresholdExceeded(int deltaThreshold) {
+        if (this.lastSyncedBloodType != this.bloodType) return true;
+        if (this.lastSyncedBleedingTier != this.bleedingTier) return true;
+        return Math.abs(this.bloodVolume - this.lastSyncedBloodVolume) >= deltaThreshold;
+    }
+
+    public void markBloodSynced() {
+        this.lastSyncedBloodVolume = this.bloodVolume;
+        this.lastSyncedBleedingTier = this.bleedingTier;
+        this.lastSyncedBloodType = this.bloodType;
+    }
+
+    public void resetBlood(boolean resetBloodType) {
+        this.bloodVolume = DEFAULT_BLOOD_VOLUME;
+        this.bleedingTier = 0;
+        this.clottingTicks = 0;
+        this.bloodRegenBoostTicks = 0;
+        if (resetBloodType) {
+            this.bloodType = null;
+        }
     }
 }

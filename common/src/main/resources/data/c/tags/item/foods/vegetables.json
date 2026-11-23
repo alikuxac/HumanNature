@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:carrot",
+    "minecraft:beetroot",
+    "minecraft:dried_kelp",
+    "minecraft:cactus",
+    "#humannature:hot_stews"
+  ]
+}

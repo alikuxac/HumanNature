@@ -4,14 +4,18 @@ import com.alikuxac.humannature.api.injury.InjuryTier;
 import com.alikuxac.humannature.api.injury.LimbType;
 
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.init.ModItems;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
+import com.alikuxac.humannature.network.SyncInjuryPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -26,6 +30,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.item.ArmorMaterial;
@@ -108,7 +113,7 @@ public class InjuryEventHandler {
     );
 
     public static void updateSplintModifier() {
-        double reduction = ServerConfig.SPLINT_SPEED_REDUCTION;
+        double reduction = ServerConfig.SPLINT_SPEED_REDUCTION.get();
         SPLINT_SPEED_MODIFIER = new AttributeModifier(
                 SPLINT_SPEED_MODIFIER_ID,
                 -reduction,
@@ -133,6 +138,10 @@ public class InjuryEventHandler {
         player.setSprinting(false);
         InjuryModule.setFractureTier(player.getUUID(), targetTier);
         updatePlayerAttributesAndPose(player);
+
+        if (targetTier == InjuryTier.TIER_2_DOUBLE_LEG) {
+            PhysiologyEventHandler.triggerArterialBleeding(player);
+        }
 
         float pitch = (targetTier == InjuryTier.TIER_1_SINGLE_LEG) ? 0.8F : 0.6F;
         playBoneCrackSound(player, pitch);
@@ -284,14 +293,25 @@ public class InjuryEventHandler {
     }
 
     public static void reduceFractureTimer(Player player, int amount, boolean isNaturalRestHeal) {
+        double multiplier = 1.0;
         if (isNaturalRestHeal) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
-            if (data.hasAnySplint() && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                double multiplier = ServerConfig.CALCIUM_HEALING_MULTIPLIER;
-                amount = (int) Math.round(amount * multiplier);
+            InjuryTier tier = InjuryModule.getFractureTier(player.getUUID());
+            if (PhysiologyModule.hasCalciumBuff(player.getUUID())
+                    && (tier == InjuryTier.TIER_1_SINGLE_LEG || data.hasAnySplint())) {
+                multiplier *= ServerConfig.CALCIUM_HEALING_MULTIPLIER.get();
+            }
+            if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
+                multiplier *= PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getCalciumKnittingMultiplier();
             }
         }
-        InjuryModule.reduceFractureTimer(player.getUUID(), amount);
+        if (isNaturalRestHeal) {
+            if (InjuryModule.reduceNaturalFractureTimer(player.getUUID(), amount, multiplier)) {
+                HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.FRACTURE_HEALED);
+            }
+        } else {
+            InjuryModule.reduceFractureTimerScaled(player.getUUID(), amount);
+        }
         if (!InjuryModule.isFractureActive(player.getUUID())) {
             clearFractureTimer(player);
         }
@@ -464,6 +484,11 @@ public class InjuryEventHandler {
         }
     }
 
+    public static float getNutritionFallDamageMultiplier(Player player) {
+        if (!ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) return 1.0f;
+        return PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getFallDamageMultiplier();
+    }
+
     public static void onLivingFall(LivingEntity entity, float distance, float damageMultiplier) {
         if (!(entity instanceof Player player)) return;
         if (!ServerConfig.ENABLE_INJURY.get()) return;
@@ -480,6 +505,9 @@ public class InjuryEventHandler {
             safeThreshold += 1.5F;
         }
 
+        if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
+            safeThreshold += PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getCalciumFallBonusBlocks();
+        }
         if (distance >= 1.5F && distance <= safeThreshold) {
             PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
             for (LimbType leg : new LimbType[]{LimbType.LEFT_LEG, LimbType.RIGHT_LEG}) {
@@ -623,6 +651,15 @@ public class InjuryEventHandler {
         if (stateChanged) {
             InjuryModule.setInjuryData(player.getUUID(), data);
             updatePlayerAttributesAndPose(player);
+            if (data.hasAnySevereTrauma()) {
+                PhysiologyEventHandler.triggerArterialBleeding(player);
+            }
+        }
+
+        if (!damageSource.is(DamageTypes.DROWN) && !damageSource.is(DamageTypes.STARVE)
+                && !damageSource.is(DamageTypes.FREEZE) && !damageSource.is(DamageTypes.MAGIC)
+                && amount >= 2.0F) {
+            PhysiologyEventHandler.triggerMinorBleeding(player);
         }
     }
 
@@ -886,6 +923,26 @@ public class InjuryEventHandler {
         );
     }
 
+    public static void applySplintHealing(Player player, SplintTier tier) {
+        if (player == null || tier == null || player.level().isClientSide()) return;
+        switch (tier) {
+            case WOODEN, DIAMOND, NETHERITE -> clearFractureTimer(player);
+            case REINFORCED -> reduceFractureTimerByFraction(player, 0.50);
+            case GOLDEN -> reduceFractureTimerByFraction(player, 0.67);
+        }
+    }
+
+    private static void reduceFractureTimerByFraction(Player player, double fraction) {
+        int remaining = InjuryModule.getRemainingFractureTime(player.getUUID());
+        if (remaining <= 0) return;
+        InjuryModule.reduceFractureTimer(player.getUUID(), (int) Math.round(remaining * fraction));
+        if (!InjuryModule.isFractureActive(player.getUUID())) {
+            clearFractureTimer(player);
+        } else {
+            updatePlayerAttributesAndPose(player);
+        }
+    }
+
     public static void dislodgeSplint(Player player, LimbType limb, String reason) {
         if (player == null || limb == null) return;
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -957,7 +1014,7 @@ public class InjuryEventHandler {
             double accumulated = STEP_DISTANCE_ACCUMULATOR.compute(player.getUUID(), (k, v) -> (v == null ? 0.0 : v) + deltaDistance);
             if (accumulated >= 50.0) {
                 STEP_DISTANCE_ACCUMULATOR.put(player.getUUID(), 0.0);
-                int drain = ServerConfig.SPLINT_DURABILITY_PER_50_STEPS;
+                int drain = ServerConfig.SPLINT_DURABILITY_PER_50_STEPS.get();
                 for (LimbType leg : new LimbType[]{LimbType.LEFT_LEG, LimbType.RIGHT_LEG}) {
                     if (data.isSplinted(leg)) {
                         SplintTier tier = data.getSplint(leg);
@@ -989,7 +1046,7 @@ public class InjuryEventHandler {
 
             double effective = baseAmount * maxSplintMultiplier;
             if (anySplinted && PhysiologyModule.hasCalciumBuff(player.getUUID())) {
-                double calciumMult = ServerConfig.CALCIUM_HEALING_MULTIPLIER;
+                double calciumMult = ServerConfig.CALCIUM_HEALING_MULTIPLIER.get();
                 effective *= calciumMult;
             }
 
@@ -999,7 +1056,8 @@ public class InjuryEventHandler {
     }
 
     public static boolean handleQuickTreat(Player player, LimbType limb, ItemStack splintStack) {
-        if (!ServerConfig.ENABLE_SPLINT.get() || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
+        if (player.level().isClientSide() || !ServerConfig.ENABLE_INJURY.get() || !ServerConfig.ENABLE_SPLINT.get()
+                || splintStack.isEmpty() || !(splintStack.getItem() instanceof SplintItem splintItem)) {
             return false;
         }
 
@@ -1013,7 +1071,10 @@ public class InjuryEventHandler {
             return false;
         }
 
-        applySplintToLimb(player, limb, splintItem.getTier());
+        applySplintHealing(player, splintItem.getTier());
+        if (isFractureActive(player)) {
+            applySplintToLimb(player, limb, splintItem.getTier());
+        }
 
         if (splintItem.getTier().getPrimaryBuffDuration() > 0) {
             switch (splintItem.getTier()) {
@@ -1033,6 +1094,7 @@ public class InjuryEventHandler {
 
         player.getCooldowns().addCooldown(splintItem, SplintItem.CHANNEL_DURATION);
         splintStack.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+        HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.SPLINT_APPLIED);
 
         return true;
     }
@@ -1052,6 +1114,29 @@ public class InjuryEventHandler {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    public static ItemStack findFirstBandage(Player player) {
+        ItemStack cursor = player.containerMenu.getCarried();
+        if (cursor.getItem() instanceof ClothBandageItem) return cursor;
+
+        ItemStack main = player.getMainHandItem();
+        if (main.getItem() instanceof ClothBandageItem) return main;
+        ItemStack off = player.getOffhandItem();
+        if (off.getItem() instanceof ClothBandageItem) return off;
+
+        for (ItemStack item : player.getInventory().items) {
+            if (item.getItem() instanceof ClothBandageItem) {
+                return item;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public static void syncInjuriesToClient(Player player, PlayerInjuryData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(new SyncInjuryPayload(data.getRawData())));
+        }
     }
 
     public static boolean shouldCancelNaturalRegen(Player player, float amount) {

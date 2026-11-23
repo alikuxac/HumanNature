@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "humannature:item/blood_bag_empty"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "humannature:blood_ratio": 0.001
+      },
+      "model": "humannature:item/blood_bag_partial"
+    },
+    {
+      "predicate": {
+        "humannature:blood_ratio": 1.0
+      },
+      "model": "humannature:item/blood_bag_full"
+    }
+  ]
+}
+

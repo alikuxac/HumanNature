@@ -4,6 +4,7 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.api.event.HumanNatureEvents;
 import com.alikuxac.humannature.api.event.HypothermiaEvent;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
 import com.alikuxac.humannature.modules.weight.EncumbranceTier;
@@ -80,7 +81,7 @@ public class TemperatureEventHandler {
             PlayerTemperatureData data = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
             data.setWetnessBuffer(data.getWetnessBuffer() * 0.5f);
             player.setTicksFrozen(0);
-            int durationTicks = ServerConfig.INTERNAL_WARMING_DURATION_TICKS;
+            int durationTicks = ServerConfig.INTERNAL_WARMING_DURATION_TICKS.get();
             data.setInternalWarmingTicks(durationTicks);
             removeHypothermiaDebuffs(player, data);
 
@@ -124,13 +125,13 @@ public class TemperatureEventHandler {
         double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
                 ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
 
-        double dryingTimeSec = Math.max(1.0, ServerConfig.HEAT_DRYING_TIME_SECONDS);
+        double dryingTimeSec = Math.max(1.0, ServerConfig.HEAT_DRYING_TIME_SECONDS.get());
         float dryingPerTick = (float) ((1.0 / (dryingTimeSec * 20.0)) * rateMultiplier);
         data.reduceWetness(dryingPerTick);
 
         int currentFrozen = player.getTicksFrozen();
         if (currentFrozen > 0) {
-            int thawAmount = (int) Math.round(2.0 * ServerConfig.HEAT_THAW_MULTIPLIER * rateMultiplier);
+            int thawAmount = (int) Math.round(2.0 * ServerConfig.HEAT_THAW_MULTIPLIER.get() * rateMultiplier);
             player.setTicksFrozen(Math.max(0, currentFrozen - thawAmount));
         }
 
@@ -146,22 +147,25 @@ public class TemperatureEventHandler {
 
         boolean inWater = player.isInWater() || player.isUnderWater();
         boolean inRain = player.level().isRainingAt(player.blockPosition());
+        float coldMultiplier = ServerConfig.ENABLE_NUTRIENT_RESERVES.get()
+                ? PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getColdAbsorptionMultiplier()
+                : 1.0f;
 
         double rateMultiplier = ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER != null ?
                 ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER.get() : 1.0;
 
         if (inWater) {
-            float delta = (float) (ServerConfig.WETNESS_WATER_ACCUMULATION_RATE * rateMultiplier);
+            float delta = (float) (ServerConfig.WETNESS_WATER_ACCUMULATION_RATE.get() * rateMultiplier);
             float reduction = calculateFreezeImmuneReduction(player);
-            delta *= (1.0f - reduction);
+            delta *= (1.0f - reduction) * coldMultiplier;
             data.addWetness(delta);
         } else if (inRain) {
-            float delta = (float) (ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE * rateMultiplier);
+            float delta = (float) (ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE.get() * rateMultiplier);
             if (player.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
-                delta *= (float) ServerConfig.WETNESS_NO_HELMET_MULTIPLIER;
+                delta *= ServerConfig.WETNESS_NO_HELMET_MULTIPLIER.get().floatValue();
             }
             float reduction = calculateFreezeImmuneReduction(player);
-            delta *= (1.0f - reduction);
+            delta *= (1.0f - reduction) * coldMultiplier;
             data.addWetness(delta);
         } else {
             data.reduceWetness((float) (0.0005F * rateMultiplier));
@@ -296,7 +300,10 @@ public class TemperatureEventHandler {
     }
 
     private static void applyHypothermiaDebuffs(Player player, PlayerTemperatureData data) {
-        if (ServerConfig.HYPOTHERMIA_MINING_FATIGUE) {
+        if (!data.isHypothermiaDebuffActive()) {
+            HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.HYPOTHERMIA);
+        }
+        if (ServerConfig.HYPOTHERMIA_MINING_FATIGUE.get()) {
             player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 0, false, false, true));
         }
 
@@ -338,7 +345,7 @@ public class TemperatureEventHandler {
 
         Level level = player.level();
         BlockPos playerPos = player.blockPosition();
-        int radius = (int) Math.round(ServerConfig.HEAT_SOURCE_RADIUS);
+        int radius = (int) Math.round(ServerConfig.HEAT_SOURCE_RADIUS.get());
         int radiusY = Math.min(radius, 2);
 
         for (BlockPos pos : BlockPos.betweenClosed(
@@ -447,7 +454,7 @@ public class TemperatureEventHandler {
             }
         }
         if (freezeImmunePieces == 0) return 0.0F;
-        float maxReduction = (float) ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION;
+        float maxReduction = ServerConfig.WETNESS_FREEZE_IMMUNE_REDUCTION.get().floatValue();
         return (freezeImmunePieces / 4.0F) * maxReduction;
     }
 

@@ -1,16 +1,26 @@
 package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.HumanNatureCommon;
+import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModItems;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
+import com.alikuxac.humannature.modules.injury.InjuryModule;
+import com.alikuxac.humannature.network.SyncBloodPayload;
+import com.alikuxac.humannature.network.SyncNutritionPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -37,6 +47,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.Map;
@@ -71,6 +82,7 @@ public class PhysiologyEventHandler {
     public static final ResourceLocation EXERTION_JUMP_STRENGTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "exertion_jump_strength");
     public static final ResourceLocation ADRENALINE_SPEED_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "adrenaline_speed_surge");
     public static final ResourceLocation OVEREATING_SLOW_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("humannature", "overeating_slowness");
+    public static final ResourceLocation BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "blood_loss_max_health");
 
     private static final AttributeModifier EXERTION_ATTACK_SPEED_MODIFIER = new AttributeModifier(
             EXERTION_ATTACK_SPEED_MODIFIER_ID,
@@ -131,9 +143,15 @@ public class PhysiologyEventHandler {
             handleAdrenalineTick(player, data);
         }
 
+        if (PhysiologyModule.isBloodSystemEnabled()) {
+            handleBloodTick(player, data);
+        }
+
         if (data.hasCalciumBuff()) {
             data.decrementCalciumAbsorptionTicks();
         }
+
+        NutritionEventHandler.handlePlayerTick(player, data);
 
         if (PhysiologyModule.isSleepDeprivationEnabled() && !isSleeping) {
             data.incrementAwakeTicks();
@@ -146,8 +164,8 @@ public class PhysiologyEventHandler {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 0.8F, 0.7F);
 
-                    int minInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL;
-                    int maxInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL;
+                    int minInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL.get();
+                    int maxInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL.get();
                     if (maxInterval < minInterval) {
                         maxInterval = minInterval;
                     }
@@ -162,15 +180,20 @@ public class PhysiologyEventHandler {
         if (PhysiologyModule.isToxinBuildupEnabled()) {
             if (data.getToxinBuildup() > 0.0f) {
                 data.incrementTicksSinceLastExposure();
-                int decayDelay = ServerConfig.TOXIN_DECAY_DELAY_TICKS;
+                int decayDelay = ServerConfig.TOXIN_DECAY_DELAY_TICKS.get();
 
                 if (data.getTicksSinceLastExposure() >= decayDelay) {
                     boolean isStandingStill = !isMoving;
                     boolean isResting = isSleeping || (player.isCrouching() && isStandingStill);
                     boolean nearHeat = isNearHeatSource(player);
 
-                    double multiplier = (isResting || nearHeat) ? ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER : 1.0;
-                    double ratePerSec = ServerConfig.TOXIN_DECAY_RATE_PER_SECOND;
+                    double multiplier = (isResting || nearHeat) ?
+                            (ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER.get() != null ?
+                                    ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER.get() : 3.0)
+                            : 1.0;
+                    multiplier *= data.getToxinEliminationMultiplier();
+                    double ratePerSec = ServerConfig.TOXIN_DECAY_RATE_PER_SECOND != null ?
+                            ServerConfig.TOXIN_DECAY_RATE_PER_SECOND.get() : 2.0;
                     float decayPerTick = (float) ((ratePerSec / 20.0) * multiplier);
                     data.decayToxinBuildup(decayPerTick);
                 }
@@ -192,7 +215,7 @@ public class PhysiologyEventHandler {
         }
 
         ToxinType toxinType = isPoison ? ToxinType.POISON : ToxinType.WITHER;
-        double baseHit = ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT;
+        double baseHit = ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT.get();
         float durationFactor = (effectInstance.getDuration() / 20.0f) * 1.5f;
         float amplifierFactor = effectInstance.getAmplifier() + 1;
         float baseValue = (float) Math.max(baseHit, Math.min(100.0, durationFactor * amplifierFactor));
@@ -255,6 +278,8 @@ public class PhysiologyEventHandler {
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
 
+        NutritionEventHandler.handleItemConsumption(player, stack);
+
         if (PhysiologyModule.isToxinBuildupEnabled() && data.getToxinBuildup() > 0.0f) {
             if (stack.is(Items.MILK_BUCKET)) {
                 data.resetToxin();
@@ -291,6 +316,16 @@ public class PhysiologyEventHandler {
                 data.resetIndigestion();
             } else if (stack.is(Items.HONEY_BOTTLE)) {
                 data.decayIndigestion(30.0f);
+            }
+        }
+
+        if (PhysiologyModule.isBloodSystemEnabled()) {
+            if (stack.is(Items.MILK_BUCKET)) {
+                int milkAmount = ServerConfig.BLOOD_MILK_RESTORE_AMOUNT != null ? ServerConfig.BLOOD_MILK_RESTORE_AMOUNT.get() : 500;
+                data.modifyBloodVolume(milkAmount);
+            } else if (stack.is(Items.BEEF) || stack.is(Items.COOKED_BEEF) || stack.is(ModItems.BONE_BROTH.get())) {
+                int duration = ServerConfig.BLOOD_MEAT_BOOST_DURATION_TICKS != null ? ServerConfig.BLOOD_MEAT_BOOST_DURATION_TICKS.get() : 1200;
+                data.setBloodRegenBoostTicks(duration);
             }
         }
 
@@ -386,18 +421,363 @@ public class PhysiologyEventHandler {
 
     public static void onPlayerDeath(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        savePlayerNutritionNbt(player, data);
+        data.resetBlood(false);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
         removeExertionModifiers(player);
+        removeBloodModifiers(player);
     }
 
     public static void onPlayerRespawn(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        initOrLoadPlayerBlood(player, data);
+        data.resetBlood(false);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
         PhysiologyModule.reset(player.getUUID());
+        initOrLoadNutritionNbt(player, data);
         removeExertionModifiers(player);
+        removeBloodModifiers(player);
     }
 
     public static void onPlayerLoggedOut(Player player) {
         FOOD_SNAPSHOTS.remove(player.getUUID());
+        savePlayerNutritionNbt(player, PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()));
+    }
+
+    public static void onPlayerLoggedIn(Player player) {
+        initOrLoadNutritionNbt(player, PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()));
+    }
+
+    public static void initOrLoadPlayerBlood(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        if (persisted.contains("HumanNatureBlood")) {
+            CompoundTag bloodTag = persisted.getCompound("HumanNatureBlood");
+            if (bloodTag.contains("BloodType")) {
+                byte typeId = bloodTag.getByte("BloodType");
+                data.setBloodType(BloodType.fromId(typeId));
+                short vol = bloodTag.contains("BloodVolume") ? bloodTag.getShort("BloodVolume") : PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME;
+                data.setBloodVolume(vol);
+                byte bleed = bloodTag.contains("BleedingTier") ? bloodTag.getByte("BleedingTier") : 0;
+                data.setBleedingTier(bleed);
+                int clotting = bloodTag.contains("ClottingTicks") ? bloodTag.getInt("ClottingTicks") : 0;
+                data.setClottingTicks(clotting);
+                int boost = bloodTag.contains("BloodRegenBoostTicks") ? bloodTag.getInt("BloodRegenBoostTicks") : 0;
+                data.setBloodRegenBoostTicks(boost);
+                syncBloodToClient(player, data);
+                return;
+            }
+        }
+        BloodType rolled = BloodType.getRandom(player.getRandom());
+        data.setBloodType(rolled);
+        data.setBloodVolume(PlayerPhysiologyData.DEFAULT_BLOOD_VOLUME);
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+        data.setBloodRegenBoostTicks(0);
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
+    }
+
+    public static void savePlayerBloodNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        CompoundTag bloodTag = persisted.getCompound("HumanNatureBlood");
+
+        if (data.getBloodType() != null) {
+            bloodTag.putByte("BloodType", data.getBloodType().getId());
+        }
+        bloodTag.putShort("BloodVolume", data.getBloodVolume());
+        bloodTag.putByte("BleedingTier", data.getBleedingTier());
+        bloodTag.putInt("ClottingTicks", data.getClottingTicks());
+        bloodTag.putInt("BloodRegenBoostTicks", data.getBloodRegenBoostTicks());
+
+        persisted.put("HumanNatureBlood", bloodTag);
+        root.put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    public static void initOrLoadNutritionNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        if (persisted.contains("HumanNatureNutrition")) {
+            CompoundTag nutritionTag = persisted.getCompound("HumanNatureNutrition");
+            data.setCalcium(nutritionTag.getByte("Calcium"));
+            data.setCarbohydrates(nutritionTag.getByte("Carbohydrates"));
+            data.setVitamins(nutritionTag.getByte("Vitamins"));
+            syncNutritionToClient(player, data);
+            return;
+        }
+        savePlayerNutritionNbt(player, data);
+        syncNutritionToClient(player, data);
+    }
+
+    public static void savePlayerNutritionNbt(Player player, PlayerPhysiologyData data) {
+        if (player.level().isClientSide()) return;
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        CompoundTag nutritionTag = persisted.getCompound("HumanNatureNutrition");
+        nutritionTag.putByte("Calcium", data.getCalcium());
+        nutritionTag.putByte("Carbohydrates", data.getCarbohydrates());
+        nutritionTag.putByte("Vitamins", data.getVitamins());
+        persisted.put("HumanNatureNutrition", nutritionTag);
+        root.put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    public static void syncBloodToClient(Player player, PlayerPhysiologyData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            byte typeId = data.getBloodType() != null ? data.getBloodType().getId() : BloodType.O_POSITIVE.getId();
+            SyncBloodPayload payload = new SyncBloodPayload(data.getBloodVolume(), typeId, data.getBleedingTier());
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(payload));
+            data.markBloodSynced();
+        }
+    }
+
+    public static void syncNutritionToClient(Player player, PlayerPhysiologyData data) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            SyncNutritionPayload payload = new SyncNutritionPayload(data.getCalcium(), data.getCarbohydrates(), data.getVitamins());
+            serverPlayer.connection.send(new ClientboundCustomPayloadPacket(payload));
+        }
+    }
+
+    public static void handleDiagnosticTreat(ServerPlayer patient, int limbIndex, int treatmentType) {
+        LimbType limb = LimbType.fromIndex(limbIndex);
+        if (treatmentType == 0) {
+            ItemStack splint = InjuryEventHandler.findFirstSplint(patient);
+            if (splint.isEmpty() || !InjuryEventHandler.handleQuickTreat(patient, limb, splint)) return;
+            InjuryEventHandler.syncInjuriesToClient(patient, InjuryModule.getOrCreateInjuryData(patient.getUUID()));
+        } else if (treatmentType == 1) {
+            if (!PhysiologyModule.isBloodSystemEnabled()) return;
+            if (PhysiologyModule.getBleedingTier(patient.getUUID()) <= 0) return;
+            ItemStack bandage = InjuryEventHandler.findFirstBandage(patient);
+            if (bandage.isEmpty() || patient.getCooldowns().isOnCooldown(bandage.getItem())) return;
+            applyClothBandageTreatment(patient);
+            patient.getCooldowns().addCooldown(bandage.getItem(), ClothBandageItem.CHANNEL_DURATION);
+            bandage.consume(1, patient);
+        }
+    }
+
+    public static void removeBloodModifiers(Player player) {
+        AttributeInstance maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttr != null && maxHealthAttr.hasModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID)) {
+            maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        }
+    }
+
+    public static void updateBloodMaxHealthModifier(Player player, PlayerPhysiologyData data) {
+        AttributeInstance maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttr == null) return;
+
+        short bloodVol = data.getBloodVolume();
+        double lostFraction = Math.max(0.0, (PlayerPhysiologyData.MAX_BLOOD_VOLUME - bloodVol) / (double) PlayerPhysiologyData.MAX_BLOOD_VOLUME);
+
+        double totalWithoutBlood = maxHealthAttr.getValue();
+        AttributeModifier existing = maxHealthAttr.getModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        if (existing != null) {
+            double mult = 1.0 + existing.amount();
+            if (mult > 0.001) {
+                totalWithoutBlood = totalWithoutBlood / mult;
+            }
+        }
+
+        double safeFloor = ServerConfig.BLOOD_SAFE_MIN_HEALTH != null ? ServerConfig.BLOOD_SAFE_MIN_HEALTH.get() : 4.0;
+
+        if (lostFraction > 0.001 && totalWithoutBlood > safeFloor) {
+            double targetHealth = Math.max(safeFloor, totalWithoutBlood * (1.0 - lostFraction));
+            double modAmount = (targetHealth / totalWithoutBlood) - 1.0;
+            modAmount = Math.max(-1.0, Math.min(0.0, modAmount));
+
+            if (existing == null || Math.abs(existing.amount() - modAmount) > 0.005) {
+                if (existing != null) {
+                    maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+                }
+                maxHealthAttr.addTransientModifier(new AttributeModifier(
+                        BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID,
+                        modAmount,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+                ));
+            }
+        } else if (existing != null) {
+            maxHealthAttr.removeModifier(BLOOD_LOSS_MAX_HEALTH_MODIFIER_ID);
+        }
+
+        if (player.getHealth() > maxHealthAttr.getValue()) {
+            player.setHealth((float) Math.max(1.0, maxHealthAttr.getValue()));
+        }
+    }
+
+    public static boolean shouldCancelNaturalRegen(Player player, float amount) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return false;
+        if (amount > 1.0F) return false;
+        if (player.hasEffect(MobEffects.REGENERATION) || player.hasEffect(MobEffects.HEAL)) return false;
+
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        return data.isBleeding() || data.getBloodVolume() < (short) (PlayerPhysiologyData.MAX_BLOOD_VOLUME * 0.70);
+    }
+
+    public static void triggerMinorBleeding(Player player) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        if (player.isCreative() || player.isSpectator() || player.isDeadOrDying()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() == 0) {
+            data.setBleedingTier((byte) 1);
+            savePlayerBloodNbt(player, data);
+            syncBloodToClient(player, data);
+        }
+    }
+
+    public static void triggerArterialBleeding(Player player) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        if (player.isCreative() || player.isSpectator() || player.isDeadOrDying()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() < 2) {
+            data.setBleedingTier((byte) 2);
+            savePlayerBloodNbt(player, data);
+            syncBloodToClient(player, data);
+        }
+    }
+
+    public static void applyClothBandageTreatment(Player patient) {
+        if (!PhysiologyModule.isBloodSystemEnabled()) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(patient.getUUID());
+        byte tier = data.getBleedingTier();
+        if (tier <= 0) return;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        if (tier >= 2) {
+            int duration = ServerConfig.BANDAGE_NUMBNESS_DURATION_TICKS.get();
+            patient.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 0, false, false, true));
+        }
+
+        savePlayerBloodNbt(patient, data);
+        syncBloodToClient(patient, data);
+    }
+
+    public static boolean applyEmergencyTourniquet(Player player, ItemStack stack) {
+        if (!PhysiologyModule.isBloodSystemEnabled() || !ServerConfig.ENABLE_EMERGENCY_TOURNIQUET.get()) return false;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        if (data.getBleedingTier() <= 0) return false;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        int duration = ServerConfig.TOURNIQUET_NUMBNESS_DURATION_TICKS.get();
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 1, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, duration, 0, false, false, true));
+
+        savePlayerBloodNbt(player, data);
+        syncBloodToClient(player, data);
+
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.LEASH_KNOT_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
+
+        stack.consume(1, player);
+        return true;
+    }
+
+    public static boolean applyEmergencyTourniquetToTarget(Player healer, Player target, ItemStack stack) {
+        if (!PhysiologyModule.isBloodSystemEnabled() || !ServerConfig.ENABLE_EMERGENCY_TOURNIQUET.get()) return false;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(target.getUUID());
+        if (data.getBleedingTier() <= 0) return false;
+
+        data.setBleedingTier((byte) 0);
+        data.setClottingTicks(0);
+
+        int duration = ServerConfig.TOURNIQUET_NUMBNESS_DURATION_TICKS.get();
+        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 1, false, false, true));
+        target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, duration, 0, false, false, true));
+
+        savePlayerBloodNbt(target, data);
+        syncBloodToClient(target, data);
+
+        target.level().playSound(null, target.getX(), target.getY(), target.getZ(),
+                SoundEvents.LEASH_KNOT_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
+
+        stack.consume(1, healer);
+        return true;
+    }
+
+    private static void handleBloodTick(Player player, PlayerPhysiologyData data) {
+        if (data.getBloodType() == null) {
+            initOrLoadPlayerBlood(player, data);
+        }
+
+        byte bleedTier = data.getBleedingTier();
+
+        if (bleedTier == 1) {
+            data.decrementClottingTicks();
+            if (data.getClottingTicks() <= 0) {
+                data.setBleedingTier((byte) 0);
+                savePlayerBloodNbt(player, data);
+                syncBloodToClient(player, data);
+                bleedTier = 0;
+            }
+        }
+
+        if (data.getBloodRegenBoostTicks() > 0) {
+            data.decrementBloodRegenBoostTicks();
+        }
+
+        if (!data.isBleeding() && data.getBloodVolume() < PlayerPhysiologyData.MAX_BLOOD_VOLUME && player.getFoodData().getFoodLevel() >= 18) {
+            int baseRegen = ServerConfig.BLOOD_REGEN_PER_TICK != null ? ServerConfig.BLOOD_REGEN_PER_TICK.get() : 1;
+            int mult = data.getBloodRegenBoostTicks() > 0 ?
+                    (ServerConfig.BLOOD_MEAT_BOOST_MULTIPLIER != null ? ServerConfig.BLOOD_MEAT_BOOST_MULTIPLIER.get() : 3) : 1;
+            data.modifyBloodVolume(baseRegen * mult);
+        }
+
+        if (bleedTier >= 2 && player.tickCount % 8 == 0 && player.level() instanceof ServerLevel serverLevel) {
+            double px = player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.3;
+            double py = player.getY() + 0.7 + (player.getRandom().nextDouble() - 0.5) * 0.2;
+            double pz = player.getZ() + (player.getRandom().nextDouble() - 0.5) * 0.3;
+            serverLevel.sendParticles(
+                    new DustParticleOptions(new Vector3f(0.55F, 0.02F, 0.03F), 1.0F),
+                    px, py, pz,
+                    3, 0.05, 0.0, 0.05, 0.02
+            );
+        }
+
+        updateBloodMaxHealthModifier(player, data);
+
+        short vol = data.getBloodVolume();
+        if (vol <= 0) {
+            player.kill();
+            return;
+        }
+
+        if (vol < 2000) {
+            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 3, false, false, true));
+            player.setSprinting(false);
+        } else if (vol < 3000) {
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false, true));
+        }
+
+        if (player.tickCount % 20 == 0) {
+            if (bleedTier > 0) {
+                int loss = switch (bleedTier) {
+                    case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                    case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
+                    case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
+                    default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
+                };
+                data.modifyBloodVolume(-loss);
+            }
+
+            int threshold = ServerConfig.BLOOD_SYNC_DELTA_THRESHOLD.get();
+            if (data.isBloodDeltaThresholdExceeded(threshold)) {
+                savePlayerBloodNbt(player, data);
+                syncBloodToClient(player, data);
+            }
+        }
     }
 
     private static void handlePhysicalExertionTick(Player player, PlayerPhysiologyData data, boolean isMoving, boolean isSleeping) {
@@ -416,7 +796,7 @@ public class PhysiologyEventHandler {
                 Vec3 motion = player.getDeltaMovement();
                 if (flow.dot(motion) < -0.01) {
                     data.addExertion(0.75f);
-                    if (data.getExertionScore() >= 100.0f) {
+                    if (data.getExertionScore() >= data.getStaminaCapacity()) {
                         data.setMuscleFailure(true);
                     }
                 }
@@ -428,9 +808,9 @@ public class PhysiologyEventHandler {
             if (data.isMuscleFailure()) {
                 player.setSprinting(false);
             } else {
-                double drain = ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK;
+                double drain = ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK.get();
                 data.addExertion((float) drain);
-                if (data.getExertionScore() >= 100.0f) {
+                if (data.getExertionScore() >= data.getStaminaCapacity()) {
                     data.setMuscleFailure(true);
                     player.setSprinting(false);
                 }
@@ -439,8 +819,8 @@ public class PhysiologyEventHandler {
 
         if (!isMoving && player.onGround() && data.getTicksSinceLastMining() > 10 && data.getTicksSinceLastJump() > 10 && !isSprinting) {
             data.incrementRestTicks();
-            int reqRest = ServerConfig.EXERTION_REST_RECOVERY_TICKS;
-            data.decayExertion(100.0f / (float) reqRest);
+            int reqRest = ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() != null ? ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() : 70;
+            data.decayExertion(data.getStaminaCapacity() / (float) reqRest);
             if (data.getRestTicks() >= reqRest) {
                 data.resetExertion();
                 removeExertionModifiers(player);
@@ -478,14 +858,14 @@ public class PhysiologyEventHandler {
         if (player.isInWater() || player.isSwimming()) {
             data.incrementContinuousSwimmingTicks();
             data.resetCrampRestTicks();
-            int threshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS;
+            int threshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get();
             if (data.getContinuousSwimmingTicks() >= threshold && !data.isSwimmingCramped()) {
                 data.setSwimmingCramped(true);
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.PLAYER_HURT_DROWN, SoundSource.PLAYERS, 1.0F, 0.8F);
             }
             if (data.isSwimmingCramped()) {
-                double penalty = ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY;
+                double penalty = ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY.get();
                 double factor = Math.max(0.1, 1.0 - penalty);
                 Vec3 motion = player.getDeltaMovement();
                 player.setDeltaMovement(motion.x * factor, motion.y, motion.z * factor);
@@ -499,7 +879,7 @@ public class PhysiologyEventHandler {
             boolean isInBoat = player.getVehicle() != null;
             if (isAshore || isInBoat || !player.isInWater()) {
                 data.incrementCrampRestTicks();
-                int recTicks = ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS;
+                int recTicks = ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS.get();
                 if (data.getCrampRestTicks() >= recTicks) {
                     data.resetSwimmingCramps();
                 }
@@ -519,8 +899,8 @@ public class PhysiologyEventHandler {
         data.incrementContinuousMiningTicks();
         data.setTicksSinceLastMining(0);
         data.resetRestTicks();
-        int limit = ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS;
-        data.addExertion(100.0f / (float) limit);
+        int limit = ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() != null ? ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() : 200;
+        data.addExertion(data.getStaminaCapacity() / (float) limit);
         if (data.getContinuousMiningTicks() >= limit) {
             data.setMuscleFailure(true);
         }
@@ -539,7 +919,7 @@ public class PhysiologyEventHandler {
         if (!PhysiologyModule.isExertionEnabled()) return;
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-        if (data.isMuscleFailure() || (100.0f - data.getExertionScore()) < 10.0f) {
+        if (data.isMuscleFailure() || (data.getStaminaCapacity() - data.getExertionScore()) < 10.0f) {
             Vec3 motion = player.getDeltaMovement();
             player.setDeltaMovement(motion.x, Math.min(0.0, motion.y), motion.z);
             player.hurtMarked = true;
@@ -564,7 +944,7 @@ public class PhysiologyEventHandler {
             jumpCost += Math.min(6.0f, 1.0f * (data.getConsecutiveJumps() - 2));
         }
         data.addExertion(jumpCost);
-        if (data.getExertionScore() >= 100.0f || data.getConsecutiveJumps() >= 8) {
+        if (data.getExertionScore() >= data.getStaminaCapacity() || data.getConsecutiveJumps() >= 8) {
             data.setMuscleFailure(true);
         }
     }
@@ -572,7 +952,7 @@ public class PhysiologyEventHandler {
     public static float modifyBreakSpeed(Player player, float originalSpeed) {
         if (!PhysiologyModule.isExertionEnabled()) return originalSpeed;
         if (PhysiologyModule.isMuscleFailure(player.getUUID())) {
-            double penalty = ServerConfig.EXERTION_MINING_SPEED_PENALTY;
+            double penalty = ServerConfig.EXERTION_MINING_SPEED_PENALTY.get();
             return (float) (originalSpeed * (1.0 - penalty));
         }
         return originalSpeed;
@@ -581,7 +961,7 @@ public class PhysiologyEventHandler {
     private static void handleDigestionTick(Player player, PlayerPhysiologyData data) {
         if (data.getPendingNutrition() > 0.0f || data.getPendingSaturation() > 0.0f) {
             data.incrementDigestionTickCounter();
-            int interval = ServerConfig.DIGESTION_INTERVAL_TICKS;
+            int interval = ServerConfig.DIGESTION_INTERVAL_TICKS.get();
             if (data.getDigestionTickCounter() >= interval) {
                 data.resetDigestionTickCounter();
 
@@ -646,7 +1026,7 @@ public class PhysiologyEventHandler {
 
         if (isDeepUnderground && light == 0 && !isCalmed) {
             data.incrementClaustrophobiaTicks();
-            int threshold = ServerConfig.PANIC_THRESHOLD_TICKS;
+            int threshold = ServerConfig.PANIC_THRESHOLD_TICKS.get();
             if (data.getClaustrophobiaTicks() >= threshold) {
                 data.setPanicking(true);
                 if (data.getPanicSoundCooldown() > 0) {
@@ -717,7 +1097,7 @@ public class PhysiologyEventHandler {
                 player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 40, 0, false, false, true));
                 player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 25, 0, false, false, true));
 
-                data.setExertionScore(100.0f);
+                data.setExertionScore(data.getStaminaCapacity());
                 data.setMuscleFailure(true);
                 player.setSprinting(false);
 
@@ -734,7 +1114,7 @@ public class PhysiologyEventHandler {
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         if (data.getAdrenalineCooldownTicks() <= 0 && !data.isAdrenalineActive()) {
-            int duration = ServerConfig.ADRENALINE_SURGE_DURATION_TICKS;
+            int duration = ServerConfig.ADRENALINE_SURGE_DURATION_TICKS.get();
             data.triggerAdrenaline(duration);
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 0.8F, 1.6F);

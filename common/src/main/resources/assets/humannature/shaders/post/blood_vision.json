@@ -1,0 +1,23 @@
+{
+  "targets": [
+    "humannature:blood_vision"
+  ],
+  "passes": [
+    {
+      "name": "humannature:blood_vision",
+      "intarget": "minecraft:main",
+      "outtarget": "humannature:blood_vision",
+      "uniforms": [
+        {
+          "name": "Intensity",
+          "values": [ 0.0 ]
+        }
+      ]
+    },
+    {
+      "name": "minecraft:blit",
+      "intarget": "humannature:blood_vision",
+      "outtarget": "minecraft:main"
+    }
+  ]
+}

@@ -75,7 +75,7 @@ class AutoHealthyHudTest {
             }
         });
 
-        TreatLimbPayload testPayload = new TreatLimbPayload((byte) LimbType.LEFT_LEG.getIndex());
+        TreatLimbPayload testPayload = new TreatLimbPayload((byte) LimbType.LEFT_LEG.getIndex(), TreatLimbPayload.TYPE_SPLINT);
         NetworkHandler.sendToServer(testPayload);
 
         assertNotNull(sentPayload.get());

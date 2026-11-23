@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:life_giver",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_carrot"
+    },
+    "title": {
+      "translate": "advancements.humannature.balanced_diet.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.balanced_diet.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "max_nutrition": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "max_nutrition"
+      }
+    }
+  }
+}

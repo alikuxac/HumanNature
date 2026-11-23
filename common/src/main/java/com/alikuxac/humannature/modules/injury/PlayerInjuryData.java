@@ -140,6 +140,13 @@ public class PlayerInjuryData {
         return false;
     }
 
+    public boolean hasAnySevereTrauma() {
+        for (byte s : limbSeverities) {
+            if (s >= 2) return true;
+        }
+        return false;
+    }
+
     public int getTotalInjuries() {
         int count = 0;
         for (byte s : limbSeverities) {

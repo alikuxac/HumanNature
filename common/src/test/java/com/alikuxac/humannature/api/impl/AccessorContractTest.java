@@ -1,6 +1,8 @@
 package com.alikuxac.humannature.api.impl;
 
 import com.alikuxac.humannature.api.HumanNatureAPI;
+import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.api.blood.IBloodAccessor;
 import com.alikuxac.humannature.api.injury.InjuryTier;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.api.weight.EncumbranceTier;
@@ -28,6 +30,7 @@ class AccessorContractTest {
         assertNotNull(api.getNutrition());
         assertNotNull(api.getTemperature());
         assertNotNull(api.getWeight());
+        assertNotNull(api.getBlood());
         assertNotNull(api.getEventBus());
     }
 
@@ -156,5 +159,45 @@ class AccessorContractTest {
         assertEquals(500.0f, api.getWeight().getMaxCapacity(playerId), 0.01f);
         assertEquals(EncumbranceTier.NORMAL, api.getWeight().getEncumbranceTier(playerId));
         assertFalse(api.getWeight().isEncumbered(playerId));
+    }
+
+    @Test
+    void testBloodAccessorContracts() {
+        HumanNatureAPI api = HumanNatureAPI.getInstance();
+        IBloodAccessor blood = api.getBlood();
+        assertNotNull(blood);
+        UUID playerId = UUID.randomUUID();
+
+        // Default standard volume 5000 ml
+        assertEquals(IBloodAccessor.DEFAULT_BLOOD_VOLUME, blood.getBloodVolume(playerId));
+        assertNull(blood.getBloodType(playerId));
+        assertEquals((byte) 0, blood.getBleedingTier(playerId));
+
+        // Assign BloodType
+        blood.setBloodType(playerId, BloodType.A_POSITIVE);
+        assertEquals(BloodType.A_POSITIVE, blood.getBloodType(playerId));
+
+        // Modify volume
+        blood.modifyBloodVolume(playerId, -500);
+        assertEquals((short) 4500, blood.getBloodVolume(playerId));
+
+        blood.setBloodVolume(playerId, (short) 3200);
+        assertEquals((short) 3200, blood.getBloodVolume(playerId));
+
+        // Upper clamp
+        blood.modifyBloodVolume(playerId, 10000);
+        assertEquals(IBloodAccessor.MAX_BLOOD_VOLUME, blood.getBloodVolume(playerId));
+
+        // Lower clamp
+        blood.modifyBloodVolume(playerId, -10000);
+        assertEquals((short) 0, blood.getBloodVolume(playerId));
+
+        // Bleeding tier
+        blood.setBleedingTier(playerId, (byte) 2);
+        assertEquals((byte) 2, blood.getBleedingTier(playerId));
+
+        // Clamp bleeding tier max 3
+        blood.setBleedingTier(playerId, (byte) 10);
+        assertEquals((byte) 3, blood.getBleedingTier(playerId));
     }
 }

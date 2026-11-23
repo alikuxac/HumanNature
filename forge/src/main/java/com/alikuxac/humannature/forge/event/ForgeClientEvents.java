@@ -2,6 +2,8 @@ package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
+import com.alikuxac.humannature.client.BloodScreenEffectHandler;
+import com.alikuxac.humannature.client.HeartbeatAudioHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
@@ -13,6 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
@@ -34,6 +37,12 @@ public class ForgeClientEvents {
             event.setRoll(event.getRoll() + offset.roll + shiver.roll());
             event.setYaw(event.getYaw() + aimOffset.yaw() + shiver.yaw());
         }
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        BloodScreenEffectHandler.process(event.getPartialTick());
     }
 
     private static DiagnosticTabButton tabButton = null;
@@ -77,5 +86,6 @@ public class ForgeClientEvents {
             SwappableHudOverlay.cycleHudMode(mc.player);
         }
         SwappableHudOverlay.onClientTick(mc.player);
+        HeartbeatAudioHandler.onClientTick(mc.player);
     }
 }

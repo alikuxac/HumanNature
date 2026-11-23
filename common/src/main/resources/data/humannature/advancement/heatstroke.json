@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:cold_snap",
+  "display": {
+    "icon": {
+      "id": "minecraft:magma_block"
+    },
+    "title": {
+      "translate": "advancements.humannature.heatstroke.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.heatstroke.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "heat_exhaustion": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "heat_exhaustion"
+      }
+    }
+  }
+}

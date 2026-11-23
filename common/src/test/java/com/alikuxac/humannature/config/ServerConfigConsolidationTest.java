@@ -75,25 +75,25 @@ class ServerConfigConsolidationTest {
 
     @Test
     void testPublicStaticFinalConstants() {
-        assertEquals(0.10, ServerConfig.SPLINT_SPEED_REDUCTION, 0.001);
-        assertEquals(1, ServerConfig.SPLINT_DURABILITY_PER_50_STEPS);
-        assertEquals(0.5, ServerConfig.BONE_FRACTURE_CROUCH_MULTIPLIER, 0.001);
+        assertEquals(0.10, ServerConfig.SPLINT_SPEED_REDUCTION.get(), 0.001);
+        assertEquals(1, ServerConfig.SPLINT_DURABILITY_PER_50_STEPS.get());
+        assertEquals(0.5, ServerConfig.BONE_FRACTURE_CROUCH_MULTIPLIER.get(), 0.001);
 
-        assertEquals(0.0025, ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE, 0.0001);
-        assertEquals(0.015, ServerConfig.WETNESS_WATER_ACCUMULATION_RATE, 0.0001);
-        assertEquals(12.5, ServerConfig.HEAT_DRYING_TIME_SECONDS, 0.01);
-        assertEquals(5.0, ServerConfig.HEAT_THAW_MULTIPLIER, 0.01);
+        assertEquals(0.0025, ServerConfig.WETNESS_RAIN_ACCUMULATION_RATE.get(), 0.0001);
+        assertEquals(0.015, ServerConfig.WETNESS_WATER_ACCUMULATION_RATE.get(), 0.0001);
+        assertEquals(12.5, ServerConfig.HEAT_DRYING_TIME_SECONDS.get(), 0.01);
+        assertEquals(5.0, ServerConfig.HEAT_THAW_MULTIPLIER.get(), 0.01);
 
-        assertEquals(0.8, ServerConfig.WEIGHT_HEAVY_BLOCK_BASE, 0.001);
-        assertEquals(0.4, ServerConfig.WEIGHT_METALLIC_ITEM_BASE, 0.001);
-        assertEquals(0.05, ServerConfig.WEIGHT_DEFAULT_ITEM_BASE, 0.001);
-        assertEquals(0.005, ServerConfig.WEIGHT_LIGHT_ITEM_BASE, 0.001);
+        assertEquals(0.8, ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get(), 0.001);
+        assertEquals(0.4, ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get(), 0.001);
+        assertEquals(0.05, ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get(), 0.001);
+        assertEquals(0.005, ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get(), 0.001);
 
-        assertEquals(25.0, ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT, 0.001);
-        assertEquals(80, ServerConfig.TOXIN_DECAY_DELAY_TICKS);
-        assertEquals(2.0, ServerConfig.TOXIN_DECAY_RATE_PER_SECOND, 0.001);
-        assertEquals(200, ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS);
-        assertEquals(70, ServerConfig.EXERTION_REST_RECOVERY_TICKS);
+        assertEquals(25.0, ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT.get(), 0.001);
+        assertEquals(80, ServerConfig.TOXIN_DECAY_DELAY_TICKS.get());
+        assertEquals(2.0, ServerConfig.TOXIN_DECAY_RATE_PER_SECOND.get(), 0.001);
+        assertEquals(200, ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get());
+        assertEquals(70, ServerConfig.EXERTION_REST_RECOVERY_TICKS.get());
     }
 }
 

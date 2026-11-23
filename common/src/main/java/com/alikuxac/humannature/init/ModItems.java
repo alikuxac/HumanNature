@@ -11,6 +11,8 @@ public class ModItems {
     public static Supplier<Item> DIAMOND_SPLINT = () -> null;
     public static Supplier<Item> NETHERITE_SPLINT = () -> null;
     public static Supplier<Item> BONE_BROTH = () -> null;
+    public static Supplier<Item> CLOTH_BANDAGE = () -> null;
+    public static Supplier<Item> BLOOD_BAG = () -> null;
 
     // Legacy fallback alias
     public static Supplier<Item> SPLINT = () -> WOODEN_SPLINT.get();

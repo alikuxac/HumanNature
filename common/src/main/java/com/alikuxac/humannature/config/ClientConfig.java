@@ -16,6 +16,9 @@ public class ClientConfig {
     public static Supplier<Integer> SWAPPABLE_HUD_Y = () -> 10;
     public static Supplier<Boolean> SHOW_METABOLIC_DETAILS = () -> true;
     public static Supplier<Boolean> SHOW_CARDIAC_HUD = () -> true;
+    public static Supplier<Boolean> ENABLE_BLOOD_SCREEN_EFFECTS = () -> true;
+    public static Supplier<Double> BLOOD_SCREEN_EFFECT_INTENSITY = () -> 1.0;
+    public static Supplier<Boolean> ENABLE_HEARTBEAT_AUDIO = () -> true;
 
     public static Supplier<Boolean> ENABLE_CAMERA_LIMPING = () -> true;
     public static Supplier<Boolean> ENABLE_SHIVERING_CAMERA = () -> true;

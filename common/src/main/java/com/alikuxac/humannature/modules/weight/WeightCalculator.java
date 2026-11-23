@@ -59,13 +59,13 @@ public class WeightCalculator {
 
         float baseWeight;
         if (stack.is(COMMON_HEAVY_BLOCKS) || stack.is(MOD_HEAVY_BLOCKS)) {
-            baseWeight = (float) ServerConfig.WEIGHT_HEAVY_BLOCK_BASE;
+            baseWeight = ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get().floatValue();
         } else if (stack.is(COMMON_METALLIC_ITEMS) || stack.is(MOD_METALLIC_ITEMS)) {
-            baseWeight = (float) ServerConfig.WEIGHT_METALLIC_ITEM_BASE;
+            baseWeight = ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get().floatValue();
         } else if (stack.is(COMMON_LIGHT_ITEMS) || stack.is(MOD_LIGHT_ITEMS)) {
-            baseWeight = (float) ServerConfig.WEIGHT_LIGHT_ITEM_BASE;
+            baseWeight = ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get().floatValue();
         } else {
-            baseWeight = (float) ServerConfig.WEIGHT_DEFAULT_ITEM_BASE;
+            baseWeight = ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get().floatValue();
         }
         return baseWeight;
     }
@@ -121,13 +121,13 @@ public class WeightCalculator {
             if (burdenHolder != null) {
                 MobEffectInstance burden = player.getEffect(burdenHolder);
                 if (burden != null) {
-                    double perLvl = ServerConfig.BURDEN_BEARER_CAPACITY_BONUS;
+                    double perLvl = ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get();
                     bonus += (burden.getAmplifier() + 1) * perLvl;
                 }
             }
         }
 
-        double loadBearingBonus = ServerConfig.LOAD_BEARING_CAPACITY_BONUS;
+        double loadBearingBonus = ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get();
         EquipmentSlot[] armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (EquipmentSlot slot : armorSlots) {
             ItemStack armor = player.getItemBySlot(slot);

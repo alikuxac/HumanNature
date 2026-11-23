@@ -2,7 +2,9 @@ package com.alikuxac.humannature.neoforge.init;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.init.ModItems;
+import com.alikuxac.humannature.item.BloodBagItem;
 import com.alikuxac.humannature.item.BoneBrothItem;
+import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.item.SplintTier;
 import net.minecraft.world.item.Item;
@@ -19,6 +21,8 @@ public class NeoForgeModItems {
     public static final DeferredItem<Item> DIAMOND_SPLINT = ITEMS.register("diamond_splint", () -> new SplintItem(SplintTier.DIAMOND));
     public static final DeferredItem<Item> NETHERITE_SPLINT = ITEMS.register("netherite_splint", () -> new SplintItem(SplintTier.NETHERITE));
     public static final DeferredItem<Item> BONE_BROTH = ITEMS.register("bone_broth", () -> new BoneBrothItem(new Item.Properties()));
+    public static final DeferredItem<Item> CLOTH_BANDAGE = ITEMS.register("cloth_bandage", () -> new ClothBandageItem(new Item.Properties()));
+    public static final DeferredItem<Item> BLOOD_BAG = ITEMS.register("blood_bag", () -> new BloodBagItem(new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ModItems.WOODEN_SPLINT = WOODEN_SPLINT;
@@ -27,6 +31,8 @@ public class NeoForgeModItems {
         ModItems.DIAMOND_SPLINT = DIAMOND_SPLINT;
         ModItems.NETHERITE_SPLINT = NETHERITE_SPLINT;
         ModItems.BONE_BROTH = BONE_BROTH;
+        ModItems.CLOTH_BANDAGE = CLOTH_BANDAGE;
+        ModItems.BLOOD_BAG = BLOOD_BAG;
         ModItems.SPLINT = WOODEN_SPLINT;
 
         ITEMS.register(eventBus);

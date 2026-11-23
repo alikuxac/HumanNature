@@ -1,6 +1,6 @@
 # Public Extensibility API & Event Pipeline
 
-Public API and event system for Human Nature **v0.3.1** on Minecraft 1.21.1 (NeoForge and Forge).
+Public API and event system for Human Nature **v0.4.0** on Minecraft 1.21.1 (NeoForge and Forge).
 
 ---
 
@@ -91,7 +91,39 @@ float toxin = nutrition.getToxinBuildup(player);
 float exertion = nutrition.getExertionScore(player);
 ```
 
-### 3. Temperature (`ITemperatureAccessor`)
+#### 3-Tier Reserve Buffs
+
+Three `byte` reserves (0–100) live in `HumanNatureNutrition` player NBT: calcium, carbohydrates, vitamins. Tagged foods fill them on `LivingEntityUseItemEvent.Finish`:
+
+| Reserve | Tag | Effect at full |
+| :--- | :--- | :--- |
+| Calcium | `#c:foods/calcium_rich` | fracture healing +25%, safe fall +2 blocks, fall damage −25% |
+| Carbohydrates | `#c:foods/carbohydrates` | exertion cap 100 → 150 |
+| Vitamins | `#c:foods/vegetables`, `#c:foods/fruits` | cold buildup −50%, toxin decay ×2 |
+
+Each reserve drops by 1 every `nutrientDepletionIntervalTicks` (default 150). Empty just turns the buff off — no damage or debuff. Strength scales with the current reserve; gains, intervals and multipliers are in `ServerConfig` under `nutrition`.
+
+### 3. Blood (`IBloodAccessor`)
+
+Query and modify blood volume, ABO/Rh type, and active bleeding tier. Volume is clamped to 0–5,000 ml.
+
+```java
+import com.alikuxac.humannature.api.HumanNatureAPI;
+import com.alikuxac.humannature.api.blood.BloodType;
+
+var blood = HumanNatureAPI.getInstance().getBlood();
+
+short ml = blood.getBloodVolume(player);
+blood.modifyBloodVolume(player, -500);
+BloodType type = blood.getBloodType(player);
+blood.setBloodType(player, BloodType.O_POSITIVE);
+byte bleedingTier = blood.getBleedingTier(player);
+blood.setBleedingTier(player, (byte) 0);
+```
+
+Every method also accepts a `UUID` for offline-capable data access.
+
+### 4. Temperature (`ITemperatureAccessor`)
 
 Read and write core body temperature, wetness buffer, and heat source proximity. Core temperature lives in `PlayerTemperatureData`, clamped to `[25.0°C, 45.0°C]` around a `37.0°C` baseline.
 
@@ -114,7 +146,7 @@ float wetness = temp.getWetnessBuffer(player);
 temp.setWetnessBuffer(player, 0.5f);
 ```
 
-### 4. Weight & Encumbrance (`IWeightAccessor`)
+### 5. Weight & Encumbrance (`IWeightAccessor`)
 
 Query current carried weight, max carrying capacity, and encumbrance tier.
 

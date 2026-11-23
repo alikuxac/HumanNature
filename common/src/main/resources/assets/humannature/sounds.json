@@ -1,0 +1,12 @@
+{
+  "heartbeat": {
+    "sounds": [
+      {
+        "name": "humannature:heartbeat",
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ],
+    "category": "players"
+  }
+}

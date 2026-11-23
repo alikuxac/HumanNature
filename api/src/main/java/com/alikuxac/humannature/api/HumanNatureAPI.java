@@ -1,5 +1,6 @@
 package com.alikuxac.humannature.api;
 
+import com.alikuxac.humannature.api.blood.IBloodAccessor;
 import com.alikuxac.humannature.api.event.HumanNatureEventBus;
 import com.alikuxac.humannature.api.injury.IInjuryAccessor;
 import com.alikuxac.humannature.api.nutrition.INutritionAccessor;
@@ -34,6 +35,8 @@ public abstract class HumanNatureAPI {
     public abstract ITemperatureAccessor getTemperature();
 
     public abstract IWeightAccessor getWeight();
+
+    public abstract IBloodAccessor getBlood();
 
     public HumanNatureEventBus getEventBus() {
         return HumanNatureEventBus.getInstance();

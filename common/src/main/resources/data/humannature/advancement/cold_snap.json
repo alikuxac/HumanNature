@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:powder_snow_bucket"
+    },
+    "title": {
+      "translate": "advancements.humannature.cold_snap.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.cold_snap.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "hypothermia": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "hypothermia"
+      }
+    }
+  }
+}

@@ -23,15 +23,15 @@ public class TemperatureModule implements IHumanModule {
     }
 
     public static boolean isWetnessAccumulationEnabled() {
-        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_WETNESS_ACCUMULATION;
+        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_WETNESS_ACCUMULATION.get();
     }
 
     public static boolean isHeatRewarmingEnabled() {
-        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_HEAT_REWARMING;
+        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_HEAT_REWARMING.get();
     }
 
     public static boolean isHypothermiaEnabled() {
-        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_HYPOTHERMIA;
+        return ServerConfig.ENABLE_TEMPERATURE.get() && ServerConfig.ENABLE_HYPOTHERMIA.get();
     }
 
     public static boolean isInternalWarmingActive(UUID playerId) {

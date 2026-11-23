@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:heavy_is_the_head",
+  "display": {
+    "icon": {
+      "id": "minecraft:enchanted_book"
+    },
+    "title": {
+      "translate": "advancements.humannature.pack_mule.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.pack_mule.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "max_load_bearing": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "max_load_bearing"
+      }
+    }
+  }
+}

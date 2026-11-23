@@ -93,10 +93,10 @@ Recovery foods reduce remaining fracture time on consumption:
 ### 7. Diagnostic UI
 
 - **Interactive Body Silhouette**:
-  - Open with `H` or the inventory tab button (`DiagnosticScreen`).
+  - Open with `H` (`DiagnosticScreen`); press `E` to return to the inventory.
   - Silhouette colors show limb status: Green (Healthy), Yellow (Minor / Sprain), Red (Severe / Fracture).
   - Splinted limbs display a cyan border (`#00FFFF`), the splint tier, and remaining durability.
-  - Clicking an injured limb uses the first suitable splint from inventory via `TreatLimbPayload`.
+  - Clicking an injured limb uses the first suitable splint or bandage from inventory via `TreatLimbPayload`.
   - Hovering a limb shows context hints: `[Click to Treat with Splint]` or `[Need Splint to Treat]`.
   - Active Osteogenesis shows a bone icon with remaining duration.
 - **Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)**:
@@ -126,6 +126,18 @@ When a player triggers a Totem of Undying to survive fatal fall damage:
     - **Extreme Impact** ($\ge 12.0$ damage, dive angle $\ge 35^\circ$ with speed $\ge 1.4$, or speed $\ge 1.8$):
       - Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
       - Drops any firework rockets held in either hand.
+
+---
+
+### 10. Hemorrhage & Field Hemostasis
+
+Physical trauma triggers bleeding tracked by the physiology module:
+
+- **Tier 1 (Minor Bleeding)**: Any non-magic, non-freeze hit $\ge 2.0$ damage triggers minor capillary bleeding (2 ml/s). Clots automatically after 35 seconds.
+- **Tier 2 (Arterial Bleeding)**: Severe trauma, including Tier 2 double leg fractures, triggers arterial bleeding (20 ml/s). Does not clot naturally; emits falling blood particles in-world.
+- **Cloth Bandage** (`humannature:cloth_bandage`): Channels for 1.5 seconds. Instantly halts minor bleeding; halts arterial bleeding while inflicting 5 seconds of Slowness I numbness.
+- **Emergency Tourniquet**: Consuming 1 Leather or String halts bleeding immediately at the cost of Slowness II and Mining Fatigue I for 8 seconds.
+- For complete circulatory thresholds and transfusion mechanics, see [PHYSIOLOGY_SYSTEM.md](./PHYSIOLOGY_SYSTEM.md).
 
 ---
 

@@ -7,6 +7,7 @@ import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import com.alikuxac.humannature.neoforge.init.NeoForgeModPotions;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
@@ -32,6 +33,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -87,6 +89,10 @@ public class NeoForgeEvents {
             if (mult > 1.0f) {
                 event.setDamageMultiplier(event.getDamageMultiplier() * mult);
             }
+            float nutritionMult = InjuryEventHandler.getNutritionFallDamageMultiplier(player);
+            if (nutritionMult < 1.0f) {
+                event.setDamageMultiplier(event.getDamageMultiplier() * nutritionMult);
+            }
         }
     }
 
@@ -98,7 +104,8 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onLivingHeal(LivingHealEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (InjuryEventHandler.shouldCancelNaturalRegen(player, event.getAmount())) {
+            if (InjuryEventHandler.shouldCancelNaturalRegen(player, event.getAmount())
+                    || PhysiologyEventHandler.shouldCancelNaturalRegen(player, event.getAmount())) {
                 event.setCanceled(true);
             }
         }
@@ -183,6 +190,9 @@ public class NeoForgeEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         WeightEventHandler.onPlayerLoggedIn(event.getEntity());
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PhysiologyEventHandler.onPlayerLoggedIn(event.getEntity());
+        }
     }
 
     @SubscribeEvent
@@ -369,7 +379,28 @@ public class NeoForgeEvents {
                 return;
             }
         }
+        ItemStack stack = event.getItemStack();
+        if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+            if (PhysiologyEventHandler.applyEmergencyTourniquet(player, stack)) {
+                event.setCancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide()));
+                event.setCanceled(true);
+                return;
+            }
+        }
         InjuryEventHandler.onPlayerRightClickItem(player, event.getHand(), event.getItemStack());
+    }
+
+    @SubscribeEvent
+    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (event.getTarget() instanceof Player targetPlayer) {
+            ItemStack stack = event.getItemStack();
+            if (stack.is(Items.LEATHER) || stack.is(Items.STRING)) {
+                if (PhysiologyEventHandler.applyEmergencyTourniquetToTarget(event.getEntity(), targetPlayer, stack)) {
+                    event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+                    event.setCanceled(true);
+                }
+            }
+        }
     }
 
     @SubscribeEvent

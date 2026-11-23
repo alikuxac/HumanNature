@@ -2,6 +2,7 @@ package com.alikuxac.humannature.item;
 
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
@@ -107,8 +108,10 @@ public class SplintItem extends Item {
             return stack;
         }
 
-        if (!level.isClientSide && InjuryEventHandler.isFractureActive(player)) {
+        if (!level.isClientSide && ServerConfig.ENABLE_INJURY.get() && ServerConfig.ENABLE_SPLINT.get()
+                && InjuryEventHandler.isFractureActive(player)) {
             applySplintTreatment(player, stack);
+            HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.SPLINT_APPLIED);
 
             stack.hurtAndBreak(1, player, player.getUsedItemHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
 
@@ -145,7 +148,8 @@ public class SplintItem extends Item {
             }
         }
 
-        if (targetLimb != null) {
+        InjuryEventHandler.applySplintHealing(player, tier);
+        if (targetLimb != null && InjuryEventHandler.isFractureActive(player)) {
             InjuryEventHandler.applySplintToLimb(player, targetLimb, tier);
         }
 

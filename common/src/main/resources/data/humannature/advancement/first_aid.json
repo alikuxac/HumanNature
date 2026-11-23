@@ -1,0 +1,26 @@
+{
+  "parent": "humannature:root",
+  "display": {
+    "icon": {
+      "id": "humannature:reinforced_splint"
+    },
+    "title": {
+      "translate": "advancements.humannature.first_aid.title"
+    },
+    "description": {
+      "translate": "advancements.humannature.first_aid.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "splint_applied": {
+      "trigger": "humannature:gameplay_event",
+      "conditions": {
+        "event_id": "splint_applied"
+      }
+    }
+  }
+}
