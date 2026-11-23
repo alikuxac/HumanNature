@@ -14,7 +14,7 @@ public class NeoForgeConfig {
     static {
         ModConfigSpec.Builder serverBuilder = new ModConfigSpec.Builder();
 
-        serverBuilder.comment("Module master toggles").push("modules");
+        serverBuilder.comment("Master module toggles for Human Nature").push("general");
         ModConfigSpec.BooleanValue enableInjury = serverBuilder
                 .comment("Enable injury & trauma module")
                 .define("enableInjury", true);
@@ -29,7 +29,7 @@ public class NeoForgeConfig {
                 .define("enablePhysiology", true);
         serverBuilder.pop();
 
-        serverBuilder.comment("Splint & limb stabilization mechanics").push("splint");
+        serverBuilder.comment("Injury and limb trauma mechanics").push("injury");
         ModConfigSpec.BooleanValue enableSplint = serverBuilder
                 .comment("Enable splint mechanics")
                 .define("enableSplint", true);
@@ -39,9 +39,8 @@ public class NeoForgeConfig {
         ModConfigSpec.IntValue splintDurabilityPer50Steps = serverBuilder
                 .comment("Durability consumed per 50 steps walked with active splint")
                 .defineInRange("splintDurabilityPer50Steps", 1, 0, 100);
-        serverBuilder.pop();
 
-        serverBuilder.comment("Bone fracture & trauma mechanics").push("fracture");
+        serverBuilder.comment("Bone fracture & trauma mechanics");
         ModConfigSpec.IntValue boneFractureDuration = serverBuilder
                 .comment("Base natural recovery duration in ticks (6000 ticks = 5 minutes)")
                 .defineInRange("boneFractureDurationTicks", 6000, 100, 72000);
@@ -201,7 +200,19 @@ public class NeoForgeConfig {
                 .defineInRange("adrenalineSurgeDurationTicks", 80, 20, 400);
         serverBuilder.pop();
 
-        serverBuilder.comment("Temperature & hypothermia mechanics").push("temperature");
+        serverBuilder.comment("Body temperature, wetness, and climate mechanics").push("temperature");
+        ModConfigSpec.DoubleValue temperatureChangeRateMultiplier = serverBuilder
+                .comment("Global multiplier for rate of temperature change, wetness accumulation, and heating/cooling rates")
+                .defineInRange("temperatureChangeRateMultiplier", 1.0, 0.1, 10.0);
+        ModConfigSpec.DoubleValue hypothermiaThreshold = serverBuilder
+                .comment("Fraction of freeze ticks required to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
+                .defineInRange("hypothermiaThreshold", 0.60, 0.1, 1.0);
+        ModConfigSpec.DoubleValue heatExhaustionThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering heat exhaustion debuffs (panting, slowness)")
+                .defineInRange("heatExhaustionThreshold", 39.5, 37.5, 43.0);
+        ModConfigSpec.DoubleValue heatDamageThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering periodic lethal hyperthermia damage")
+                .defineInRange("heatDamageThreshold", 42.0, 39.0, 45.0);
         ModConfigSpec.BooleanValue enableWetnessAccumulation = serverBuilder
                 .comment("Enable rain soaking and water wetness accumulation")
                 .define("enableWetnessAccumulation", true);
@@ -235,9 +246,6 @@ public class NeoForgeConfig {
         ModConfigSpec.IntValue internalWarmingDurationTicks = serverBuilder
                 .comment("Duration in ticks of internal warming buff granted by hot soups/stews (1600 ticks = 80s)")
                 .defineInRange("internalWarmingDurationTicks", 1600, 20, 72000);
-        ModConfigSpec.DoubleValue hypothermiaPenaltyThreshold = serverBuilder
-                .comment("Fraction of required freeze ticks to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
-                .defineInRange("hypothermiaPenaltyThreshold", 0.60, 0.1, 1.0);
         ModConfigSpec.BooleanValue hypothermiaMiningFatigue = serverBuilder
                 .comment("Enable Mining Fatigue I debuff when suffering from severe hypothermia")
                 .define("hypothermiaMiningFatigue", true);
@@ -250,6 +258,12 @@ public class NeoForgeConfig {
         serverBuilder.pop();
 
         serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
+        ModConfigSpec.DoubleValue maxCarryCapacityKg = serverBuilder
+                .comment("Baseline maximum carrying capacity in kilograms before encumbrance penalties apply")
+                .defineInRange("maxCarryCapacityKg", 500.0, 10.0, 10000.0);
+        ModConfigSpec.DoubleValue weightPenaltyMultiplier = serverBuilder
+                .comment("Global multiplier for encumbrance penalties (speed reduction, sinking pull in water, and fall damage)")
+                .defineInRange("weightPenaltyMultiplier", 1.0, 0.0, 10.0);
         ModConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
                 .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
                 .defineInRange("weightHeavyBlockBase", 0.8, 0.0, 100.0);
@@ -263,9 +277,6 @@ public class NeoForgeConfig {
                 .comment("Base weight multiplier for light items (#c:light_items)")
                 .defineInRange("weightLightItemBase", 0.005, 0.0, 100.0);
 
-        ModConfigSpec.DoubleValue weightMaxCapacity = serverBuilder
-                .comment("Max weight carrying capacity baseline in kg")
-                .defineInRange("weightMaxCapacity", 500.0, 10.0, 10000.0);
         ModConfigSpec.DoubleValue weightLightThreshold = serverBuilder
                 .comment("Encumbrance ratio threshold for Light tier (0.50 = 50%)")
                 .defineInRange("weightLightThreshold", 0.50, 0.0, 1.0);
@@ -328,6 +339,12 @@ public class NeoForgeConfig {
         ServerConfig.ENABLE_TOTEM_BYPASS = enableTotemBypass::get;
         ServerConfig.ENABLE_GFORCE_BLACKOUT = enableGForceBlackout::get;
         ServerConfig.ENABLE_KINETIC_CRASH = enableKineticCrash::get;
+
+        ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER = temperatureChangeRateMultiplier::get;
+        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = hypothermiaThreshold::get;
+        ServerConfig.HEAT_STRESS_OVERHEAT_THRESHOLD = heatExhaustionThreshold::get;
+        ServerConfig.HEAT_STRESS_DAMAGE_THRESHOLD = heatDamageThreshold::get;
+
         ServerConfig.ENABLE_SLEEP_DEPRIVATION = enableSleepDeprivation::get;
         ServerConfig.SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = sleepDeprivationFullFatigueTicks::get;
         ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD = sleepFatigueBlinkThreshold::get;
@@ -385,16 +402,16 @@ public class NeoForgeConfig {
         ServerConfig.HEAT_THAW_MULTIPLIER = heatThawMultiplier::get;
         ServerConfig.ENABLE_HYPOTHERMIA = enableHypothermia::get;
         ServerConfig.INTERNAL_WARMING_DURATION_TICKS = internalWarmingDurationTicks::get;
-        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = hypothermiaPenaltyThreshold::get;
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = hypothermiaMiningFatigue::get;
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = hypothermiaAttackSpeedPenalty::get;
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = hypothermiaInteractionRangePenalty::get;
 
+        ServerConfig.WEIGHT_MAX_CAPACITY = maxCarryCapacityKg::get;
+        ServerConfig.WEIGHT_PENALTY_MULTIPLIER = weightPenaltyMultiplier::get;
         ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = weightHeavyBlockBase::get;
         ServerConfig.WEIGHT_METALLIC_ITEM_BASE = weightMetallicItemBase::get;
         ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = weightDefaultItemBase::get;
         ServerConfig.WEIGHT_LIGHT_ITEM_BASE = weightLightItemBase::get;
-        ServerConfig.WEIGHT_MAX_CAPACITY = weightMaxCapacity::get;
         ServerConfig.WEIGHT_LIGHT_THRESHOLD = weightLightThreshold::get;
         ServerConfig.WEIGHT_MEDIUM_THRESHOLD = weightMediumThreshold::get;
         ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD = weightOverburdenedThreshold::get;
@@ -434,6 +451,9 @@ public class NeoForgeConfig {
         ModConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
+        ModConfigSpec.BooleanValue autoHideHealthyHud = clientBuilder
+                .comment("Automatically hide HUD overlays when player is fully healthy")
+                .define("autoHideHealthyHud", false);
         ModConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
                 .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
@@ -484,6 +504,7 @@ public class NeoForgeConfig {
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = enableStaminaHudOverlay::get;
         ClientConfig.ENABLE_WEIGHT_TOOLTIP = enableWeightTooltip::get;
         ClientConfig.ENABLE_SWAPPABLE_HUD = enableSwappableHud::get;
+        ClientConfig.AUTO_HIDE_HEALTHY_HUD = autoHideHealthyHud::get;
         ClientConfig.DEFAULT_HUD_MODE = defaultHudMode::get;
         ClientConfig.SWAPPABLE_HUD_X = swappableHudX::get;
         ClientConfig.SWAPPABLE_HUD_Y = swappableHudY::get;

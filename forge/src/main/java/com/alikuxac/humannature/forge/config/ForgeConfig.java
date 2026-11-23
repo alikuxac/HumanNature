@@ -16,7 +16,7 @@ public class ForgeConfig {
     static {
         ForgeConfigSpec.Builder serverBuilder = new ForgeConfigSpec.Builder();
 
-        serverBuilder.comment("Module master toggles").push("modules");
+        serverBuilder.comment("Master module toggles for Human Nature").push("general");
         ForgeConfigSpec.BooleanValue enableInjury = serverBuilder
                 .comment("Enable injury & trauma module")
                 .define("enableInjury", true);
@@ -31,7 +31,7 @@ public class ForgeConfig {
                 .define("enablePhysiology", true);
         serverBuilder.pop();
 
-        serverBuilder.comment("Splint & limb stabilization mechanics").push("splint");
+        serverBuilder.comment("Injury and limb trauma mechanics").push("injury");
         ForgeConfigSpec.BooleanValue enableSplint = serverBuilder
                 .comment("Enable splint mechanics")
                 .define("enableSplint", true);
@@ -41,9 +41,8 @@ public class ForgeConfig {
         ForgeConfigSpec.IntValue splintDurabilityPer50Steps = serverBuilder
                 .comment("Durability consumed per 50 steps walked with active splint")
                 .defineInRange("splintDurabilityPer50Steps", 1, 0, 100);
-        serverBuilder.pop();
 
-        serverBuilder.comment("Bone fracture & trauma mechanics").push("fracture");
+        serverBuilder.comment("Bone fracture & trauma mechanics");
         ForgeConfigSpec.IntValue boneFractureDuration = serverBuilder
                 .comment("Base natural recovery duration in ticks (6000 ticks = 5 minutes)")
                 .defineInRange("boneFractureDurationTicks", 6000, 100, 72000);
@@ -203,7 +202,19 @@ public class ForgeConfig {
                 .defineInRange("adrenalineSurgeDurationTicks", 80, 20, 400);
         serverBuilder.pop();
 
-        serverBuilder.comment("Temperature & hypothermia mechanics").push("temperature");
+        serverBuilder.comment("Body temperature, wetness, and climate mechanics").push("temperature");
+        ForgeConfigSpec.DoubleValue temperatureChangeRateMultiplier = serverBuilder
+                .comment("Global multiplier for rate of temperature change, wetness accumulation, and heating/cooling rates")
+                .defineInRange("temperatureChangeRateMultiplier", 1.0, 0.1, 10.0);
+        ForgeConfigSpec.DoubleValue hypothermiaThreshold = serverBuilder
+                .comment("Fraction of freeze ticks required to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
+                .defineInRange("hypothermiaThreshold", 0.60, 0.1, 1.0);
+        ForgeConfigSpec.DoubleValue heatExhaustionThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering heat exhaustion debuffs (panting, slowness)")
+                .defineInRange("heatExhaustionThreshold", 39.5, 37.5, 43.0);
+        ForgeConfigSpec.DoubleValue heatDamageThreshold = serverBuilder
+                .comment("Core body temperature threshold in degrees Celsius triggering periodic lethal hyperthermia damage")
+                .defineInRange("heatDamageThreshold", 42.0, 39.0, 45.0);
         ForgeConfigSpec.BooleanValue enableWetnessAccumulation = serverBuilder
                 .comment("Enable rain soaking and water wetness accumulation")
                 .define("enableWetnessAccumulation", true);
@@ -237,9 +248,6 @@ public class ForgeConfig {
         ForgeConfigSpec.IntValue internalWarmingDurationTicks = serverBuilder
                 .comment("Duration in ticks of internal warming buff granted by hot soups/stews (1600 ticks = 80s)")
                 .defineInRange("internalWarmingDurationTicks", 1600, 20, 72000);
-        ForgeConfigSpec.DoubleValue hypothermiaPenaltyThreshold = serverBuilder
-                .comment("Fraction of required freeze ticks to trigger hypothermia physical penalties and shivering (0.60 = 60%)")
-                .defineInRange("hypothermiaPenaltyThreshold", 0.60, 0.1, 1.0);
         ForgeConfigSpec.BooleanValue hypothermiaMiningFatigue = serverBuilder
                 .comment("Enable Mining Fatigue I debuff when suffering from severe hypothermia")
                 .define("hypothermiaMiningFatigue", true);
@@ -252,6 +260,12 @@ public class ForgeConfig {
         serverBuilder.pop();
 
         serverBuilder.comment("Inventory weight density and encumbrance mechanics").push("weight");
+        ForgeConfigSpec.DoubleValue maxCarryCapacityKg = serverBuilder
+                .comment("Baseline maximum carrying capacity in kilograms before encumbrance penalties apply")
+                .defineInRange("maxCarryCapacityKg", 500.0, 10.0, 10000.0);
+        ForgeConfigSpec.DoubleValue weightPenaltyMultiplier = serverBuilder
+                .comment("Global multiplier for encumbrance penalties (speed reduction, sinking pull in water, and fall damage)")
+                .defineInRange("weightPenaltyMultiplier", 1.0, 0.0, 10.0);
         ForgeConfigSpec.DoubleValue weightHeavyBlockBase = serverBuilder
                 .comment("Base weight multiplier for heavy blocks (#c:heavy_blocks)")
                 .defineInRange("weightHeavyBlockBase", 0.8, 0.0, 100.0);
@@ -265,9 +279,6 @@ public class ForgeConfig {
                 .comment("Base weight multiplier for light items (#c:light_items)")
                 .defineInRange("weightLightItemBase", 0.005, 0.0, 100.0);
 
-        ForgeConfigSpec.DoubleValue weightMaxCapacity = serverBuilder
-                .comment("Max weight carrying capacity baseline in kg")
-                .defineInRange("weightMaxCapacity", 500.0, 10.0, 10000.0);
         ForgeConfigSpec.DoubleValue weightLightThreshold = serverBuilder
                 .comment("Encumbrance ratio threshold for Light tier (0.50 = 50%)")
                 .defineInRange("weightLightThreshold", 0.50, 0.0, 1.0);
@@ -330,6 +341,12 @@ public class ForgeConfig {
         ServerConfig.ENABLE_TOTEM_BYPASS = safe(SERVER_SPEC, enableTotemBypass, true);
         ServerConfig.ENABLE_GFORCE_BLACKOUT = safe(SERVER_SPEC, enableGForceBlackout, true);
         ServerConfig.ENABLE_KINETIC_CRASH = safe(SERVER_SPEC, enableKineticCrash, true);
+
+        ServerConfig.TEMPERATURE_CHANGE_RATE_MULTIPLIER = safe(SERVER_SPEC, temperatureChangeRateMultiplier, 1.0);
+        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = safe(SERVER_SPEC, hypothermiaThreshold, 0.60);
+        ServerConfig.HEAT_STRESS_OVERHEAT_THRESHOLD = safe(SERVER_SPEC, heatExhaustionThreshold, 39.5);
+        ServerConfig.HEAT_STRESS_DAMAGE_THRESHOLD = safe(SERVER_SPEC, heatDamageThreshold, 42.0);
+
         ServerConfig.ENABLE_SLEEP_DEPRIVATION = safe(SERVER_SPEC, enableSleepDeprivation, true);
         ServerConfig.SLEEP_DEPRIVATION_FULL_FATIGUE_TICKS = safe(SERVER_SPEC, sleepDeprivationFullFatigueTicks, 72000);
         ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD = safe(SERVER_SPEC, sleepFatigueBlinkThreshold, 0.80);
@@ -387,16 +404,16 @@ public class ForgeConfig {
         ServerConfig.HEAT_THAW_MULTIPLIER = safe(SERVER_SPEC, heatThawMultiplier, 5.0);
         ServerConfig.ENABLE_HYPOTHERMIA = safe(SERVER_SPEC, enableHypothermia, true);
         ServerConfig.INTERNAL_WARMING_DURATION_TICKS = safe(SERVER_SPEC, internalWarmingDurationTicks, 1600);
-        ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD = safe(SERVER_SPEC, hypothermiaPenaltyThreshold, 0.60);
         ServerConfig.HYPOTHERMIA_MINING_FATIGUE = safe(SERVER_SPEC, hypothermiaMiningFatigue, true);
         ServerConfig.HYPOTHERMIA_ATTACK_SPEED_PENALTY = safe(SERVER_SPEC, hypothermiaAttackSpeedPenalty, 0.35);
         ServerConfig.HYPOTHERMIA_INTERACTION_RANGE_PENALTY = safe(SERVER_SPEC, hypothermiaInteractionRangePenalty, 1.0);
 
+        ServerConfig.WEIGHT_MAX_CAPACITY = safe(SERVER_SPEC, maxCarryCapacityKg, 500.0);
+        ServerConfig.WEIGHT_PENALTY_MULTIPLIER = safe(SERVER_SPEC, weightPenaltyMultiplier, 1.0);
         ServerConfig.WEIGHT_HEAVY_BLOCK_BASE = safe(SERVER_SPEC, weightHeavyBlockBase, 0.8);
         ServerConfig.WEIGHT_METALLIC_ITEM_BASE = safe(SERVER_SPEC, weightMetallicItemBase, 0.4);
         ServerConfig.WEIGHT_DEFAULT_ITEM_BASE = safe(SERVER_SPEC, weightDefaultItemBase, 0.05);
         ServerConfig.WEIGHT_LIGHT_ITEM_BASE = safe(SERVER_SPEC, weightLightItemBase, 0.005);
-        ServerConfig.WEIGHT_MAX_CAPACITY = safe(SERVER_SPEC, weightMaxCapacity, 500.0);
         ServerConfig.WEIGHT_LIGHT_THRESHOLD = safe(SERVER_SPEC, weightLightThreshold, 0.50);
         ServerConfig.WEIGHT_MEDIUM_THRESHOLD = safe(SERVER_SPEC, weightMediumThreshold, 0.70);
         ServerConfig.WEIGHT_OVERBURDENED_THRESHOLD = safe(SERVER_SPEC, weightOverburdenedThreshold, 0.85);
@@ -436,6 +453,9 @@ public class ForgeConfig {
         ForgeConfigSpec.BooleanValue enableSwappableHud = clientBuilder
                 .comment("Enable swappable HUD module cycling")
                 .define("enableSwappableHud", true);
+        ForgeConfigSpec.BooleanValue autoHideHealthyHud = clientBuilder
+                .comment("Automatically hide HUD overlays when player is fully healthy")
+                .define("autoHideHealthyHud", false);
         ForgeConfigSpec.ConfigValue<String> defaultHudMode = clientBuilder
                 .comment("Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)")
                 .define("defaultHudMode", "COMBINED");
@@ -486,6 +506,7 @@ public class ForgeConfig {
         ClientConfig.ENABLE_STAMINA_HUD_OVERLAY = safe(CLIENT_SPEC, enableStaminaHudOverlay, true);
         ClientConfig.ENABLE_WEIGHT_TOOLTIP = safe(CLIENT_SPEC, enableWeightTooltip, true);
         ClientConfig.ENABLE_SWAPPABLE_HUD = safe(CLIENT_SPEC, enableSwappableHud, true);
+        ClientConfig.AUTO_HIDE_HEALTHY_HUD = safe(CLIENT_SPEC, autoHideHealthyHud, false);
         ClientConfig.DEFAULT_HUD_MODE = safe(CLIENT_SPEC, defaultHudMode, "COMBINED");
         ClientConfig.SWAPPABLE_HUD_X = safe(CLIENT_SPEC, swappableHudX, 10);
         ClientConfig.SWAPPABLE_HUD_Y = safe(CLIENT_SPEC, swappableHudY, 10);
