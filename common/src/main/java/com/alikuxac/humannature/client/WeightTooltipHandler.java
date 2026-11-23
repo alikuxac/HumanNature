@@ -2,9 +2,17 @@ package com.alikuxac.humannature.client;
 
 import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
+import com.alikuxac.humannature.modules.weight.EncumbranceTier;
+import com.alikuxac.humannature.modules.weight.PlayerWeightData;
 import com.alikuxac.humannature.modules.weight.WeightCalculator;
+import com.alikuxac.humannature.modules.weight.WeightModule;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -21,24 +29,50 @@ public class WeightTooltipHandler {
         float total = WeightCalculator.calculateStackWeight(stack);
         float contents = WeightCalculator.getContentsWeight(stack);
 
+        MutableComponent baseComponent;
         if (contents > 0.001f) {
-            tooltip.add(Component.translatable(
+            baseComponent = Component.translatable(
                     "tooltip.humannature.weight_container",
                     formatWeight(total),
                     formatWeight(contents)
-            ).withStyle(ChatFormatting.GRAY));
+            );
         } else if (stack.getCount() > 1) {
-            tooltip.add(Component.translatable(
+            baseComponent = Component.translatable(
                     "tooltip.humannature.weight_stack",
                     formatWeight(total),
                     formatWeight(unit)
-            ).withStyle(ChatFormatting.GRAY));
+            );
         } else {
-            tooltip.add(Component.translatable(
+            baseComponent = Component.translatable(
                     "tooltip.humannature.weight_single",
                     formatWeight(unit)
-            ).withStyle(ChatFormatting.GRAY));
+            );
         }
+        baseComponent.withStyle(ChatFormatting.GRAY);
+
+        if (Screen.hasShiftDown()) {
+            Minecraft mc = Minecraft.getInstance();
+            Player player = mc != null ? mc.player : null;
+            if (player != null) {
+                PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
+                float curWeight = weightData.getCachedWeight();
+                if (curWeight <= 0.0f) {
+                    curWeight = WeightCalculator.calculateWeight(player);
+                    weightData.setCachedWeight(curWeight);
+                }
+                float maxWeight = WeightCalculator.calculateMaxCapacity(player);
+                float weightRatio = maxWeight > 0.0f ? (curWeight / maxWeight) : 0.0f;
+                int pct = Math.round(weightRatio * 100.0f);
+                EncumbranceTier tier = EncumbranceTier.fromWeightRatio(weightRatio);
+                ChatFormatting tierColor = tier.getChatFormatting();
+
+                Component tierComponent = Component.translatable(tier.getTranslationKey()).withStyle(tierColor);
+                Component totalSuffix = Component.translatable("tooltip.humannature.weight_total_suffix", pct, tierComponent).withStyle(ChatFormatting.GRAY);
+                baseComponent.append(CommonComponents.SPACE).append(totalSuffix);
+            }
+        }
+
+        tooltip.add(baseComponent);
     }
 
     public static String formatWeight(float weight) {

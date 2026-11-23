@@ -8,6 +8,9 @@ public class PlayerTemperatureData {
     private int stumbleCooldown;
     private int internalWarmingTicks;
     private boolean hypothermiaDebuffActive;
+    private float coreTemperature;
+    private int heatExhaustionSoundCooldown;
+    private int heatDamageCooldown;
 
     public PlayerTemperatureData() {
         this.wetnessBuffer = 0.0f;
@@ -17,6 +20,9 @@ public class PlayerTemperatureData {
         this.stumbleCooldown = 0;
         this.internalWarmingTicks = 0;
         this.hypothermiaDebuffActive = false;
+        this.coreTemperature = 37.0f;
+        this.heatExhaustionSoundCooldown = 0;
+        this.heatDamageCooldown = 0;
     }
 
     public float getWetnessBuffer() {
@@ -111,6 +117,46 @@ public class PlayerTemperatureData {
         this.hypothermiaDebuffActive = active;
     }
 
+    public float getCoreTemperature() {
+        return coreTemperature;
+    }
+
+    public void setCoreTemperature(float coreTemperature) {
+        this.coreTemperature = Math.max(25.0f, Math.min(45.0f, coreTemperature));
+    }
+
+    public void modifyCoreTemperature(float delta) {
+        setCoreTemperature(this.coreTemperature + delta);
+    }
+
+    public int getHeatExhaustionSoundCooldown() {
+        return heatExhaustionSoundCooldown;
+    }
+
+    public void setHeatExhaustionSoundCooldown(int heatExhaustionSoundCooldown) {
+        this.heatExhaustionSoundCooldown = heatExhaustionSoundCooldown;
+    }
+
+    public void decrementHeatExhaustionSoundCooldown() {
+        if (this.heatExhaustionSoundCooldown > 0) {
+            this.heatExhaustionSoundCooldown--;
+        }
+    }
+
+    public int getHeatDamageCooldown() {
+        return heatDamageCooldown;
+    }
+
+    public void setHeatDamageCooldown(int heatDamageCooldown) {
+        this.heatDamageCooldown = heatDamageCooldown;
+    }
+
+    public void decrementHeatDamageCooldown() {
+        if (this.heatDamageCooldown > 0) {
+            this.heatDamageCooldown--;
+        }
+    }
+
     public void reset() {
         this.wetnessBuffer = 0.0f;
         this.nearHeatSource = false;
@@ -119,5 +165,8 @@ public class PlayerTemperatureData {
         this.stumbleCooldown = 0;
         this.internalWarmingTicks = 0;
         this.hypothermiaDebuffActive = false;
+        this.coreTemperature = 37.0f;
+        this.heatExhaustionSoundCooldown = 0;
+        this.heatDamageCooldown = 0;
     }
 }

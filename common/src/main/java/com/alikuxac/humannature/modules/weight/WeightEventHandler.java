@@ -5,6 +5,7 @@ import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
 import com.alikuxac.humannature.init.ModEnchantments;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -43,7 +44,7 @@ public class WeightEventHandler {
             boolean showWarning = ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS == null || ClientConfig.SHOW_ACTIONBAR_WEIGHT_WARNINGS.get();
             if (showWarning) {
                 int pct = Math.round(data.getWeightRatio() * 100.0f);
-                player.displayClientMessage(Component.literal("§cEncumbered: " + pct + "% (Overburdened)"), true);
+                player.displayClientMessage(Component.translatable("message.humannature.encumbered", pct).withStyle(ChatFormatting.RED), true);
             }
         }
         data.setPreviousTier(currentTier);

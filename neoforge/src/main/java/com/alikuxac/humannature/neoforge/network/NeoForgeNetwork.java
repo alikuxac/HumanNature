@@ -7,15 +7,21 @@ import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
 import com.alikuxac.humannature.modules.physiology.PlayerPhysiologyData;
+import com.alikuxac.humannature.network.NetworkHandler;
 import com.alikuxac.humannature.network.SyncBloodPayload;
 import com.alikuxac.humannature.network.SyncInjuryPayload;
 import com.alikuxac.humannature.network.SyncNutritionPayload;
 import com.alikuxac.humannature.network.TreatLimbPayload;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class NeoForgeNetwork {
+
+    public static void initClient() {
+        NetworkHandler.setSender(PacketDistributor::sendToServer);
+    }
 
     public static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(HumanNatureCommon.MOD_ID);

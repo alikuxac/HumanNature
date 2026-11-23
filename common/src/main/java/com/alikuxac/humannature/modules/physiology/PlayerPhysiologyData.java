@@ -150,9 +150,7 @@ public class PlayerPhysiologyData {
     }
 
     public boolean isBlinkEligible() {
-        double threshold = ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD != null ?
-                ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD.get() : 0.80;
-        return getFatigueScore() >= (float) threshold;
+        return getFatigueScore() >= ServerConfig.SLEEP_FATIGUE_BLINK_THRESHOLD.get().floatValue();
     }
 
     public int getBlinkCooldown() {

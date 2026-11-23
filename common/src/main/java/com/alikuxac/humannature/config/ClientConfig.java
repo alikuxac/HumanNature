@@ -10,6 +10,7 @@ public class ClientConfig {
     public static Supplier<Boolean> ENABLE_STAMINA_HUD_OVERLAY = () -> true;
     public static Supplier<Boolean> ENABLE_WEIGHT_TOOLTIP = () -> true;
     public static Supplier<Boolean> ENABLE_SWAPPABLE_HUD = () -> true;
+    public static Supplier<Boolean> AUTO_HIDE_HEALTHY_HUD = () -> false;
     public static Supplier<String> DEFAULT_HUD_MODE = () -> "COMBINED";
     public static Supplier<Integer> SWAPPABLE_HUD_X = () -> 10;
     public static Supplier<Integer> SWAPPABLE_HUD_Y = () -> 10;

@@ -59,36 +59,48 @@ public class WeightCalculator {
 
         float baseWeight;
         if (stack.is(COMMON_HEAVY_BLOCKS) || stack.is(MOD_HEAVY_BLOCKS)) {
-            baseWeight = ServerConfig.WEIGHT_HEAVY_BLOCK_BASE != null ? ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get().floatValue() : 0.8f;
+            baseWeight = ServerConfig.WEIGHT_HEAVY_BLOCK_BASE.get().floatValue();
         } else if (stack.is(COMMON_METALLIC_ITEMS) || stack.is(MOD_METALLIC_ITEMS)) {
-            baseWeight = ServerConfig.WEIGHT_METALLIC_ITEM_BASE != null ? ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get().floatValue() : 0.4f;
+            baseWeight = ServerConfig.WEIGHT_METALLIC_ITEM_BASE.get().floatValue();
         } else if (stack.is(COMMON_LIGHT_ITEMS) || stack.is(MOD_LIGHT_ITEMS)) {
-            baseWeight = ServerConfig.WEIGHT_LIGHT_ITEM_BASE != null ? ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get().floatValue() : 0.05f;
+            baseWeight = ServerConfig.WEIGHT_LIGHT_ITEM_BASE.get().floatValue();
         } else {
-            baseWeight = ServerConfig.WEIGHT_DEFAULT_ITEM_BASE != null ? ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get().floatValue() : 0.1f;
+            baseWeight = ServerConfig.WEIGHT_DEFAULT_ITEM_BASE.get().floatValue();
         }
         return baseWeight;
     }
 
     public static float getContentsWeight(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0.0f;
-        float contents = 0.0f;
+        float rawContents = 0.0f;
 
         ItemContainerContents container = stack.get(DataComponents.CONTAINER);
         if (container != null) {
             for (ItemStack content : container.nonEmptyItems()) {
-                contents += calculateStackWeight(content) * stack.getCount();
+                rawContents += calculateStackWeight(content);
             }
         }
 
         BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
         if (bundle != null) {
             for (ItemStack content : bundle.items()) {
-                contents += calculateStackWeight(content) * stack.getCount();
+                rawContents += calculateStackWeight(content);
             }
         }
 
-        return contents;
+        if (rawContents <= 0.0f) return 0.0f;
+
+        double ratio = ServerConfig.WEIGHT_CONTAINER_RATIO;
+        float contents = (float) (rawContents * ratio);
+
+        int loadBearingLvl = getEnchantmentLevel(stack, com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
+        if (loadBearingLvl > 0) {
+            double reductionPerLvl = ServerConfig.LOAD_BEARING_CONTAINER_REDUCTION;
+            double reduction = Math.min(1.0, loadBearingLvl * reductionPerLvl);
+            contents *= (float) (1.0 - reduction);
+        }
+
+        return contents * stack.getCount();
     }
 
     public static float calculateStackWeight(ItemStack stack) {
@@ -109,13 +121,13 @@ public class WeightCalculator {
             if (burdenHolder != null) {
                 MobEffectInstance burden = player.getEffect(burdenHolder);
                 if (burden != null) {
-                    double perLvl = ServerConfig.BURDEN_BEARER_CAPACITY_BONUS != null ? ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get() : 150.0;
+                    double perLvl = ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get();
                     bonus += (burden.getAmplifier() + 1) * perLvl;
                 }
             }
         }
 
-        double loadBearingBonus = ServerConfig.LOAD_BEARING_CAPACITY_BONUS != null ? ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get() : 50.0;
+        double loadBearingBonus = ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get();
         EquipmentSlot[] armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (EquipmentSlot slot : armorSlots) {
             ItemStack armor = player.getItemBySlot(slot);

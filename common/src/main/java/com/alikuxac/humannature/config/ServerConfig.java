@@ -129,4 +129,19 @@ public class ServerConfig {
 
     public static Supplier<Double> BURDEN_BEARER_CAPACITY_BONUS = () -> 150.0;
     public static Supplier<Double> LOAD_BEARING_CAPACITY_BONUS = () -> 50.0;
+
+    public static Supplier<Double> TEMPERATURE_CHANGE_RATE_MULTIPLIER = () -> 1.0;
+    public static Supplier<Double> WEIGHT_PENALTY_MULTIPLIER = () -> 1.0;
+    public static Supplier<Double> HEAT_STRESS_OVERHEAT_THRESHOLD = () -> 39.5;
+    public static Supplier<Double> HEAT_STRESS_DAMAGE_THRESHOLD = () -> 42.0;
+
+    public static final boolean ENABLE_ARMOR_THERMAL_INSULATION = true;
+    public static final double LEATHER_INSULATION_FREEZE_REDUCTION = 0.60;
+    public static final double METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER = 1.50;
+    public static final boolean ENABLE_HEAVY_LOAD_HEAT_STRESS = true;
+    public static final double HEAT_STRESS_TEMP_RISE_RATE = 0.0015;
+    public static final double HEAT_STRESS_EXERTION_DRAIN = 0.10;
+    public static final int HEAT_STRESS_DAMAGE_INTERVAL_TICKS = 40;
+    public static final double WEIGHT_CONTAINER_RATIO = 1.0;
+    public static final double LOAD_BEARING_CONTAINER_REDUCTION = 0.20;
 }

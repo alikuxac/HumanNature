@@ -2,7 +2,7 @@
   "description": {
     "translate": "enchantment.humannature.load_bearing"
   },
-  "supported_items": "#minecraft:enchantable/armor",
+  "supported_items": "#humannature:enchantable/load_bearing",
   "primary_items": "#minecraft:enchantable/armor",
   "weight": 5,
   "max_level": 3,

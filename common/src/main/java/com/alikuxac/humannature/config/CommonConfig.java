@@ -22,7 +22,6 @@ public class CommonConfig {
     public static Supplier<Boolean> ENABLE_GFORCE_BLACKOUT = () -> ServerConfig.ENABLE_GFORCE_BLACKOUT.get();
     public static Supplier<Boolean> ENABLE_KINETIC_CRASH = () -> ServerConfig.ENABLE_KINETIC_CRASH.get();
 
-    // Client proxies
     public static Supplier<Boolean> ENABLE_HUD_OVERLAY = () -> ClientConfig.ENABLE_HUD_OVERLAY.get();
     public static Supplier<Boolean> ENABLE_CAMERA_LIMPING = () -> ClientConfig.ENABLE_CAMERA_LIMPING.get();
 }

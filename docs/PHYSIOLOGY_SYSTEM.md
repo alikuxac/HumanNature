@@ -28,7 +28,7 @@ At 80% fatigue, moving players trigger a 1-second (20-tick) Darkness blink every
 Incoming `minecraft:poison` and `minecraft:wither` attacks add to a hidden 0–100% buildup gauge instead of applying immediate status effects. Other status effects apply normally.
 
 #### Buildup Calculation & State Scaling
-Each exposure calculates base buildup from effect duration and amplifier, with a configurable minimum (default 25%):
+Each exposure calculates base buildup from effect duration and amplifier, with a baseline minimum of 25%:
 
 $$\text{BaseValue} = \max(\text{baseHit}, \min(100, \text{durationFactor} \times \text{amplifierFactor}))$$
 
@@ -68,6 +68,7 @@ Physical actions drain stamina from a 0–100% capacity gauge. Reaching 100% exe
   - Jump threshold: Jumping requires at least 10% stamina (<90% exertion) and no active muscle failure. Otherwise, vertical jump velocity zeroes out and `generic.jump_strength` drops by 100%.
 - **Attacking**: Swings add 4.0% exertion per hit.
 - **Upstream Swimming**: Moving against fluid flow (`fluid.getFlow()`) adds 0.75% exertion per tick.
+- **Heavy-Load Heat Stress**: Moving while overburdened ($\ge 85\%$ carry load) in hot biomes (Nether, Badlands, Desert) adds $+0.10\%$ exertion per tick, accelerating stamina depletion alongside rising core body temperature.
 
 #### Muscle Failure Threshold
 At 100% exertion:
@@ -113,9 +114,11 @@ At 100% exertion:
 - Indigestion decays at 1% every 40 ticks (2 seconds), tracked by a dedicated per-player counter.
 - Milk clears 100% of accumulated indigestion; honey clears 30%.
 
-#### Calcium Bone Healing
-- Drinking Bone Broth (`humannature:bone_broth`), Milk, or items tagged `#humannature:calcium_foods` grants active calcium absorption for 3 minutes (3,600 ticks).
-- Doubles natural recovery speed for Tier 1 bone fractures exclusively during resting or sleeping. Calcium has no effect on external medical treatments (splints or bandages).
+#### Osteogenesis Buff
+Consuming Milk, Bone Broth, or `#humannature:calcium_foods` grants **Osteogenesis** for 3 minutes (3,600 ticks):
+- **Healing speed**: Splinted fractures heal $2.0\times$ faster (`ServerConfig.CALCIUM_HEALING_MULTIPLIER`), stacking with the splint tier multiplier.
+- **Instant reduction**: Eating calcium food with a splinted fracture immediately cuts remaining healing time by $35\%-50\%$.
+- **Requirement**: Fractures must be splinted to receive this bonus.
 
 #### Fracture Natural Regeneration Suppression
 - Active bone fractures cancel passive food-based health regeneration (`amount <= 1.0F`).
@@ -264,13 +267,26 @@ Transfusing an incompatible blood type into yourself or a teammate triggers imme
 ### HUD & Diagnostic Interface
 
 #### Swappable HUD Overlay
-- A compact overlay displaying real-time survival stats, toggleable between four modes:
-  - `OFF`: Hides the overlay.
-  - `PHYSIOLOGY`: Displays fatigue, toxicity, heart rate, stamina, and digestion.
-  - `INJURY`: Displays active trauma, fractures, and limb penalties.
-  - `COMBINED`: Shows both physiological and injury status in a single box.
-- Long text lines wrap within the overlay box, and the box clamps against screen boundaries to avoid visual clipping.
-- Displays emergency alerts (Adrenaline Surge, Panic) at the top of the box.
+A compact overlay displaying real-time survival stats, toggleable between six modes:
+- `OFF`: Hides the overlay.
+- `PHYSIOLOGY`: Displays fatigue, toxicity, heart rate, stamina, and digestion.
+- `ENVIRONMENT`: Displays wetness and temperature in the action bar or compact readout.
+- `INJURY`: Displays active trauma, fractures, and limb penalties.
+- `WEIGHT`: Displays detailed weight, encumbrance bar, and capacity buffs.
+- `COMBINED`: Shows all active survival lines in a standardized layout:
+  - `Fatigue`: `Fatigue: %s (%s %s)` (colored awake duration, status tag, and percentage).
+  - `Toxicity`: `Toxicity: %s (%s)` (compact representation with active status).
+  - `Heart`: `Heart: %s (%s)` (colored BPM and cardiac rate status).
+  - `Stamina`: `Stamina: %s (%s)` (percentage and muscle/cramp condition).
+  - `Digestion`: `Digestion: %s` (Active, Resting, or Hungry).
+  - `Temperature`: `Temperature: %s (%s)` (core temp and climate tier).
+  - `Weight`: `Weight: %s/%skg (%s %s)` (current/max load and encumbrance tier).
+
+#### Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
+Hides the overlay when all vitals are nominal:
+- Rested (`fatigueScore <= 0.0f`), no toxins (`toxinBuildup <= 0.0f`), and full stamina (`exertionScore <= 0.0f`).
+- No active muscle failure, cramps, panic, or adrenaline surge.
+- Normal temperature, light/normal encumbrance, and no limb injuries.
 
 #### Transient HUD Overlays
 - **Stamina Crosshair Arc**: When stamina drops below 100%, a radial arc renders right of the crosshair (radius 19–23 px, angle -55° to +55°). Fades out over 1.5 seconds once stamina reaches 100%.
@@ -279,9 +295,10 @@ Transfusing an incompatible blood type into yourself or a teammate triggers imme
 
 #### Body Diagnostics Screen (`H` Key)
 The diagnostic screen provides a detailed medical readout:
-- Interactive limb hitboxes showing bone fractures and trauma severity.
+- Interactive limb hitboxes showing bone fractures, trauma severity, and splint status.
 - Real-time cardiac heart rate, fatigue rating, muscle status, and digestion buffer.
-- `← Inventory` navigation button to return to the player inventory.
+- Press `E` (the Inventory key) to return to the player inventory.
+- Full localization across 7 locales (`en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`).
 
 ---
 
@@ -295,46 +312,23 @@ The diagnostic screen provides a detailed medical readout:
 
 ## Configuration
 
-Server settings are in `config/humannature-server.toml`:
+### Server (`humannature-server.toml`)
+
+Master module switch under `[general]`:
+- `enablePhysiology = true`: Master toggle for the physiology module (sleep deprivation, stamina, toxin buildup).
+
+Core settings under `[physiology]`:
 
 ```toml
 [physiology]
-    # Enable sleep deprivation and fatigue buildup
+    # Enable sleep deprivation and fatigue buildup over time
     enableSleepDeprivation = true
     # Ticks of being awake required to reach 100% fatigue (72000 ticks = 3 in-game days)
-    # Range: 1200 ~ 720000
+    # Range: 20 ~ 720000
     sleepDeprivationFullFatigueTicks = 72000
-    # Fatigue score threshold (0.0 to 1.0) above which darkness blinks begin occurring
-    # Range: 0.0 ~ 1.0
-    sleepFatigueBlinkThreshold = 0.8
-    # Minimum interval in ticks between darkness blinks (20 ticks = 1s)
-    # Range: 20 ~ 72000
-    sleepFatigueBlinkMinIntervalTicks = 300
-    # Maximum interval in ticks between darkness blinks
-    # Range: 40 ~ 72000
-    sleepFatigueBlinkMaxIntervalTicks = 800
-
     # Enable soulslike bad effect (poison/wither) buildup and transient gauge
     enableToxinBuildup = true
-    # Base minimum toxin buildup percentage added per exposure
-    # Range: 1.0 ~ 100.0
-    toxinBaseBuildupPerHit = 25.0
-    # Ticks of delay without exposure before toxin buildup begins decaying (80 ticks = 4s)
-    # Range: 1 ~ 72000
-    toxinDecayDelayTicks = 80
-    # Passive percentage decay of toxin buildup per second
-    # Range: 0.1 ~ 100.0
-    toxinDecayRatePerSecond = 2.0
-    # Toxin decay rate multiplier when near heat sources (campfires, lava) or resting
-    # Range: 1.0 ~ 20.0
-    toxinRestingHeatDecayMultiplier = 3.0
-    # Enable toxin buildup rate scaling based on sleep deprivation and fatigue score
-    enableToxinFatigueScaling = true
-    # Toxin buildup multiplier when the player suffers from bone fractures or trauma
-    # Range: 1.0 ~ 5.0
-    toxinFractureBuildupMultiplier = 1.5
-
-    # Enable physical exertion and muscle failure
+    # Enable physical exertion and muscle failure from continuous mining and sprinting
     enablePhysicalExertion = true
     # Ticks of continuous chopping or mining required to trigger muscle failure (200 ticks = 10s)
     exertionContinuousMiningTicks = 200
@@ -415,12 +409,16 @@ Server settings are in `config/humannature-server.toml`:
     bloodBagTransferVolume = 1000
 ```
 
-Client settings are in `config/humannature-client.toml`:
+> **Physics Constants**: Subsystem parameters (such as the 80% blink threshold, 25% minimum toxin hit, 80-tick decay delay, 200-tick continuous mining limit, 600-tick swimming cramp threshold, 30-tick digestion cadence, 100-tick dark claustrophobia panic, and 80-tick adrenaline surge) are internal balance constants in code.
+
+### Client (`humannature-client.toml`)
 
 ```toml
 [hud]
     # Show injury & trauma status HUD overlay on screen
     enableHudOverlay = true
+    # Automatically suppress HUD rendering when fully healthy
+    autoHideHealthyHud = false
     # Screen X position of the injury HUD overlay
     hudX = 10
     # Screen Y position of the injury HUD overlay
@@ -431,7 +429,7 @@ Client settings are in `config/humannature-client.toml`:
     enableStaminaHudOverlay = true
     # Enable swappable HUD module cycling
     enableSwappableHud = true
-    # Default HUD mode on launch (OFF, PHYSIOLOGY, INJURY, COMBINED)
+    # Default HUD mode on launch (OFF, PHYSIOLOGY, ENVIRONMENT, INJURY, WEIGHT, COMBINED)
     defaultHudMode = "COMBINED"
     # Screen X position of the swappable HUD mini box
     swappableHudX = 10

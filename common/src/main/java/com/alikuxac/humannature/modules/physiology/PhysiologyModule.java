@@ -175,7 +175,7 @@ public class PhysiologyModule implements IHumanModule {
                 : 0.0f;
         boolean isFractured = ServerConfig.ENABLE_INJURY.get() && InjuryModule.isFractureActive(playerId);
         double fractureMultiplier = isFractured
-                ? (ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER != null ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER.get() : 1.5)
+                ? ServerConfig.TOXIN_FRACTURE_BUILDUP_MULTIPLIER.get()
                 : 1.0;
         return (float) ((1.0f + fatigueScore) * fractureMultiplier);
     }

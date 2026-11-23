@@ -6,9 +6,11 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 
@@ -22,6 +24,7 @@ public class InjuryHudOverlay {
         Player player = mc.player;
         if (player == null || mc.options.hideGui) return;
         if (!ServerConfig.ENABLE_INJURY.get() || !ClientConfig.ENABLE_HUD_OVERLAY.get()) return;
+        if (ClientConfig.AUTO_HIDE_HEALTHY_HUD.get() && SwappableHudOverlay.isPlayerFullyHealthy(player)) return;
         if (ClientConfig.ENABLE_SWAPPABLE_HUD.get() && SwappableHudOverlay.getCurrentMode() != SwappableHudOverlay.HudMode.INJURY) return;
 
         PlayerInjuryData injuryData = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -36,25 +39,30 @@ public class InjuryHudOverlay {
         boolean isMoving = player.walkDist - player.walkDistO > 0.001F;
         boolean isResting = player.isSleeping() || (player.isCrouching() && !isMoving);
 
-        String statusText;
+        String timeStr = String.format(java.util.Locale.ROOT, "%02d:%02d", minutes, seconds);
+        Component statusComponent;
         if (isMoving) {
-            statusText = String.format("§cHealing: %02d:%02d (Paused)", minutes, seconds);
+            statusComponent = Component.translatable("hud.humannature.injury.healing_paused", timeStr).withStyle(ChatFormatting.RED);
         } else if (isResting) {
-            statusText = String.format("§eHealing: %02d:%02d (Resting 2x)", minutes, seconds);
+            statusComponent = Component.translatable("hud.humannature.injury.healing_resting", timeStr).withStyle(ChatFormatting.YELLOW);
         } else {
-            statusText = String.format("§bHealing: %02d:%02d (Standing Still)", minutes, seconds);
+            statusComponent = Component.translatable("hud.humannature.injury.healing_standing", timeStr).withStyle(ChatFormatting.AQUA);
         }
 
-        StringBuilder injuredLimbs = new StringBuilder();
+        MutableComponent injuredLimbs = Component.empty();
+        boolean hasInjured = false;
         for (LimbType limb : LimbType.values()) {
             byte sev = injuryData.getSeverity(limb);
             if (sev > 0) {
-                if (!injuredLimbs.isEmpty()) injuredLimbs.append(", ");
-                injuredLimbs.append(limb.getDisplayName()).append(" (T").append(sev).append(")");
+                if (hasInjured) injuredLimbs.append(", ");
+                hasInjured = true;
+                injuredLimbs.append(Component.translatable(limb.getTranslationKey())).append(" (T" + sev + ")");
             }
         }
 
-        String limbsTitle = injuredLimbs.isEmpty() ? "§6Trauma Status" : "§cInjured: §f" + injuredLimbs;
+        Component limbsTitle = !hasInjured
+                ? Component.translatable("hud.humannature.injury.trauma_status").withStyle(ChatFormatting.GOLD)
+                : Component.translatable("hud.humannature.injury.injured_prefix", injuredLimbs.withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.RED);
 
         int screenWidth = guiGraphics.guiWidth();
         int screenHeight = guiGraphics.guiHeight();
@@ -66,17 +74,8 @@ public class InjuryHudOverlay {
 
         int maxWrapWidth = Math.max(120, Math.min(240, screenWidth - x - 16));
         List<FormattedCharSequence> wrappedLines = new ArrayList<>();
-        if (mc.font.width(limbsTitle) <= maxWrapWidth) {
-            wrappedLines.add(Component.literal(limbsTitle).getVisualOrderText());
-        } else {
-            wrappedLines.addAll(mc.font.split(Component.literal(limbsTitle), maxWrapWidth));
-        }
-
-        if (mc.font.width(statusText) <= maxWrapWidth) {
-            wrappedLines.add(Component.literal(statusText).getVisualOrderText());
-        } else {
-            wrappedLines.addAll(mc.font.split(Component.literal(statusText), maxWrapWidth));
-        }
+        wrappedLines.addAll(mc.font.split(limbsTitle, maxWrapWidth));
+        wrappedLines.addAll(mc.font.split(statusComponent, maxWrapWidth));
 
         int maxLineWidth = 0;
         for (FormattedCharSequence fcs : wrappedLines) {

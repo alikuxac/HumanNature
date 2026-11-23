@@ -10,6 +10,7 @@ import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.network.SyncBloodPayload;
 import com.alikuxac.humannature.network.SyncNutritionPayload;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -56,6 +57,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PhysiologyEventHandler {
 
     public static final TagKey<Item> CALCIUM_FOODS = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(HumanNatureCommon.MOD_ID, "calcium_foods"));
+
+    public static void triggerOsteogenesis(Player player) {
+        if (player == null) return;
+        PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        data.setCalciumAbsorptionTicks(3600);
+    }
 
     public record FoodSnapshot(int foodLevel, float saturationLevel) {}
     private static final Map<UUID, FoodSnapshot> FOOD_SNAPSHOTS = new ConcurrentHashMap<>();
@@ -157,10 +164,8 @@ public class PhysiologyEventHandler {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 0.8F, 0.7F);
 
-                    int minInterval = ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL != null ?
-                            ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL.get() : 300;
-                    int maxInterval = ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL != null ?
-                            ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL.get() : 800;
+                    int minInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MIN_INTERVAL.get();
+                    int maxInterval = (int) ServerConfig.SLEEP_FATIGUE_BLINK_MAX_INTERVAL.get();
                     if (maxInterval < minInterval) {
                         maxInterval = minInterval;
                     }
@@ -175,8 +180,7 @@ public class PhysiologyEventHandler {
         if (PhysiologyModule.isToxinBuildupEnabled()) {
             if (data.getToxinBuildup() > 0.0f) {
                 data.incrementTicksSinceLastExposure();
-                int decayDelay = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ?
-                        ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
+                int decayDelay = ServerConfig.TOXIN_DECAY_DELAY_TICKS.get();
 
                 if (data.getTicksSinceLastExposure() >= decayDelay) {
                     boolean isStandingStill = !isMoving;
@@ -184,7 +188,7 @@ public class PhysiologyEventHandler {
                     boolean nearHeat = isNearHeatSource(player);
 
                     double multiplier = (isResting || nearHeat) ?
-                            (ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER != null ?
+                            (ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER.get() != null ?
                                     ServerConfig.TOXIN_RESTING_HEAT_DECAY_MULTIPLIER.get() : 3.0)
                             : 1.0;
                     multiplier *= data.getToxinEliminationMultiplier();
@@ -211,8 +215,7 @@ public class PhysiologyEventHandler {
         }
 
         ToxinType toxinType = isPoison ? ToxinType.POISON : ToxinType.WITHER;
-        double baseHit = ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT != null ?
-                ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT.get() : 25.0;
+        double baseHit = ServerConfig.TOXIN_BASE_BUILDUP_PER_HIT.get();
         float durationFactor = (effectInstance.getDuration() / 20.0f) * 1.5f;
         float amplifierFactor = effectInstance.getAmplifier() + 1;
         float baseValue = (float) Math.max(baseHit, Math.min(100.0, durationFactor * amplifierFactor));
@@ -291,7 +294,7 @@ public class PhysiologyEventHandler {
 
         if (PhysiologyModule.isCalciumHealingEnabled()) {
             if (stack.is(CALCIUM_FOODS) || stack.is(ModItems.BONE_BROTH.get()) || stack.is(Items.MILK_BUCKET)) {
-                data.setCalciumAbsorptionTicks(3600);
+                triggerOsteogenesis(player);
                 if (stack.is(ModItems.BONE_BROTH.get())) {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.8F);
@@ -366,7 +369,7 @@ public class PhysiologyEventHandler {
                     } else if (data.getRecentEatsWhenFull() == 2) {
                         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 1.1F, 1.0F);
-                        player.displayClientMessage(Component.translatable("message.humannature.stomach_full"), true);
+                        player.displayClientMessage(Component.translatable("message.humannature.stomach_full").withStyle(ChatFormatting.GOLD), true);
                     } else if (data.getRecentEatsWhenFull() >= 3) {
                         player.getFoodData().setFoodLevel(Math.max(10, player.getFoodData().getFoodLevel() - 5));
                         player.getFoodData().setSaturation(0.0f);
@@ -805,8 +808,7 @@ public class PhysiologyEventHandler {
             if (data.isMuscleFailure()) {
                 player.setSprinting(false);
             } else {
-                double drain = ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK != null ?
-                        ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK.get() : 0.08;
+                double drain = ServerConfig.EXERTION_SPRINT_DRAIN_PER_TICK.get();
                 data.addExertion((float) drain);
                 if (data.getExertionScore() >= data.getStaminaCapacity()) {
                     data.setMuscleFailure(true);
@@ -817,7 +819,7 @@ public class PhysiologyEventHandler {
 
         if (!isMoving && player.onGround() && data.getTicksSinceLastMining() > 10 && data.getTicksSinceLastJump() > 10 && !isSprinting) {
             data.incrementRestTicks();
-            int reqRest = ServerConfig.EXERTION_REST_RECOVERY_TICKS != null ? ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() : 70;
+            int reqRest = ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() != null ? ServerConfig.EXERTION_REST_RECOVERY_TICKS.get() : 70;
             data.decayExertion(data.getStaminaCapacity() / (float) reqRest);
             if (data.getRestTicks() >= reqRest) {
                 data.resetExertion();
@@ -856,14 +858,14 @@ public class PhysiologyEventHandler {
         if (player.isInWater() || player.isSwimming()) {
             data.incrementContinuousSwimmingTicks();
             data.resetCrampRestTicks();
-            int threshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS != null ? ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get() : 600;
+            int threshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get();
             if (data.getContinuousSwimmingTicks() >= threshold && !data.isSwimmingCramped()) {
                 data.setSwimmingCramped(true);
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.PLAYER_HURT_DROWN, SoundSource.PLAYERS, 1.0F, 0.8F);
             }
             if (data.isSwimmingCramped()) {
-                double penalty = ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY != null ? ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY.get() : 0.40;
+                double penalty = ServerConfig.SWIMMING_CRAMP_SPEED_PENALTY.get();
                 double factor = Math.max(0.1, 1.0 - penalty);
                 Vec3 motion = player.getDeltaMovement();
                 player.setDeltaMovement(motion.x * factor, motion.y, motion.z * factor);
@@ -877,7 +879,7 @@ public class PhysiologyEventHandler {
             boolean isInBoat = player.getVehicle() != null;
             if (isAshore || isInBoat || !player.isInWater()) {
                 data.incrementCrampRestTicks();
-                int recTicks = ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS != null ? ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS.get() : 60;
+                int recTicks = ServerConfig.SWIMMING_CRAMP_RECOVERY_TICKS.get();
                 if (data.getCrampRestTicks() >= recTicks) {
                     data.resetSwimmingCramps();
                 }
@@ -897,7 +899,7 @@ public class PhysiologyEventHandler {
         data.incrementContinuousMiningTicks();
         data.setTicksSinceLastMining(0);
         data.resetRestTicks();
-        int limit = ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS != null ? ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() : 200;
+        int limit = ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() != null ? ServerConfig.EXERTION_CONTINUOUS_MINING_TICKS.get() : 200;
         data.addExertion(data.getStaminaCapacity() / (float) limit);
         if (data.getContinuousMiningTicks() >= limit) {
             data.setMuscleFailure(true);
@@ -950,7 +952,7 @@ public class PhysiologyEventHandler {
     public static float modifyBreakSpeed(Player player, float originalSpeed) {
         if (!PhysiologyModule.isExertionEnabled()) return originalSpeed;
         if (PhysiologyModule.isMuscleFailure(player.getUUID())) {
-            double penalty = ServerConfig.EXERTION_MINING_SPEED_PENALTY != null ? ServerConfig.EXERTION_MINING_SPEED_PENALTY.get() : 0.50;
+            double penalty = ServerConfig.EXERTION_MINING_SPEED_PENALTY.get();
             return (float) (originalSpeed * (1.0 - penalty));
         }
         return originalSpeed;
@@ -959,7 +961,7 @@ public class PhysiologyEventHandler {
     private static void handleDigestionTick(Player player, PlayerPhysiologyData data) {
         if (data.getPendingNutrition() > 0.0f || data.getPendingSaturation() > 0.0f) {
             data.incrementDigestionTickCounter();
-            int interval = ServerConfig.DIGESTION_INTERVAL_TICKS != null ? ServerConfig.DIGESTION_INTERVAL_TICKS.get() : 30;
+            int interval = ServerConfig.DIGESTION_INTERVAL_TICKS.get();
             if (data.getDigestionTickCounter() >= interval) {
                 data.resetDigestionTickCounter();
 
@@ -1024,7 +1026,7 @@ public class PhysiologyEventHandler {
 
         if (isDeepUnderground && light == 0 && !isCalmed) {
             data.incrementClaustrophobiaTicks();
-            int threshold = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
+            int threshold = ServerConfig.PANIC_THRESHOLD_TICKS.get();
             if (data.getClaustrophobiaTicks() >= threshold) {
                 data.setPanicking(true);
                 if (data.getPanicSoundCooldown() > 0) {
@@ -1112,7 +1114,7 @@ public class PhysiologyEventHandler {
         if (player.isCreative() || player.isSpectator()) return;
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         if (data.getAdrenalineCooldownTicks() <= 0 && !data.isAdrenalineActive()) {
-            int duration = ServerConfig.ADRENALINE_SURGE_DURATION_TICKS != null ? ServerConfig.ADRENALINE_SURGE_DURATION_TICKS.get() : 80;
+            int duration = ServerConfig.ADRENALINE_SURGE_DURATION_TICKS.get();
             data.triggerAdrenaline(duration);
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 0.8F, 1.6F);

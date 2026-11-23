@@ -1,14 +1,16 @@
 package com.alikuxac.humannature.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 public class DiagnosticTabButton extends Button {
     private boolean activeTab = false;
 
     public DiagnosticTabButton(int x, int y, OnPress onPress) {
-        super(x, y, 28, 28, Component.literal(""), onPress, DEFAULT_NARRATION);
+        super(x, y, 28, 28, CommonComponents.EMPTY, onPress, DEFAULT_NARRATION);
     }
 
     public boolean isActiveTab() {
@@ -48,7 +50,7 @@ public class DiagnosticTabButton extends Button {
         guiGraphics.fill(cx + 1, cy + 14, cx + 3, cy + 20, limbColor);
 
         if (isHoveredOrFocused()) {
-            guiGraphics.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, Component.literal("Body Diagnostics (H)"), mouseX, mouseY);
+            guiGraphics.renderTooltip(Minecraft.getInstance().font, Component.translatable("gui.humannature.tab.diagnostics"), mouseX, mouseY);
         }
     }
 }
