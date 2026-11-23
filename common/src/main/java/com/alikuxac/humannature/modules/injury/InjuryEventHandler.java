@@ -923,6 +923,26 @@ public class InjuryEventHandler {
         );
     }
 
+    public static void applySplintHealing(Player player, SplintTier tier) {
+        if (player == null || tier == null || player.level().isClientSide()) return;
+        switch (tier) {
+            case WOODEN, DIAMOND, NETHERITE -> clearFractureTimer(player);
+            case REINFORCED -> reduceFractureTimerByFraction(player, 0.50);
+            case GOLDEN -> reduceFractureTimerByFraction(player, 0.67);
+        }
+    }
+
+    private static void reduceFractureTimerByFraction(Player player, double fraction) {
+        int remaining = InjuryModule.getRemainingFractureTime(player.getUUID());
+        if (remaining <= 0) return;
+        InjuryModule.reduceFractureTimer(player.getUUID(), (int) Math.round(remaining * fraction));
+        if (!InjuryModule.isFractureActive(player.getUUID())) {
+            clearFractureTimer(player);
+        } else {
+            updatePlayerAttributesAndPose(player);
+        }
+    }
+
     public static void dislodgeSplint(Player player, LimbType limb, String reason) {
         if (player == null || limb == null) return;
         PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
@@ -1051,7 +1071,10 @@ public class InjuryEventHandler {
             return false;
         }
 
-        applySplintToLimb(player, limb, splintItem.getTier());
+        applySplintHealing(player, splintItem.getTier());
+        if (isFractureActive(player)) {
+            applySplintToLimb(player, limb, splintItem.getTier());
+        }
 
         if (splintItem.getTier().getPrimaryBuffDuration() > 0) {
             switch (splintItem.getTier()) {

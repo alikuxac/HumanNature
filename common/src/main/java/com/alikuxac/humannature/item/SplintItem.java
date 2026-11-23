@@ -148,7 +148,8 @@ public class SplintItem extends Item {
             }
         }
 
-        if (targetLimb != null) {
+        InjuryEventHandler.applySplintHealing(player, tier);
+        if (targetLimb != null && InjuryEventHandler.isFractureActive(player)) {
             InjuryEventHandler.applySplintToLimb(player, targetLimb, tier);
         }
 
