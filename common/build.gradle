@@ -25,6 +25,7 @@ neoForge {
 dependencies {
     api project(':api')
     compileOnly 'dev.latvian.mods:kubejs-neoforge:2101.7.2-build.265'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
 }
 
 tasks.named('compileTestJava', JavaCompile) {
@@ -33,6 +34,7 @@ tasks.named('compileTestJava', JavaCompile) {
 
 tasks.named('test', Test) {
     classpath += sourceSets.main.compileClasspath
+    classpath += files(layout.buildDirectory.file("moddev/artifacts/neoforge-${rootProject.neo_version}-minecraft-resources-aka-client-extra.jar"))
 }
 
 var generateBuildConstants = tasks.register('generateBuildConstants') {

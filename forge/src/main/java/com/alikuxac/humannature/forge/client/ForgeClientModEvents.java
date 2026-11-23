@@ -4,6 +4,7 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.InjuryHudOverlay;
 import com.alikuxac.humannature.client.BloodVolumeHudOverlay;
 import com.alikuxac.humannature.client.ModKeyMappings;
+import com.alikuxac.humannature.client.PhysiologyVignetteOverlay;
 import com.alikuxac.humannature.client.StaminaHudOverlay;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
 import com.alikuxac.humannature.client.ToxinHudOverlay;
@@ -56,6 +57,9 @@ public class ForgeClientModEvents {
 
             try {
                 SwappableHudOverlay.render(guiGraphics, partialTick);
+            } catch (Throwable ignored) {}
+            try {
+                PhysiologyVignetteOverlay.render(guiGraphics);
             } catch (Throwable ignored) {}
             BloodVolumeHudOverlay.render(guiGraphics);
         };

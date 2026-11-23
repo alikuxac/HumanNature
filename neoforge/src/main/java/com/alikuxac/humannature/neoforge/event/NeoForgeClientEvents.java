@@ -11,6 +11,7 @@ import com.alikuxac.humannature.client.ToxinHudOverlay;
 
 import com.alikuxac.humannature.client.WeightTooltipHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
+import com.alikuxac.humannature.client.PhysiologyVignetteOverlay;
 import com.alikuxac.humannature.client.ShiveringCameraHandler;
 import com.alikuxac.humannature.client.SwappableHudOverlay;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
@@ -52,6 +53,7 @@ public class NeoForgeClientEvents {
         StaminaHudOverlay.render(event.getGuiGraphics(), partialTick);
 
         SwappableHudOverlay.render(event.getGuiGraphics(), partialTick);
+        PhysiologyVignetteOverlay.render(event.getGuiGraphics());
         BloodVolumeHudOverlay.render(event.getGuiGraphics());
         BloodScreenEffectHandler.process(partialTick);
     }

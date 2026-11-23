@@ -1,14 +1,13 @@
 package com.alikuxac.humannature.client.gui;
 
 import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.client.ModKeyMappings;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.item.ClothBandageItem;
 import com.alikuxac.humannature.item.SplintItem;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
-import com.alikuxac.humannature.network.TreatLimbPayload;
-import com.alikuxac.humannature.api.injury.LimbType;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.injury.TraumaSeverity;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
@@ -21,48 +20,42 @@ import com.alikuxac.humannature.modules.weight.EncumbranceTier;
 import com.alikuxac.humannature.modules.weight.PlayerWeightData;
 import com.alikuxac.humannature.modules.weight.WeightCalculator;
 import com.alikuxac.humannature.modules.weight.WeightModule;
+import com.alikuxac.humannature.network.TreatLimbPayload;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
-import net.minecraft.Util;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DiagnosticScreen extends Screen {
-    public static final int GUI_WIDTH = 240;
-    public static final int GUI_HEIGHT = 166;
+    public static final int GUI_WIDTH = DiagnosticAssets.GUI_WIDTH;
+    public static final int GUI_HEIGHT = DiagnosticAssets.GUI_HEIGHT;
+
+    private enum Tab { SUM, INJ, MET, BLD }
+
+    private static final int[] TAB_X = { 84, 105, 126, 147 };
+    private static final String[] TAB_TEXT = { "SUM", "INJ", "MET", "BLD" };
+
+    private record Metric(String label, String value, float fill, int color,
+                          DiagnosticAssets.Uv icon, List<Component> tooltip) {}
 
     private int leftPos;
     private int topPos;
-
-    public record LimbHitbox(LimbType limb, int relX, int relY, int width, int height) {
-        public boolean contains(int mouseX, int mouseY, int originX, int originY) {
-            int x = originX + relX;
-            int y = originY + relY;
-            return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
-        }
-    }
-
-    private static final List<LimbHitbox> HITBOXES = List.of(
-            new LimbHitbox(LimbType.HEAD, 24, 10, 22, 22),
-            new LimbHitbox(LimbType.TORSO, 23, 34, 24, 36),
-            new LimbHitbox(LimbType.OFF_ARM, 9, 34, 12, 36),
-            new LimbHitbox(LimbType.MAIN_ARM, 49, 34, 12, 36),
-            new LimbHitbox(LimbType.LEFT_LEG, 23, 72, 11, 44),
-            new LimbHitbox(LimbType.RIGHT_LEG, 36, 72, 11, 44)
-    );
+    private Tab activeTab = Tab.SUM;
+    private LimbType hoveredLimb;
+    private LimbType selectedLimb = LimbType.HEAD;
+    private Metric hoveredMetric;
 
     public DiagnosticScreen() {
-        super(Component.literal("Skeleton & Body Diagnostics"));
+        super(Component.literal("Body Diagnostics"));
     }
 
     @Override
@@ -70,781 +63,404 @@ public class DiagnosticScreen extends Screen {
         super.init();
         this.leftPos = (this.width - GUI_WIDTH) / 2;
         this.topPos = (this.height - GUI_HEIGHT) / 2;
-
-        this.addRenderableWidget(Button.builder(
-                Component.literal("← Inventory"),
-                btn -> {
-                    if (this.minecraft != null && this.minecraft.player != null) {
-                        this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
-                    }
-                })
-                .bounds(leftPos + GUI_WIDTH - 82, topPos + 6, 70, 16)
-                .build()
-        );
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-
+    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        super.render(gui, mouseX, mouseY, partialTick);
         Minecraft mc = this.minecraft;
-        if (mc == null) return;
+        if (mc == null || mc.player == null) return;
         Player player = mc.player;
-        if (player == null) return;
 
-        PlayerInjuryData data = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        hoveredLimb = null;
+        hoveredMetric = null;
 
         RenderSystem.disableDepthTest();
-        guiGraphics.fill(leftPos, topPos, leftPos + GUI_WIDTH, topPos + GUI_HEIGHT, 0xF0181818);
-        guiGraphics.renderOutline(leftPos, topPos, GUI_WIDTH, GUI_HEIGHT, 0xFF3E3E3E);
+        gui.blit(DiagnosticAssets.BACKGROUND, leftPos, topPos, GUI_WIDTH, GUI_HEIGHT,
+                0.0f, 0.0f, GUI_WIDTH, GUI_HEIGHT, GUI_WIDTH, GUI_HEIGHT);
+        gui.drawString(this.font, "DIAGNOSTICS", leftPos + 8, topPos + 8, 0xFFD7DEE8, false);
 
-        guiGraphics.drawString(this.font, "§6§lBODY DIAGNOSTICS", leftPos + 12, topPos + 10, 0xFFFFFF, false);
-        guiGraphics.fill(leftPos + 12, topPos + 24, leftPos + GUI_WIDTH - 12, topPos + 25, 0xFF353535);
+        drawTabs(gui, mouseX, mouseY);
+        drawSilhouettes(gui, player, mouseX, mouseY);
 
-        int silX = leftPos + 12;
-        int silY = topPos + 30;
-        guiGraphics.fill(silX, silY, silX + 70, silY + 124, 0xFF101010);
-        guiGraphics.renderOutline(silX, silY, 70, 124, 0xFF2A2A2A);
+        List<Metric> metrics = buildMetrics(player);
+        drawMetrics(gui, metrics, mouseX, mouseY);
+        drawFooter(gui, player);
 
-        LimbHitbox hoveredBox = null;
-        byte activeBleedTier = PhysiologyModule.isBloodSystemEnabled()
-                ? PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getBleedingTier() : 0;
-        boolean dropVisible = (Util.getMillis() / 400) % 2 == 0;
-        List<Component> nutritionTooltip = null;
-
-        for (LimbHitbox box : HITBOXES) {
-            byte sevLevel = data.getSeverity(box.limb());
-            TraumaSeverity severity = TraumaSeverity.fromLevel(sevLevel);
-            int color = severity.getColorRgb();
-
-            boolean isHovered = box.contains(mouseX, mouseY, silX, silY);
-            if (isHovered) {
-                hoveredBox = box;
-                color = (color & 0x00FFFFFF) | 0xFF000000;
-            }
-
-            int bx = silX + box.relX();
-            int by = silY + box.relY();
-            guiGraphics.fill(bx, by, bx + box.width(), by + box.height(), color);
-            guiGraphics.renderOutline(bx, by, box.width(), box.height(), isHovered ? 0xFFFFFFFF : 0xFF222222);
-
-            if (activeBleedTier > 0 && sevLevel > 0 && dropVisible) {
-                int dx = bx + box.width() - 5;
-                int dy = by + 2;
-                guiGraphics.fill(dx + 1, dy, dx + 4, dy + 1, 0xFFFF2A2A);
-                guiGraphics.fill(dx, dy + 1, dx + 5, dy + 4, 0xFFFF2A2A);
-                guiGraphics.fill(dx + 1, dy + 4, dx + 4, dy + 5, 0xFFFF2A2A);
-                guiGraphics.fill(dx + 2, dy + 5, dx + 3, dy + 6, 0xFFFF2A2A);
-            }
+        if (hoveredLimb != null) {
+            gui.renderComponentTooltip(this.font, limbTooltip(player, hoveredLimb), mouseX, mouseY);
+        } else if (hoveredMetric != null && !hoveredMetric.tooltip().isEmpty()) {
+            gui.renderComponentTooltip(this.font, hoveredMetric.tooltip(), mouseX, mouseY);
         }
-
-        if (ServerConfig.ENABLE_NUTRIENT_RESERVES.get()) {
-            PlayerPhysiologyData reserves = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-            byte[] values = { reserves.getCalcium(), reserves.getCarbohydrates(), reserves.getVitamins() };
-            int[] barColors = { 0xFF56C4E8, 0xFFE8C439, 0xFF64D966 };
-            String[] names = { "Calcium", "Carbohydrates", "Vitamins" };
-            int reserveBarY = silY + 126;
-            for (int i = 0; i < values.length; i++) {
-                int barBottom = reserveBarY + i * 4 + 2;
-                guiGraphics.fill(silX, reserveBarY + i * 4, silX + 70, barBottom, 0xFF101010);
-                int filled = (int) (70L * Math.max(0, Math.min(100, values[i])) / 100L);
-                if (filled > 0) {
-                    guiGraphics.fill(silX, reserveBarY + i * 4, silX + filled, barBottom, barColors[i]);
-                }
-                guiGraphics.renderOutline(silX, reserveBarY + i * 4, 70, 2, 0xFF2A2A2A);
-                if (mouseX >= silX && mouseX < silX + 70 && mouseY >= reserveBarY + i * 4 && mouseY < barBottom) {
-                    nutritionTooltip = List.of(
-                            Component.literal("§b" + names[i] + ": " + values[i] + " / 100"),
-                            Component.literal("§7Buff strength scales with this reserve.")
-                    );
-                }
-            }
-        }
-
-        int infoX = leftPos + 84;
-        int infoWidth = (leftPos + GUI_WIDTH - 12) - infoX;
-        int curY = topPos + 30;
-
-        int totalFractures = 0;
-        for (LimbType limb : LimbType.values()) {
-            byte sev = data.getSeverity(limb);
-            if (sev > 0) totalFractures++;
-        }
-
-        if (totalFractures == 0) {
-            guiGraphics.drawString(this.font, "§a✔ All limbs healthy", infoX, curY, 0x55FF55, false);
-            curY += 12;
-        } else {
-            guiGraphics.drawString(this.font, "§c⚠ " + totalFractures + " Fractured Limb(s)", infoX, curY, 0xFF5555, false);
-            curY += 13;
-
-            for (LimbType limb : LimbType.values()) {
-                byte sev = data.getSeverity(limb);
-                if (sev > 0) {
-                    String sevName = sev >= 2 ? "Broken" : "Sprained";
-                    String line = "§f• " + limb.getDisplayName() + ": " + getSeverityColor(sev) + sevName;
-                    guiGraphics.drawString(this.font, line, infoX, curY, 0xFFFFFF, false);
-                    curY += 11;
-                }
-            }
-            curY += 4;
-        }
-
-        List<Component> physTooltip = null;
-        List<Component> toxinTooltip = null;
-        List<Component> exertionTooltip = null;
-        List<Component> heartRateTooltip = null;
-        List<Component> metabolismTooltip = null;
-        List<Component> weightTooltip = null;
-        List<Component> bloodTooltip = null;
-
-        if (ServerConfig.ENABLE_WEIGHT.get() || ServerConfig.ENABLE_PHYSIOLOGY.get()) {
-            guiGraphics.fill(infoX, curY, leftPos + GUI_WIDTH - 12, curY + 1, 0xFF353535);
-            curY += 3;
-        }
-
-        if (ServerConfig.ENABLE_WEIGHT.get()) {
-            PlayerWeightData weightData = WeightModule.getOrCreateWeightData(player.getUUID());
-            float curWeight = weightData.getCachedWeight();
-            if (curWeight <= 0.0f) {
-                curWeight = WeightCalculator.calculateWeight(player);
-                weightData.setCachedWeight(curWeight);
-            }
-            float maxWeight = WeightCalculator.calculateMaxCapacity(player);
-            float baseWeight = ServerConfig.WEIGHT_MAX_CAPACITY != null ? ServerConfig.WEIGHT_MAX_CAPACITY.get().floatValue() : 500.0f;
-            float ratio = maxWeight > 0 ? curWeight / maxWeight : 0.0f;
-            float weightPct = ratio * 100.0f;
-            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(ratio);
-
-            String weightText = "§7Weight: " + tier.getColorCode() + String.format("%.1f/%.0fkg §8(%s)", curWeight, maxWeight, tier.getDisplayName());
-            int weightLabelY = curY;
-            guiGraphics.drawString(this.font, weightText, infoX, curY, 0xFFFFFF, false);
-            curY += 9;
-
-            int barHeight = 2;
-            int barY = curY;
-            int barWidth = infoWidth;
-            guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
-            guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
-
-            int filledWeightWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, ratio)));
-            int barColor = switch (tier) {
-                case OVERBURDENED -> 0xFFFF4444;
-                case MEDIUM -> 0xFFFFAA00;
-                case LIGHT -> 0xFFFFFF55;
-                default -> 0xFF55FF55;
-            };
-            if (filledWeightWidth > 0) {
-                guiGraphics.fill(infoX, barY, infoX + filledWeightWidth, barY + barHeight, barColor);
-            }
-            curY += barHeight + 3;
-
-            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= weightLabelY && mouseY <= barY + barHeight + 2) {
-                weightTooltip = new ArrayList<>();
-                weightTooltip.add(Component.literal("§6Inventory Weight: " + tier.getColorCode() + String.format("%.1f / %.1f kg (%.1f%%)", curWeight, maxWeight, weightPct)));
-                weightTooltip.add(Component.literal("§7Status: " + tier.getColorCode() + tier.getDisplayName()));
-
-                if (Math.abs(maxWeight - baseWeight) > 0.5f) {
-                    weightTooltip.add(Component.literal(String.format("§7Base Capacity: %.0f kg", baseWeight)));
-                    if (com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER != null) {
-                        var holder = com.alikuxac.humannature.init.ModEffects.BURDEN_BEARER.get();
-                        if (holder != null) {
-                            var burden = player.getEffect(holder);
-                            if (burden != null) {
-                                double bonus = (burden.getAmplifier() + 1) * (ServerConfig.BURDEN_BEARER_CAPACITY_BONUS != null ? ServerConfig.BURDEN_BEARER_CAPACITY_BONUS.get() : 150.0);
-                                weightTooltip.add(Component.literal(String.format("§a• Burden Bearer (Potion): +%.0f kg", bonus)));
-                            }
-                        }
-                    }
-                    int totalLoadBearing = 0;
-                    for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-                        totalLoadBearing += WeightCalculator.getEnchantmentLevel(player.getItemBySlot(slot), com.alikuxac.humannature.init.ModEnchantments.LOAD_BEARING);
-                    }
-                    if (totalLoadBearing > 0) {
-                        double bonus = totalLoadBearing * (ServerConfig.LOAD_BEARING_CAPACITY_BONUS != null ? ServerConfig.LOAD_BEARING_CAPACITY_BONUS.get() : 50.0);
-                        weightTooltip.add(Component.literal(String.format("§b• Load Bearing (Armor): +%.0f kg", bonus)));
-                    }
-                }
-                if (tier == EncumbranceTier.NORMAL) {
-                    weightTooltip.add(Component.literal("§a✔ Unencumbered: Full mobility & baseline physics"));
-                } else {
-                    weightTooltip.add(Component.literal(String.format("§c• Speed Penalty: -%.0f%% Movement Speed", tier.getSpeedPenalty() * 100.0f)));
-                    weightTooltip.add(Component.literal(String.format("§c• Water Sinking: +%.0f%% Sink Pull", tier.getSinkPull() * 1000.0f)));
-                    weightTooltip.add(Component.literal(String.format("§c• Fall Impact: %.2fx Fall Damage", tier.getFallDamageMultiplier())));
-                }
-                weightTooltip.add(Component.literal("§8Light ≥50% | Medium ≥70% | Overburdened ≥85%"));
-            }
-        }
-
-        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
-            PlayerPhysiologyData physData = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
-            int barWidth = infoWidth;
-
-            if (PhysiologyModule.isSleepDeprivationEnabled()) {
-                float fatigueScore = physData.getFatigueScore();
-                float fatiguePct = physData.getFatiguePercentage();
-
-                String fatigueColor;
-                String fatigueLabel;
-                if (fatigueScore >= 0.80f) {
-                    fatigueColor = "§c";
-                    fatigueLabel = "Drowsy";
-                } else if (fatigueScore >= 0.50f) {
-                    fatigueColor = "§6";
-                    fatigueLabel = "Tired";
-                } else if (fatigueScore >= 0.20f) {
-                    fatigueColor = "§e";
-                    fatigueLabel = "Mild";
-                } else {
-                    fatigueColor = "§a";
-                    fatigueLabel = "Rested";
-                }
-
-                int physLabelY = curY;
-                String physText = "§7Fatigue: " + fatigueColor + String.format("%.0f%%", fatiguePct) + " §8(" + fatigueLabel + "§8)";
-                guiGraphics.drawString(this.font, physText, infoX, curY, 0xFFFFFF, false);
-                curY += 9;
-
-                int barHeight = 2;
-                int barY = curY;
-                guiGraphics.fill(infoX, barY, infoX + barWidth, barY + barHeight, 0xFF101010);
-                guiGraphics.renderOutline(infoX, barY, barWidth, barHeight, 0xFF282828);
-
-                int filledWidth = (int) (barWidth * Math.min(1.0f, Math.max(0.0f, fatigueScore)));
-                int barColor = fatigueScore >= 0.80f ? 0xFFFF4444 : (fatigueScore >= 0.50f ? 0xFFFFAA00 : (fatigueScore >= 0.20f ? 0xFFFFFF55 : 0xFF55FF55));
-                if (filledWidth > 0) {
-                    guiGraphics.fill(infoX, barY, infoX + filledWidth, barY + barHeight, barColor);
-                }
-                curY += barHeight + 3;
-
-                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= physLabelY && mouseY <= barY + barHeight + 2) {
-                    physTooltip = new ArrayList<>();
-                    physTooltip.add(Component.literal("§6Sleep Fatigue: " + fatigueColor + String.format("%.1f%%", fatiguePct)));
-                    long awakeTicks = physData.getAwakeTicks();
-                    double awakeDays = (double) awakeTicks / 24000.0;
-                    physTooltip.add(Component.literal(String.format("§7Awake: %.1f in-game day(s)", awakeDays)));
-                    if (physData.isBlinkEligible()) {
-                        physTooltip.add(Component.literal("§c⚠ Micro-Sleep Active: Periodic Darkness blinks while moving"));
-                    } else {
-                        physTooltip.add(Component.literal("§a✔ Darkness Blinks: Inactive (< 80% fatigue)"));
-                    }
-                    physTooltip.add(Component.literal("§8Sleep in a bed through the night to reset fatigue."));
-                }
-            }
-
-            if (PhysiologyModule.isToxinBuildupEnabled()) {
-                float toxinBuildup = physData.getToxinBuildup();
-                ToxinType toxinType = physData.getLastToxinType();
-
-                String toxinLabel = toxinType == ToxinType.NONE ? "Clear" : toxinType.getDisplayName();
-                String toxinText = "§7Toxin: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.0f%%", toxinBuildup) : "§a0%")
-                        + " §8(" + (toxinBuildup > 0.0f ? toxinType.getColorCode() : "§a") + toxinLabel + "§8)";
-
-                int toxinLabelY = curY;
-                guiGraphics.drawString(this.font, toxinText, infoX, curY, 0xFFFFFF, false);
-                curY += 9;
-
-                int toxinBarHeight = 2;
-                int toxinBarY = curY;
-                guiGraphics.fill(infoX, toxinBarY, infoX + barWidth, toxinBarY + toxinBarHeight, 0xFF101010);
-                guiGraphics.renderOutline(infoX, toxinBarY, barWidth, toxinBarHeight, 0xFF282828);
-
-                int filledToxinWidth = (int) (barWidth * (Math.min(100.0f, Math.max(0.0f, toxinBuildup)) / 100.0f));
-                int toxinBarColor = toxinType == ToxinType.WITHER ? 0xFFBA68C8 : (toxinBuildup > 0.0f ? 0xFF00E676 : 0xFF44AA44);
-                if (filledToxinWidth > 0) {
-                    guiGraphics.fill(infoX, toxinBarY, infoX + filledToxinWidth, toxinBarY + toxinBarHeight, toxinBarColor);
-                }
-                curY += toxinBarHeight + 3;
-
-                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= toxinLabelY && mouseY <= toxinBarY + toxinBarHeight + 2) {
-                    toxinTooltip = new ArrayList<>();
-                    toxinTooltip.add(Component.literal("§6Toxin Buildup: " + (toxinBuildup > 0.0f ? toxinType.getColorCode() + String.format("%.1f%%", toxinBuildup) : "§a0.0% (Clear)")));
-                    float toxinMultiplier = PhysiologyModule.calculateToxinMultiplier(player.getUUID());
-                    if (toxinBuildup > 0.0f) {
-                        toxinTooltip.add(Component.literal("§7Accumulated Type: " + toxinType.getColorCode() + toxinType.getDisplayName()));
-                        int delayTicks = ServerConfig.TOXIN_DECAY_DELAY_TICKS != null ? ServerConfig.TOXIN_DECAY_DELAY_TICKS.get() : 80;
-                        int elapsed = physData.getTicksSinceLastExposure();
-                        if (elapsed < delayTicks) {
-                            toxinTooltip.add(Component.literal(String.format("§7Decay Delay: %.1fs remaining", (delayTicks - elapsed) / 20.0)));
-                        } else {
-                            toxinTooltip.add(Component.literal("§a✔ Passive Decay Active (~2.0%/s)"));
-                        }
-                        toxinTooltip.add(Component.literal("§e⚡ Heat/Resting: 3x decay acceleration"));
-                        toxinTooltip.add(Component.literal("§b🍶 Milk Bucket: Clears 100% | 🍯 Honey: -50%"));
-                        if (toxinMultiplier > 1.01f) {
-                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
-                        }
-                        toxinTooltip.add(Component.literal("§c⚠ Reaching 100% causes immediate outbreak!"));
-                    } else {
-                        toxinTooltip.add(Component.literal("§a✔ Toxin Free: Poison & Wither attacks build up here."));
-                        if (toxinMultiplier > 1.01f) {
-                            toxinTooltip.add(Component.literal(String.format("§c⚠ Vulnerability: %.1fx buildup (Fatigue / Trauma)", toxinMultiplier)));
-                        }
-                        toxinTooltip.add(Component.literal("§8Effects erupt only when the buildup reaches 100%."));
-                    }
-                }
-            }
-
-            if (PhysiologyModule.isExertionEnabled()) {
-                float exertion = physData.getExertionScore();
-                boolean isFailure = physData.isMuscleFailure();
-                boolean isCramped = physData.isSwimmingCramped();
-
-                String statusColor;
-                String statusLabel;
-                if (isFailure) {
-                    statusColor = "§c";
-                    statusLabel = "Failure";
-                } else if (exertion >= 50.0f) {
-                    statusColor = "§6";
-                    statusLabel = "Strained";
-                } else {
-                    statusColor = "§a";
-                    statusLabel = "Rested";
-                }
-
-                String exertionText = "§7Stamina: " + statusColor + String.format("%.0f%%", 100.0f - exertion)
-                        + " §8(" + (isCramped ? "§cCramp" : statusLabel) + "§8)";
-
-                int exertionLabelY = curY;
-                guiGraphics.drawString(this.font, exertionText, infoX, curY, 0xFFFFFF, false);
-                curY += 9;
-
-                int exertionBarHeight = 2;
-                int exertionBarY = curY;
-                guiGraphics.fill(infoX, exertionBarY, infoX + barWidth, exertionBarY + exertionBarHeight, 0xFF101010);
-                guiGraphics.renderOutline(infoX, exertionBarY, barWidth, exertionBarHeight, 0xFF282828);
-
-                float staminaFraction = Math.max(0.0f, Math.min(1.0f, (100.0f - exertion) / 100.0f));
-                int filledExertionWidth = (int) (barWidth * staminaFraction);
-                int exertionBarColor = isFailure ? 0xFFFF4444 : (exertion >= 50.0f ? 0xFFFFAA00 : 0xFF55FF55);
-                if (filledExertionWidth > 0) {
-                    guiGraphics.fill(infoX, exertionBarY, infoX + filledExertionWidth, exertionBarY + exertionBarHeight, exertionBarColor);
-                }
-                curY += exertionBarHeight + 3;
-
-                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= exertionLabelY && mouseY <= exertionBarY + exertionBarHeight + 2) {
-                    exertionTooltip = new ArrayList<>();
-                    exertionTooltip.add(Component.literal("§6Stamina & Muscle: " + statusColor + String.format("%.0f%% Capacity", 100.0f - exertion)));
-                    if (isFailure) {
-                        exertionTooltip.add(Component.literal("§c⚠ Muscle Failure: -50% Attack Speed & -50% Digging Speed"));
-                        exertionTooltip.add(Component.literal("§e⚡ Stand still & release mouse for 3–4s to recover 100%"));
-                    } else if (exertion > 0.0f) {
-                        exertionTooltip.add(Component.literal(String.format("§7Exertion: %.0f%% (Continuous labor/jumping/upstream)", exertion)));
-                        exertionTooltip.add(Component.literal("§8Recovers passively or completely when resting"));
-                    } else {
-                        exertionTooltip.add(Component.literal("§a✔ Muscles Rested: Full attack & mining efficiency"));
-                    }
-                    if (isCramped) {
-                        exertionTooltip.add(Component.literal("§c⚠ Swimming Cramp: -40% Swim Speed"));
-                        exertionTooltip.add(Component.literal("§e⚡ Exit to shore or boat for 3s to relieve cramp"));
-                    } else if (physData.getContinuousSwimmingTicks() > 200) {
-                        int crampThreshold = ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS != null ? ServerConfig.SWIMMING_CRAMP_THRESHOLD_TICKS.get() : 600;
-                        int remTicks = Math.max(0, crampThreshold - physData.getContinuousSwimmingTicks());
-                        exertionTooltip.add(Component.literal(String.format("§7Swimming: %.1fs until leg cramp", remTicks / 20.0)));
-                    }
-                }
-            }
-
-            int bpm = calculateHeartRateBpm(player, physData);
-            String bpmColor;
-            String bpmLabel;
-            if (bpm >= 140) {
-                bpmColor = "§c";
-                bpmLabel = "Tachycardia";
-            } else if (bpm >= 110) {
-                bpmColor = "§6";
-                bpmLabel = "Elevated";
-            } else if (bpm >= 80) {
-                bpmColor = "§e";
-                bpmLabel = "Moderate";
-            } else {
-                bpmColor = "§a";
-                bpmLabel = "Normal";
-            }
-
-            int hrLabelY = curY;
-            String hrText = "§7Heart: " + bpmColor + "❤ " + bpm + " BPM §8(" + bpmLabel + "§8)";
-            guiGraphics.drawString(this.font, hrText, infoX, curY, 0xFFFFFF, false);
-            curY += 9;
-
-            int hrBarHeight = 2;
-            int hrBarY = curY;
-            guiGraphics.fill(infoX, hrBarY, infoX + barWidth, hrBarY + hrBarHeight, 0xFF101010);
-            guiGraphics.renderOutline(infoX, hrBarY, barWidth, hrBarHeight, 0xFF282828);
-
-            float hrFraction = Math.max(0.0f, Math.min(1.0f, (bpm - 55.0f) / 140.0f));
-            int filledHrWidth = (int) (barWidth * hrFraction);
-            int hrBarColor = bpm >= 140 ? 0xFFFF3333 : (bpm >= 110 ? 0xFFFFAA00 : (bpm >= 80 ? 0xFFFFFF55 : 0xFF55FF55));
-            if (filledHrWidth > 0) {
-                guiGraphics.fill(infoX, hrBarY, infoX + filledHrWidth, hrBarY + hrBarHeight, hrBarColor);
-            }
-            curY += hrBarHeight + 3;
-
-            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= hrLabelY && mouseY <= hrBarY + hrBarHeight + 2) {
-                heartRateTooltip = new ArrayList<>();
-                heartRateTooltip.add(Component.literal("§c❤ Heart Rate: " + bpmColor + bpm + " BPM (" + bpmLabel + ")"));
-                heartRateTooltip.add(Component.literal("§7Resting Baseline: ~68 BPM"));
-                double exertionBpm = (physData.getExertionScore() / 100.0) * 45.0;
-                if (exertionBpm > 0.5) {
-                    heartRateTooltip.add(Component.literal(String.format("§7• Exertion / Labor: +%.0f BPM", exertionBpm)));
-                }
-                float maxHp = player.getMaxHealth();
-                float curHp = player.getHealth();
-                if (maxHp > 0.0f && curHp < maxHp) {
-                    double traumaBpm = (1.0f - (curHp / maxHp)) * 40.0;
-                    heartRateTooltip.add(Component.literal(String.format("§c• Trauma / Low HP: +%.0f BPM", traumaBpm)));
-                }
-                if (physData.getToxinBuildup() > 0.0f) {
-                    double toxinBpm = (physData.getToxinBuildup() / 100.0) * 25.0;
-                    heartRateTooltip.add(Component.literal(String.format("§2• Toxin Cardiovascular Strain: +%.0f BPM", toxinBpm)));
-                }
-                if (physData.getFatigueScore() > 0.1f) {
-                    double fatigueBpm = physData.getFatigueScore() * 15.0;
-                    heartRateTooltip.add(Component.literal(String.format("§6• Fatigue Stress: +%.0f BPM", fatigueBpm)));
-                }
-                if (physData.isPanicking()) {
-                    heartRateTooltip.add(Component.literal("§c• Underground Claustrophobia: +45 BPM"));
-                }
-                if (physData.isAdrenalineActive()) {
-                    heartRateTooltip.add(Component.literal("§c• Adrenaline Surge: +60 BPM"));
-                }
-                if (physData.getIndigestionBuildup() >= 50.0f) {
-                    heartRateTooltip.add(Component.literal("§6• Gut Discomfort / Indigestion: +10 BPM"));
-                }
-                if (PhysiologyModule.isBloodSystemEnabled() && physData.getBloodVolume() < 4500) {
-                    double bloodBpm = ((4500.0 - physData.getBloodVolume()) / 4500.0) * 50.0;
-                    heartRateTooltip.add(Component.literal(String.format("§c• Hypovolemic Strain / Blood Loss: +%.0f BPM", bloodBpm)));
-                }
-                heartRateTooltip.add(Component.literal("§8Elevated heart rate accelerates physical exhaustion."));
-            }
-
-            if (PhysiologyModule.isBloodSystemEnabled()) {
-                short bloodVol = physData.getBloodVolume();
-                BloodType bloodType = physData.getBloodType();
-                byte bleedTier = physData.getBleedingTier();
-
-                String typeStr = bloodType != null ? bloodType.getDisplayName() : "Unknown";
-                String bleedStr = bleedTier > 0 ? "§cBleed " + bleedTier : "§aNormal";
-                String bloodColor = bloodVol >= 4000 ? "§c" : (bloodVol >= 2500 ? "§e" : "§4");
-
-                int bloodLabelY = curY;
-                guiGraphics.drawString(this.font, "§7Blood Type: §c" + typeStr + " §8(" + bleedStr + "§8)", infoX, curY, 0xFFFFFF, false);
-                curY += 9;
-                String bloodText = String.format("§7Volume: %s%,d / 5,000 ml (%.0f%%)", bloodColor, (int) bloodVol,
-                        Math.max(0.0f, Math.min(1.0f, bloodVol / 5000.0f)) * 100.0f);
-                guiGraphics.drawString(this.font, bloodText, infoX, curY, 0xFFFFFF, false);
-                curY += 9;
-
-                int bloodBarHeight = 2;
-                int bloodBarY = curY;
-                guiGraphics.fill(infoX, bloodBarY, infoX + barWidth, bloodBarY + bloodBarHeight, 0xFF101010);
-                guiGraphics.renderOutline(infoX, bloodBarY, barWidth, bloodBarHeight, 0xFF282828);
-
-                float bloodFraction = Math.max(0.0f, Math.min(1.0f, (float) bloodVol / 5000.0f));
-                int filledBloodWidth = (int) (barWidth * bloodFraction);
-                int bloodBarColor = bloodVol >= 4000 ? 0xFFDD2C00 : (bloodVol >= 2500 ? 0xFFFF6D00 : 0xFF880000);
-                if (filledBloodWidth > 0) {
-                    guiGraphics.fill(infoX, bloodBarY, infoX + filledBloodWidth, bloodBarY + bloodBarHeight, bloodBarColor);
-                }
-                curY += bloodBarHeight + 3;
-
-                if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= bloodLabelY && mouseY <= bloodBarY + bloodBarHeight + 2) {
-                    bloodTooltip = new ArrayList<>();
-                    bloodTooltip.add(Component.literal("§c🩸 Blood Volume: " + bloodColor + bloodVol + " / 5,000 ml (" + String.format("%.0f%%", bloodFraction * 100.0f) + ")"));
-                    bloodTooltip.add(Component.literal("§7• ABO/Rh Type: §c" + typeStr));
-                    if (bloodType != null) {
-                        bloodTooltip.add(Component.literal("§8  ↳ Compatible Donor: " + (bloodType == BloodType.O_NEGATIVE ? "Universal Donor (All)" : "Specific Types")));
-                        bloodTooltip.add(Component.literal("§8  ↳ Compatible Recipient: " + (bloodType == BloodType.AB_POSITIVE ? "Universal Recipient (All)" : "Specific Types")));
-                    }
-                    if (bleedTier > 0) {
-                        int loss = switch (bleedTier) {
-                            case 1 -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
-                            case 2 -> ServerConfig.BLEEDING_TIER_2_LOSS_PER_SEC.get();
-                            case 3 -> ServerConfig.BLEEDING_TIER_3_LOSS_PER_SEC.get();
-                            default -> ServerConfig.BLEEDING_TIER_1_LOSS_PER_SEC.get();
-                        };
-                        bloodTooltip.add(Component.literal("§c⚠ Active Hemorrhage: Tier " + bleedTier + " (-" + loss + " ml/s)"));
-                        if (bleedTier == 1) {
-                            int clottingSec = Math.max(0, physData.getClottingTicks() / 20);
-                            bloodTooltip.add(Component.literal("§e  ↳ Clotting in: " + clottingSec + "s"));
-                        } else if (bleedTier >= 2) {
-                            bloodTooltip.add(Component.literal("§c  ↳ Arterial: Severe Trauma (No auto-clotting)"));
-                        }
-                    } else {
-                        bloodTooltip.add(Component.literal("§a✔ Hemostasis: Intact (No active bleeding)"));
-                    }
-                    if (bloodVol < 2000) {
-                        bloodTooltip.add(Component.literal("§4⚠ Critical Shock (< 40%): Blackout / Syncope"));
-                    } else if (bloodVol < 3000) {
-                        bloodTooltip.add(Component.literal("§6⚠ Moderate Shock (< 60%): Tunnel Vision & Desaturation"));
-                    } else if (bloodVol < 4000) {
-                        bloodTooltip.add(Component.literal("§e⚡ Mild Shock (< 80%): Tachycardia & 2x Stamina Drain"));
-                    }
-                }
-            }
-
-            // Compact metabolic and mental indicators
-            List<String> tags = new ArrayList<>();
-            if (physData.isAdrenalineActive()) {
-                tags.add("§c⚡ Adrenaline (" + String.format("%.1fs", physData.getAdrenalineTicks() / 20.0) + ")");
-            } else if (physData.isPanicking()) {
-                tags.add("§c⚠ Panic (0 Lux)");
-            }
-            if (physData.getPendingNutrition() > 0.0f) {
-                tags.add("§aDigesting (+" + String.format("%.0f", physData.getPendingNutrition()) + "🍗)");
-            }
-            if (physData.getIndigestionBuildup() > 0.0f) {
-                tags.add("§6Indigestion (" + String.format("%.0f%%", physData.getIndigestionBuildup()) + ")");
-            }
-            if (physData.hasCalciumBuff()) {
-                long cSec = physData.getCalciumAbsorptionTicks() / 20;
-                tags.add("§bCalcium (" + (cSec / 60) + "m " + (cSec % 60) + "s)");
-            }
-
-            if (ServerConfig.ENABLE_TEMPERATURE.get()) {
-                PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
-                float wetness = tempData.getWetnessBuffer();
-                int ticksFrozen = player.getTicksFrozen();
-                boolean hasBuff = tempData.hasInternalWarming();
-                boolean nearHeat = tempData.isNearHeatSource();
-
-                if (hasBuff) {
-                    tags.add("§6♨ Internal Warming (" + (tempData.getInternalWarmingTicks() / 20) + "s)");
-                } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
-                    tags.add("§c❄ Freezing (Hypothermia)");
-                } else if (ticksFrozen > 0) {
-                    tags.add("§b❄ Chilly");
-                }
-
-                if (wetness >= 1.0f) {
-                    tags.add("§cWetness: Soaked (100%)");
-                } else if (wetness > 0.0f) {
-                    tags.add(String.format("§bWetness: Damp (%.0f%%)", wetness * 100.0f));
-                }
-
-                if (nearHeat) {
-                    tags.add("§6Near Heat (Rewarming)");
-                }
-            }
-
-            int tagStartY = curY;
-            if (!tags.isEmpty() && curY < topPos + 118) {
-                for (String tag : tags) {
-                    if (curY + 9 > topPos + 120) break;
-                    guiGraphics.drawString(this.font, tag, infoX, curY, 0xFFFFFF, false);
-                    curY += 9;
-                }
-            } else if (curY < topPos + 118) {
-                guiGraphics.drawString(this.font, "§8Metabolism: Normal (Resting)", infoX, curY, 0x888888, false);
-                curY += 9;
-            }
-
-            if (mouseX >= infoX && mouseX <= infoX + barWidth && mouseY >= tagStartY && mouseY <= Math.max(curY, tagStartY + 9)) {
-                metabolismTooltip = new ArrayList<>();
-                metabolismTooltip.add(Component.literal("§6Metabolic & Sensory Vitals"));
-                if (physData.getPendingNutrition() > 0.0f || physData.getPendingSaturation() > 0.0f) {
-                    metabolismTooltip.add(Component.literal(String.format("§a• Digestion Buffer: +%.0f Nutrition / +%.1f Saturation",
-                            physData.getPendingNutrition(), physData.getPendingSaturation())));
-                    metabolismTooltip.add(Component.literal("§7  Absorption ticks in every 1.5s to prevent meal spam."));
-                } else {
-                    metabolismTooltip.add(Component.literal("§a• Digestion: Clear / Resting"));
-                }
-
-                if (physData.hasCalciumBuff()) {
-                    long calSec = physData.getCalciumAbsorptionTicks() / 20;
-                    metabolismTooltip.add(Component.literal(String.format("§b• Calcium Absorption: %02d:%02d remaining", calSec / 60, calSec % 60)));
-                    metabolismTooltip.add(Component.literal("§7  Doubles natural fracture healing speed during rest & sleep."));
-                } else {
-                    metabolismTooltip.add(Component.literal("§8• Calcium Buff: Inactive (Drink Hot Bone Broth or Milk)"));
-                }
-
-                if (physData.getIndigestionBuildup() > 0.0f) {
-                    String crampTxt = physData.getIndigestionBuildup() >= 50.0f ? "§c[CRAMPING ACTIVE]" : "§6[Mild Discomfort]";
-                    metabolismTooltip.add(Component.literal(String.format("§6• Indigestion Buildup: %.0f%% %s", physData.getIndigestionBuildup(), crampTxt)));
-                    metabolismTooltip.add(Component.literal("§7  Caused by raw chicken/spoiled meat. Remedy with milk or honey."));
-                }
-
-                if (physData.isAdrenalineActive()) {
-                    float remSec = physData.getAdrenalineTicks() / 20.0f;
-                    metabolismTooltip.add(Component.literal(String.format("§c• Adrenaline Rush: %.1fs remaining", remSec)));
-                    metabolismTooltip.add(Component.literal("§a  +35% Speed Burst & Sprint Unlocked overriding fractures."));
-                    metabolismTooltip.add(Component.literal("§c⚠ Pain Shock collapse occurs immediately upon rush expiry!"));
-                }
-
-                if (physData.isPanicking() || physData.getClaustrophobiaTicks() > 0) {
-                    int pThresh = ServerConfig.PANIC_THRESHOLD_TICKS != null ? ServerConfig.PANIC_THRESHOLD_TICKS.get() : 100;
-                    int pPct = Math.min(100, Math.round((physData.getClaustrophobiaTicks() / (float) pThresh) * 100.0f));
-                    metabolismTooltip.add(Component.literal(String.format("§c• Underground Claustrophobia: %d%% %s", pPct,
-                            physData.isPanicking() ? "§c[PANIC - AIM TREMORS]" : "§e[Building]")));
-                    metabolismTooltip.add(Component.literal("§7  Triggers at Y < 0 in pitch black. Calm near torches, fires, music, or pets."));
-                }
-
-                if (ServerConfig.ENABLE_TEMPERATURE.get()) {
-                    PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
-                    float wetness = tempData.getWetnessBuffer();
-                    int ticksFrozen = player.getTicksFrozen();
-                    boolean isNearHeat = tempData.isNearHeatSource();
-
-                    String tempStatus;
-                    if (tempData.hasInternalWarming()) {
-                        tempStatus = "§6Warm (Stew)";
-                    } else if (ticksFrozen >= (int) Math.round(player.getTicksRequiredToFreeze() * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get())) {
-                        tempStatus = "§cFreezing (Hypothermia)";
-                    } else if (ticksFrozen > 0 || (wetness >= 0.5f && !isNearHeat)) {
-                        tempStatus = "§bChilly";
-                    } else {
-                        tempStatus = "§aNormal (37°C)";
-                    }
-
-                    String wStatus = wetness >= 1.0f ? "§c[100% SOAKED]" : (wetness > 0.0f ? String.format("§bDamp (%.0f%%)", wetness * 100.0f) : "§a0% (Dry)");
-                    metabolismTooltip.add(Component.literal("§6• Body Temp: " + tempStatus));
-                    metabolismTooltip.add(Component.literal("§b• Wetness: " + wStatus));
-
-                    if (tempData.hasInternalWarming()) {
-                        int remSec = tempData.getInternalWarmingTicks() / 20;
-                        metabolismTooltip.add(Component.literal(String.format("§6  ↳ Internal Warming Buff: %ds remaining (Freeze Immune)", remSec)));
-                    }
-                    if (isNearHeat) {
-                        metabolismTooltip.add(Component.literal("§6  ↳ Near Heat Source: Rapid drying (~12.5s) & 5x thaw"));
-                    }
-                    if (ticksFrozen > 0) {
-                        metabolismTooltip.add(Component.literal(String.format("§c  ↳ Freezing Ticks: %d / %d (Hypothermia)", ticksFrozen, player.getTicksRequiredToFreeze())));
-                    }
-                    float red = TemperatureEventHandler.calculateFreezeImmuneReduction(player);
-                    boolean noHelm = player.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
-                    metabolismTooltip.add(Component.literal(String.format("§7  ↳ Insulation: %.0f%% reduction | Head: %s", red * 100.0f, noHelm ? "§cMissing (2x Soak)" : "§aProtected")));
-                }
-            }
-        }
-
-        int splintDividerY = Math.max(curY + 2, topPos + 124);
-        guiGraphics.fill(infoX, splintDividerY, leftPos + GUI_WIDTH - 12, splintDividerY + 1, 0xFF353535);
-        ItemStack availableSplint = InjuryEventHandler.findFirstSplint(player);
-        boolean hasSplint = !availableSplint.isEmpty();
-        boolean isOnCooldown = hasSplint && player.getCooldowns().isOnCooldown(availableSplint.getItem());
-
-        if (hasSplint) {
-            if (isOnCooldown) {
-                guiGraphics.drawString(this.font, "§c⌛ Treating...", infoX, splintDividerY + 5, 0xFF6666, false);
-            } else {
-                guiGraphics.drawString(this.font, "§eClick limb to treat", infoX, splintDividerY + 5, 0xFFFF55, false);
-            }
-            String splintName = this.font.plainSubstrByWidth(availableSplint.getHoverName().getString(), infoWidth - 36);
-            guiGraphics.drawString(this.font, "§7Using: " + splintName, infoX, splintDividerY + 17, 0xAAAAAA, false);
-        } else {
-            guiGraphics.drawString(this.font, "§8No splint in inventory", infoX, splintDividerY + 5, 0x888888, false);
-            guiGraphics.drawString(this.font, "§8[E] Return to Inventory", infoX, splintDividerY + 17, 0x666666, false);
-        }
-
-        if (hoveredBox != null) {
-            byte sev = data.getSeverity(hoveredBox.limb());
-            TraumaSeverity sevEnum = TraumaSeverity.fromLevel(sev);
-
-            List<Component> tooltip = new ArrayList<>();
-            tooltip.add(Component.literal("§6" + hoveredBox.limb().getDisplayName()));
-            tooltip.add(Component.literal("Status: " + getSeverityColor(sev) + sevEnum.getDisplayName() + " (Tier " + sev + ")"));
-
-            if (sev > 0) {
-                switch (hoveredBox.limb()) {
-                    case HEAD -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Mild Disorientation" : "§cPenalty: Flashing Darkness"));
-                    case TORSO -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: Increased Hunger Exhaustion" : "§cPenalty: Max Health Capped (7 Hearts)"));
-                    case MAIN_ARM -> tooltip.add(Component.literal("§cPenalty: -50% Attack/Mine Speed, Spasm Drop, Draw Lock"));
-                    case OFF_ARM -> tooltip.add(Component.literal("§cPenalty: Offhand Slot Locked, Shield Block Disabled"));
-                    case LEFT_LEG, RIGHT_LEG -> tooltip.add(Component.literal(sev == 1 ? "§7Penalty: -45% Speed, Sprint Locked" : "§cPenalty: -85% Speed, Forced Crawl"));
-                }
-                if (hasSplint) {
-                    if (isOnCooldown) {
-                        tooltip.add(Component.literal("§c[Splint on Cooldown]"));
-                    } else {
-                        tooltip.add(Component.literal("§e[Click to Treat with " + availableSplint.getHoverName().getString() + "]"));
-                    }
-                } else {
-                    tooltip.add(Component.literal("§7[Requires Splint in inventory]"));
-                }
-            } else {
-                tooltip.add(Component.literal("§aNo active fractures"));
-            }
-
-            guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
-        } else if (toxinTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, toxinTooltip, mouseX, mouseY);
-        } else if (physTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, physTooltip, mouseX, mouseY);
-        } else if (exertionTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, exertionTooltip, mouseX, mouseY);
-        } else if (heartRateTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, heartRateTooltip, mouseX, mouseY);
-        } else if (bloodTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, bloodTooltip, mouseX, mouseY);
-        } else if (weightTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, weightTooltip, mouseX, mouseY);
-        } else if (nutritionTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, nutritionTooltip, mouseX, mouseY);
-        } else if (metabolismTooltip != null) {
-            guiGraphics.renderComponentTooltip(this.font, metabolismTooltip, mouseX, mouseY);
-        }
-
         RenderSystem.enableDepthTest();
     }
 
-    public static int calculateHeartRateBpm(Player player, PlayerPhysiologyData physData) {
-        if (player == null || physData == null) return 68;
-
-        double bpm = 68.0;
-        bpm += (physData.getExertionScore() / 100.0) * 45.0;
-
-        float maxHp = player.getMaxHealth();
-        float curHp = player.getHealth();
-        if (maxHp > 0.0f) {
-            float healthFraction = Math.max(0.0f, Math.min(1.0f, curHp / maxHp));
-            bpm += (1.0f - healthFraction) * 40.0;
+    private void drawTabs(GuiGraphics gui, int mouseX, int mouseY) {
+        for (int i = 0; i < Tab.values().length; i++) {
+            int x = leftPos + TAB_X[i];
+            boolean selected = Tab.values()[i] == activeTab;
+            gui.fill(x, topPos + 7, x + 20, topPos + 19,
+                    selected ? DiagnosticAssets.COLOR_PANEL : DiagnosticAssets.COLOR_SHADOW);
+            if (selected) {
+                gui.fill(x, topPos + 18, x + 20, topPos + 19, DiagnosticAssets.COLOR_COPPER);
+            }
+            gui.drawString(this.font, tabLabel(Tab.values()[i]), x + 1, topPos + 9,
+                    selected ? 0xFFFFFFFF : 0xFF94A3B8, false);
         }
-
-        bpm += (Math.min(100.0f, physData.getToxinBuildup()) / 100.0) * 25.0;
-        bpm += physData.getFatigueScore() * 15.0;
-
-        if (physData.isPanicking()) {
-            bpm += 45.0;
-        }
-
-        if (physData.isAdrenalineActive()) {
-            bpm += 60.0;
-        }
-
-        if (physData.getIndigestionBuildup() >= 50.0f) {
-            bpm += 10.0;
-        }
-
-        if (PhysiologyModule.isBloodSystemEnabled() && physData.getBloodVolume() < 4500) {
-            bpm += ((4500.0 - physData.getBloodVolume()) / 4500.0) * 50.0;
-        }
-
-        return (int) Math.round(Math.max(55.0, Math.min(205.0, bpm)));
     }
 
-    private static String getSeverityColor(int sev) {
-        return switch (sev) {
-            case 2 -> "§c";
-            case 1 -> "§6";
-            default -> "§a";
+    private String tabLabel(Tab tab) {
+        if (tab == Tab.BLD && !PhysiologyModule.isBloodSystemEnabled()) return "SYS";
+        return TAB_TEXT[tab.ordinal()];
+    }
+
+    private void drawSilhouettes(GuiGraphics gui, Player player, int mouseX, int mouseY) {
+        PlayerInjuryData injury = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        int originX = leftPos + DiagnosticAssets.SPRITE_X;
+        int originY = topPos + DiagnosticAssets.SPRITE_Y;
+        byte bleedTier = PhysiologyModule.isBloodSystemEnabled()
+                ? PhysiologyModule.getOrCreatePhysiologyData(player.getUUID()).getBleedingTier() : 0;
+        boolean dropVisible = (net.minecraft.Util.getMillis() / 400) % 2 == 0;
+
+        for (LimbType limb : LimbType.values()) {
+            byte severity = injury.getSeverity(limb);
+            float[] tint = severityTint(severity);
+            HudAtlasRenderer.tintedBlit(gui, DiagnosticAssets.silhouette(limb),
+                    originX, originY, 64, 128, 64, 128, tint[0], tint[1], tint[2]);
+
+            DiagnosticAssets.Rect rect = DiagnosticAssets.limbRect(limb);
+            boolean hovered = mouseX >= originX + rect.x() && mouseX < originX + rect.x() + rect.width()
+                    && mouseY >= originY + rect.y() && mouseY < originY + rect.y() + rect.height();
+            if (hovered) {
+                hoveredLimb = limb;
+                gui.renderOutline(originX + rect.x(), originY + rect.y(), rect.width(), rect.height(),
+                        DiagnosticAssets.COLOR_HIGHLIGHT);
+            }
+            if (bleedTier > 0 && severity > 0 && dropVisible) {
+                gui.fill(originX + rect.x() + rect.width() - 3, originY + rect.y(),
+                        originX + rect.x() + rect.width() - 1, originY + rect.y() + 2, 0xFFF87171);
+            }
+            if (severity > 0) {
+                gui.enableScissor(originX + rect.x(), originY + rect.y(),
+                        originX + rect.x() + rect.width(), originY + rect.y() + rect.height());
+                gui.blit(DiagnosticAssets.SPLINT_OVERLAY, originX, originY, 64, 128,
+                        0.0f, 0.0f, 64, 128, 64, 128);
+                gui.disableScissor();
+            }
+        }
+    }
+
+    private static float[] severityTint(byte severity) {
+        int argb = TraumaSeverity.fromLevel(severity).getColorRgb();
+        return new float[] {
+                ((argb >> 16) & 0xFF) / 255.0f,
+                ((argb >> 8) & 0xFF) / 255.0f,
+                (argb & 0xFF) / 255.0f
         };
+    }
+
+    private void drawMetrics(GuiGraphics gui, List<Metric> metrics, int mouseX, int mouseY) {
+        for (int i = 0; i < metrics.size(); i++) {
+            int slotY = topPos + DiagnosticAssets.SLOT_Y + i * DiagnosticAssets.SLOT_PITCH;
+            int slotX = leftPos + DiagnosticAssets.SLOT_X;
+            Metric metric = metrics.get(i);
+
+            HudAtlasRenderer.icon(gui, metric.icon(), slotX, slotY);
+
+            String label = metric.label();
+            String value = metric.value();
+            int labelWidth = this.font.width(label);
+            int maxValueWidth = DiagnosticAssets.SLOT_BAR_W - labelWidth - 4;
+            if (maxValueWidth < 12) {
+                label = this.font.plainSubstrByWidth(label, DiagnosticAssets.SLOT_BAR_W - 24);
+                labelWidth = this.font.width(label);
+                maxValueWidth = DiagnosticAssets.SLOT_BAR_W - labelWidth - 4;
+            }
+            if (this.font.width(value) > maxValueWidth) {
+                value = this.font.plainSubstrByWidth(value, Math.max(6, maxValueWidth));
+            }
+
+            gui.drawString(this.font, label, leftPos + DiagnosticAssets.SLOT_X + 11,
+                    slotY, 0xFF94A3B8, false);
+            gui.drawString(this.font, value,
+                    leftPos + DiagnosticAssets.SLOT_X + DiagnosticAssets.SLOT_BAR_W - this.font.width(value),
+                    slotY, metric.color(), false);
+            HudAtlasRenderer.bar(gui, slotX, slotY + 9, DiagnosticAssets.SLOT_BAR_W, metric.fill(), metric.color());
+
+            if (mouseX >= slotX && mouseX < slotX + DiagnosticAssets.SLOT_BAR_W
+                    && mouseY >= slotY && mouseY < slotY + 14) {
+                hoveredMetric = metric;
+            }
+        }
+    }
+
+    private void drawFooter(GuiGraphics gui, Player player) {
+        int x = leftPos + DiagnosticAssets.SLOT_X;
+        int y = topPos + DiagnosticAssets.DIVIDER_Y;
+        gui.fill(x, y, leftPos + DiagnosticAssets.COLUMN_X + DiagnosticAssets.COLUMN_W - 2, y + 1,
+                DiagnosticAssets.COLOR_HIGHLIGHT);
+        ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+        boolean hasSplint = !splint.isEmpty();
+        boolean onCooldown = hasSplint && player.getCooldowns().isOnCooldown(splint.getItem());
+        if (hasSplint && !onCooldown) {
+            gui.drawString(this.font, "Click limb", x, y + 5, 0xFFFFD166, false);
+            gui.drawString(this.font, "E Inventory", x, y + 15, 0xFF94A3B8, false);
+        } else if (onCooldown) {
+            gui.drawString(this.font, "Treating...", x, y + 5, 0xFFF87171, false);
+        } else {
+            gui.drawString(this.font, "E Inventory", x, y + 5, 0xFF64748B, false);
+        }
+    }
+
+    private List<Metric> buildMetrics(Player player) {
+        PlayerInjuryData injury = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        PlayerPhysiologyData phys = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+        boolean blood = PhysiologyModule.isBloodSystemEnabled();
+
+        return switch (activeTab) {
+            case SUM -> buildSummary(player, injury, phys, blood);
+            case INJ -> buildInjury(injury);
+            case MET -> buildMetabolic(player, phys);
+            case BLD -> blood ? buildBlood(phys) : buildSystem(player, phys);
+        };
+    }
+
+    private List<Metric> buildSummary(Player player, PlayerInjuryData injury,
+                                      PlayerPhysiologyData phys, boolean blood) {
+        LimbType focus = hoveredLimb != null ? hoveredLimb : selectedLimb;
+        byte sev = injury.getSeverity(focus);
+        String sevText = sev == 0 ? "OK" : (sev == 1 ? "SPRAIN" : "FRACT");
+        int sevColor = severityColor(sev);
+
+        List<Metric> list = new ArrayList<>();
+        list.add(new Metric(abbrev(focus), sevText, sev / 2.0f, sevColor, null,
+                List.of(Component.literal("§7" + focus.getDisplayName() + " — "
+                        + (sev == 0 ? "works normally." : sev == 1 ? "sprained, reduced strength." : "fractured, needs a splint.")))));
+
+        DiagnosticAssets.Uv tempIcon = DiagnosticAssets.THERMO_NORMAL;
+        String tempText = "OK";
+        int tempColor = DiagnosticAssets.COLOR_OK;
+        if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+            PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+            int frozen = player.getTicksFrozen();
+            int threshold = (int) Math.round(player.getTicksRequiredToFreeze()
+                    * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get());
+            if (frozen >= threshold) {
+                tempText = "LOW"; tempColor = DiagnosticAssets.COLOR_CRITICAL;
+                tempIcon = DiagnosticAssets.THERMO_COLD;
+            } else if (frozen > 0) {
+                tempText = "COOL"; tempColor = DiagnosticAssets.COLOR_WARN;
+                tempIcon = DiagnosticAssets.THERMO_COLD;
+            } else if (tempData.isNearHeatSource()) {
+                tempText = "HIGH"; tempColor = DiagnosticAssets.COLOR_WARN;
+                tempIcon = DiagnosticAssets.THERMO_HOT;
+            }
+        }
+        list.add(new Metric("TEMP", tempText, 0.5f, tempColor, tempIcon,
+                List.of(Component.literal("Low temperature slows mining and drains warmth."))));
+
+        String loadText = "OK";
+        int loadColor = DiagnosticAssets.COLOR_OK;
+        DiagnosticAssets.Uv loadIcon = DiagnosticAssets.LOAD_LIGHT;
+        float loadFill = 0.0f;
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            PlayerWeightData data = WeightModule.getOrCreateWeightData(player.getUUID());
+            float current = data.getCachedWeight();
+            if (current <= 0.0f) {
+                current = WeightCalculator.calculateWeight(player);
+                data.setCachedWeight(current);
+            }
+            float max = WeightCalculator.calculateMaxCapacity(player);
+            loadFill = max > 0 ? current / max : 0;
+            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(loadFill);
+            loadText = String.format("%.0f%%", loadFill * 100.0f);
+            loadColor = switch (tier) {
+                case OVERBURDENED -> DiagnosticAssets.COLOR_CRITICAL;
+                case MEDIUM -> DiagnosticAssets.COLOR_WARN;
+                default -> DiagnosticAssets.COLOR_OK;
+            };
+            loadIcon = loadFill >= 0.85f ? DiagnosticAssets.LOAD_HEAVY
+                    : (loadFill >= 0.70f ? DiagnosticAssets.LOAD_MEDIUM : DiagnosticAssets.LOAD_LIGHT);
+        }
+        list.add(new Metric("LOAD", loadText, loadFill, loadColor, loadIcon,
+                List.of(Component.literal("Heavier load lowers speed and increases fall damage."))));
+
+        if (blood) {
+            int volume = phys.getBloodVolume();
+            BloodType type = phys.getBloodType();
+            float fraction = Mth.clamp(volume / 5000.0f, 0.0f, 1.0f);
+            int color = volume >= 4000 ? 0xFFFF8A65 : (volume >= 2500 ? DiagnosticAssets.COLOR_WARN : DiagnosticAssets.COLOR_CRITICAL);
+            list.add(new Metric("BLOOD", type != null ? type.getDisplayName() : "?", fraction, color, null,
+                    List.of(Component.literal(volume + " / 5,000 ml. Below 40% causes blackout."))));
+            int bpm = calculateHeartRateBpm(player, phys);
+            list.add(new Metric("HR", bpm + " BPM", (bpm - 55) / 140.0f,
+                    bpm >= 140 ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_OK, null,
+                    List.of(Component.literal("High heart rate drains stamina faster."))));
+        } else {
+            int hp = Math.round(player.getHealth());
+            list.add(new Metric("HP", String.valueOf(hp), player.getHealth() / Math.max(1.0f, player.getMaxHealth()),
+                    DiagnosticAssets.COLOR_OK, null, List.of(Component.literal("Health points remaining."))));
+        }
+        return list;
+    }
+
+    private List<Metric> buildInjury(PlayerInjuryData injury) {
+        List<Metric> list = new ArrayList<>();
+        for (LimbType limb : LimbType.values()) {
+            byte sev = injury.getSeverity(limb);
+            String text = sev == 0 ? "OK" : (sev == 1 ? "SPRAIN" : "FRACT");
+            String effect = sev == 0 ? "Works normally."
+                    : (sev == 1 ? "Reduced strength and stamina in this limb."
+                    : "Broken: major penalty until splinted.");
+            list.add(new Metric(abbrev(limb), text, sev / 2.0f, severityColor(sev), null,
+                    List.of(Component.literal("§7" + limb.getDisplayName() + ": " + effect))));
+        }
+        return list;
+    }
+
+    private List<Metric> buildMetabolic(Player player, PlayerPhysiologyData phys) {
+        List<Metric> list = new ArrayList<>();
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            float fat = Mth.clamp(player.getFoodData().getSaturationLevel() * 5.0f, 0.0f, 100.0f);
+            list.add(new Metric("FAT", pct(fat), fat / 100.0f, fat >= 50 ? DiagnosticAssets.COLOR_WARN : DiagnosticAssets.COLOR_CRITICAL, null,
+                    List.of(Component.literal("Energy reserve; low food slows stamina recovery."))));
+        } else {
+            list.add(placeholder("FAT"));
+        }
+        float stamina = Mth.clamp(100.0f - phys.getExertionScore(), 0.0f, 100.0f);
+        list.add(new Metric("STA", pct(stamina), stamina / 100.0f,
+                phys.isMuscleFailure() ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_OK, null,
+                List.of(Component.literal("Empty stamina blocks sprinting and weakens hits."))));
+
+        float toxin = Mth.clamp(phys.getToxinBuildup(), 0.0f, 100.0f);
+        ToxinType type = phys.getLastToxinType();
+        list.add(new Metric("TXN", pct(toxin), toxin / 100.0f,
+                toxin > 0 ? (type == ToxinType.WITHER ? 0xFFBA68C8 : 0xFFA3E4D7) : DiagnosticAssets.COLOR_OK, null,
+                List.of(Component.literal("Toxin triggers its effect once it reaches 100%."))));
+
+        float calcium = Mth.clamp(phys.getCalcium(), 0.0f, 100.0f);
+        list.add(new Metric("CAL", pct(calcium), calcium / 100.0f, 0xFF56C4E8, null,
+                List.of(Component.literal("Calcium speeds up fracture healing."))));
+
+        float fatigue = Mth.clamp(phys.getFatigueScore() * 100.0f, 0.0f, 100.0f);
+        list.add(new Metric("FTG", pct(fatigue), fatigue / 100.0f,
+                fatigue >= 80 ? DiagnosticAssets.COLOR_CRITICAL : (fatigue >= 50 ? DiagnosticAssets.COLOR_WARN : DiagnosticAssets.COLOR_OK), null,
+                List.of(Component.literal("Above 80% your vision blurs while moving."))));
+
+        float nut = (Mth.clamp(phys.getCalcium(), 0, 100) + Mth.clamp(phys.getCarbohydrates(), 0, 100)
+                + Mth.clamp(phys.getVitamins(), 0, 100)) / 3.0f;
+        list.add(new Metric("NUT", pct(nut), nut / 100.0f, 0xFF64D966, null, List.of(
+                Component.literal(String.format("Ca %d / Carbs %d / Vit %d",
+                        phys.getCalcium(), phys.getCarbohydrates(), phys.getVitamins())))));
+        return list;
+    }
+
+    private List<Metric> buildBlood(PlayerPhysiologyData phys) {
+        BloodType type = phys.getBloodType();
+        int volume = phys.getBloodVolume();
+        float fraction = Mth.clamp(volume / 5000.0f, 0.0f, 1.0f);
+        int color = volume >= 4000 ? 0xFFFF8A65 : (volume >= 2500 ? DiagnosticAssets.COLOR_WARN : DiagnosticAssets.COLOR_CRITICAL);
+
+        List<Metric> list = new ArrayList<>();
+        list.add(new Metric("TYPE", type != null ? type.getDisplayName() : "?", 1.0f,
+                DiagnosticAssets.COLOR_CRITICAL, null,
+                List.of(Component.literal("Blood group; mismatched transfusions cause shock."))));
+        list.add(new Metric("VOL", pct(fraction * 100.0f), fraction, color, null, List.of(
+                Component.literal(volume + " / 5,000 ml. Low volume raises heart rate."))));
+        byte bleed = phys.getBleedingTier();
+        list.add(new Metric("BLEED", bleed > 0 ? "T" + bleed : "NONE", bleed / 3.0f,
+                bleed > 0 ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_OK, null,
+                List.of(Component.literal("Active bleeding drains blood; use a bandage."))));
+        String shock = volume < 2000 ? "CRIT" : (volume < 3000 ? "MOD" : (volume < 4000 ? "MILD" : "NONE"));
+        list.add(new Metric("SHOCK", shock, 1.0f - fraction, color, null,
+                List.of(Component.literal("Shock narrows vision and weakens your strikes."))));
+        return list;
+    }
+
+    private List<Metric> buildSystem(Player player, PlayerPhysiologyData phys) {
+        int bpm = calculateHeartRateBpm(player, phys);
+        String label = bpm >= 140 ? "TACHY" : (bpm >= 110 ? "ELEV" : (bpm >= 80 ? "MOD" : "NORM"));
+        return List.of(
+                new Metric("HP", String.valueOf(Math.round(player.getHealth())),
+                        player.getHealth() / Math.max(1.0f, player.getMaxHealth()),
+                        DiagnosticAssets.COLOR_OK, null, List.of(Component.literal("Health points remaining."))),
+                new Metric("HR", bpm + " BPM", (bpm - 55) / 140.0f,
+                        bpm >= 140 ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_OK, null,
+                        List.of(Component.literal("High heart rate drains stamina faster."))),
+                new Metric("STATE", label, 0.5f, DiagnosticAssets.COLOR_OK, null,
+                        List.of(Component.literal("Overall cardiovascular strain level."))),
+                placeholder("RES")
+        );
+    }
+
+    private static Metric placeholder(String label) {
+        return new Metric(label, "—", 0.0f, 0xFF475569, null, List.of());
+    }
+
+    private static String pct(float value) {
+        return String.format("%.0f%%", value);
+    }
+
+    private static String abbrev(LimbType limb) {
+        return switch (limb) {
+            case HEAD -> "HEAD";
+            case TORSO -> "TORSO";
+            case MAIN_ARM -> "MARM";
+            case OFF_ARM -> "OARM";
+            case LEFT_LEG -> "LLEG";
+            case RIGHT_LEG -> "RLEG";
+        };
+    }
+
+    private static int severityColor(byte severity) {
+        return switch (severity) {
+            case 2 -> DiagnosticAssets.COLOR_CRITICAL;
+            case 1 -> DiagnosticAssets.COLOR_WARN;
+            default -> DiagnosticAssets.COLOR_OK;
+        };
+    }
+
+    private List<Component> limbTooltip(Player player, LimbType limb) {
+        PlayerInjuryData injury = InjuryModule.getOrCreateInjuryData(player.getUUID());
+        byte sev = injury.getSeverity(limb);
+        TraumaSeverity severity = TraumaSeverity.fromLevel(sev);
+        List<Component> tip = new ArrayList<>();
+        tip.add(Component.literal("§6" + limb.getDisplayName()));
+        tip.add(Component.literal("§7Status: " + severity.getDisplayName() + " (T" + sev + ")"));
+        if (sev > 0) {
+            ItemStack splint = InjuryEventHandler.findFirstSplint(player);
+            tip.add(Component.literal(splint.isEmpty() ? "§8Requires a splint" : "§eClick to treat"));
+        } else {
+            tip.add(Component.literal("§aNo active fracture"));
+        }
+        return tip;
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && this.minecraft != null && this.minecraft.player != null) {
-            Player player = this.minecraft.player;
-            int silX = leftPos + 12;
-            int silY = topPos + 30;
-
-            for (LimbHitbox box : HITBOXES) {
-                if (box.contains((int) mouseX, (int) mouseY, silX, silY)) {
-                    byte treatment = findTreatmentType(player);
-                    if (treatment >= 0 && this.minecraft.getConnection() != null) {
-                        this.minecraft.getConnection().send(new ServerboundCustomPayloadPacket(
-                                new TreatLimbPayload((byte) box.limb().getIndex(), treatment)));
-                        return true;
+        if (button == 0) {
+            for (int i = 0; i < Tab.values().length; i++) {
+                int x = leftPos + TAB_X[i];
+                if (mouseX >= x && mouseX < x + 20 && mouseY >= topPos + 7 && mouseY < topPos + 19) {
+                    activeTab = Tab.values()[i];
+                    return true;
+                }
+            }
+            if (this.minecraft != null && this.minecraft.player != null) {
+                Player player = this.minecraft.player;
+                int originX = leftPos + DiagnosticAssets.SPRITE_X;
+                int originY = topPos + DiagnosticAssets.SPRITE_Y;
+                for (LimbType limb : LimbType.values()) {
+                    DiagnosticAssets.Rect rect = DiagnosticAssets.limbRect(limb);
+                    if (mouseX >= originX + rect.x() && mouseX < originX + rect.x() + rect.width()
+                            && mouseY >= originY + rect.y() && mouseY < originY + rect.y() + rect.height()) {
+                        selectedLimb = limb;
+                        byte treatment = findTreatmentType(player);
+                        if (treatment >= 0 && this.minecraft.getConnection() != null) {
+                            this.minecraft.getConnection().send(new ServerboundCustomPayloadPacket(
+                                    new TreatLimbPayload((byte) limb.getIndex(), treatment)));
+                            return true;
+                        }
                     }
                 }
             }
@@ -854,9 +470,7 @@ public class DiagnosticScreen extends Screen {
 
     private static byte findTreatmentType(Player player) {
         ItemStack[] candidates = {
-                player.containerMenu.getCarried(),
-                player.getMainHandItem(),
-                player.getOffhandItem()
+                player.containerMenu.getCarried(), player.getMainHandItem(), player.getOffhandItem()
         };
         for (ItemStack stack : candidates) {
             if (SplintItem.isValidSplint(stack)) return TreatLimbPayload.TYPE_SPLINT;
@@ -875,19 +489,46 @@ public class DiagnosticScreen extends Screen {
             this.onClose();
             return true;
         }
-
+        Tab[] values = Tab.values();
+        if (keyCode == 258 || keyCode == 262) {
+            activeTab = values[(activeTab.ordinal() + 1) % values.length];
+            return true;
+        }
+        if (keyCode == 263) {
+            activeTab = values[(activeTab.ordinal() - 1 + values.length) % values.length];
+            return true;
+        }
         if (this.minecraft != null && this.minecraft.options.keyInventory.matches(keyCode, scanCode)) {
             if (this.minecraft.player != null) {
                 this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
                 return true;
             }
         }
-
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    public static int calculateHeartRateBpm(Player player, PlayerPhysiologyData physData) {
+        if (player == null || physData == null) return 68;
+        double bpm = 68.0;
+        bpm += (physData.getExertionScore() / 100.0) * 45.0;
+        float maxHp = player.getMaxHealth();
+        float curHp = player.getHealth();
+        if (maxHp > 0.0f) {
+            bpm += (1.0f - Math.max(0.0f, Math.min(1.0f, curHp / maxHp))) * 40.0;
+        }
+        bpm += (Math.min(100.0f, physData.getToxinBuildup()) / 100.0) * 25.0;
+        bpm += physData.getFatigueScore() * 15.0;
+        if (physData.isPanicking()) bpm += 45.0;
+        if (physData.isAdrenalineActive()) bpm += 60.0;
+        if (physData.getIndigestionBuildup() >= 50.0f) bpm += 10.0;
+        if (PhysiologyModule.isBloodSystemEnabled() && physData.getBloodVolume() < 4500) {
+            bpm += ((4500.0 - physData.getBloodVolume()) / 4500.0) * 50.0;
+        }
+        return (int) Math.round(Math.max(55.0, Math.min(205.0, bpm)));
     }
 }

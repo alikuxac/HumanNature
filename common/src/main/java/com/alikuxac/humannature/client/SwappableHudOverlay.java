@@ -1,6 +1,8 @@
 package com.alikuxac.humannature.client;
 
+import com.alikuxac.humannature.client.gui.DiagnosticAssets;
 import com.alikuxac.humannature.client.gui.DiagnosticScreen;
+import com.alikuxac.humannature.client.gui.HudAtlasRenderer;
 import com.alikuxac.humannature.config.ClientConfig;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
@@ -441,7 +443,7 @@ public class SwappableHudOverlay {
         }
 
         int boxWidth = Math.max(120, maxLineWidth + 8);
-        int boxHeight = wrappedLines.size() * 11 + 6;
+        int boxHeight = wrappedLines.size() * 11 + 3 + 42 + 6;
 
         if (x + boxWidth > screenWidth - 4) {
             x = Math.max(4, screenWidth - boxWidth - 4);
@@ -457,6 +459,61 @@ public class SwappableHudOverlay {
         for (FormattedCharSequence fcs : wrappedLines) {
             guiGraphics.drawString(mc.font, fcs, x, curLineY, 0xFFFFFF, false);
             curLineY += 11;
+        }
+
+        drawAtlasStrip(guiGraphics, player, x, curLineY + 3);
+    }
+
+    private static void drawAtlasStrip(GuiGraphics gui, Player player, int x, int y) {
+        DiagnosticAssets.Uv tempIcon = DiagnosticAssets.THERMO_NORMAL;
+        float freezeFraction = 0.0f;
+        int tempColor = DiagnosticAssets.COLOR_OK;
+        if (ServerConfig.ENABLE_TEMPERATURE.get()) {
+            PlayerTemperatureData tempData = TemperatureModule.getOrCreateTemperatureData(player.getUUID());
+            int frozen = player.getTicksFrozen();
+            int threshold = Math.max(1, (int) Math.round(player.getTicksRequiredToFreeze()
+                    * ServerConfig.HYPOTHERMIA_PENALTY_THRESHOLD.get()));
+            freezeFraction = Math.min(1.0f, frozen / (float) threshold);
+            if (frozen > 0 || tempData.getWetnessBuffer() >= 0.5f) {
+                tempIcon = DiagnosticAssets.THERMO_COLD;
+                tempColor = freezeFraction >= 0.6f ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_WARN;
+            } else if (tempData.isNearHeatSource()) {
+                tempIcon = DiagnosticAssets.THERMO_HOT;
+                tempColor = DiagnosticAssets.COLOR_WARN;
+            }
+        }
+        HudAtlasRenderer.icon(gui, tempIcon, x, y);
+        HudAtlasRenderer.bar(gui, x + 12, y + 2, 72, freezeFraction, tempColor);
+
+        DiagnosticAssets.Uv loadIcon = DiagnosticAssets.LOAD_LIGHT;
+        float loadFraction = 0.0f;
+        int loadColor = DiagnosticAssets.COLOR_OK;
+        if (ServerConfig.ENABLE_WEIGHT.get()) {
+            PlayerWeightData data = WeightModule.getOrCreateWeightData(player.getUUID());
+            float current = data.getCachedWeight();
+            if (current <= 0.0f) {
+                current = WeightCalculator.calculateWeight(player);
+                data.setCachedWeight(current);
+            }
+            float max = WeightCalculator.calculateMaxCapacity(player);
+            loadFraction = max > 0 ? current / max : 0;
+            EncumbranceTier tier = EncumbranceTier.fromWeightRatio(loadFraction);
+            loadColor = switch (tier) {
+                case OVERBURDENED -> DiagnosticAssets.COLOR_CRITICAL;
+                case MEDIUM -> DiagnosticAssets.COLOR_WARN;
+                default -> DiagnosticAssets.COLOR_OK;
+            };
+            loadIcon = loadFraction >= 0.85f ? DiagnosticAssets.LOAD_HEAVY
+                    : (loadFraction >= 0.70f ? DiagnosticAssets.LOAD_MEDIUM : DiagnosticAssets.LOAD_LIGHT);
+        }
+        HudAtlasRenderer.icon(gui, loadIcon, x, y + 14);
+        HudAtlasRenderer.bar(gui, x + 12, y + 16, 72, loadFraction, loadColor);
+
+        if (ServerConfig.ENABLE_PHYSIOLOGY.get()) {
+            PlayerPhysiologyData phys = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
+            float stamina = Math.max(0.0f, Math.min(100.0f, 100.0f - phys.getExertionScore())) / 100.0f;
+            HudAtlasRenderer.bar(gui, x + 12, y + 30, 72, stamina,
+                    phys.isMuscleFailure() ? DiagnosticAssets.COLOR_CRITICAL : DiagnosticAssets.COLOR_OK);
         }
     }
 }
