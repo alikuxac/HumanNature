@@ -1,6 +1,6 @@
 # Advancements
 
-Human Nature adds one advancement tab with nine milestones. All of them run through a single trigger, `humannature:gameplay_event`, so the data files live in `common/src/main/resources/data/humannature/advancement/` and work the same on Forge and NeoForge.
+Human Nature has nine advancements in one tab. Both loaders use `humannature:gameplay_event`, with data files in `common/src/main/resources/data/humannature/advancement/`.
 
 ## Milestones
 
@@ -16,18 +16,18 @@ Human Nature adds one advancement tab with nine milestones. All of them run thro
 | `life_giver` | Drawing your own blood, or a compatible transfusion that raises someone's volume | `root` |
 | `balanced_diet` | Calcium, carbohydrates and vitamins all at 100 | `life_giver` |
 
-Parents only draw the tree; a milestone does not need its parent to be earned. Custom milestones are server-side and skip creative/spectator players. The root still goes to everyone.
+Parent links control the tree layout; advancements can be earned in any order. Custom triggers run on the server for survival and adventure players. Everyone receives the root.
 
-A few details worth knowing:
+Some conditions need more than the action listed above:
 
-- **Iron Bones** needs real calcium-assisted natural healing during that fracture. The buff can wear off before the fracture finishes and it still counts. A splint cure, death or a command clear wipes the eligibility.
-- **Pack Mule** checks equipped armor on equipment changes and on login, using the enchantment's registry max level. Carrying the armor in your inventory does nothing.
-- **Life Giver** ignores self-transfusion, drawing from a teammate, incompatible blood, and recipients whose volume cannot go up.
-- **Balanced Diet** fires on the food consumption that fills the last reserve, not on a tick that happens to see all three full.
+- **Iron Bones** requires calcium to have sped up natural healing for that fracture. The buff may expire before healing finishes. A splint cure, death or clearing the fracture with a command resets eligibility.
+- **Pack Mule** checks equipped armor on login and equipment changes against the enchantment's registry max level. Armor carried in the inventory does not count.
+- **Life Giver** excludes self-transfusion, drawing from a teammate, incompatible blood and transfusions that cannot raise the recipient's blood volume.
+- **Balanced Diet** is awarded when eating fills the last nutrient reserve to 100.
 
-## Data-pack contract
+## Datapack Criteria
 
-Every custom milestone uses the same criterion shape:
+Custom milestones use this criterion:
 
 ```json
 {
@@ -38,11 +38,11 @@ Every custom milestone uses the same criterion shape:
 }
 ```
 
-`event_id` is required and matched exactly. `player` is optional and takes a vanilla entity predicate. Addons can emit events from common server code with `HumanNatureAdvancements.trigger(player, eventId)`; unknown IDs are fine and can be used by addon-defined criteria. There is no polling loop and no network packet for this.
+`event_id` is required and matched exactly. The optional `player` field takes a vanilla entity predicate. Addons can call `HumanNatureAdvancements.trigger(player, eventId)` from common server code, including with their own event IDs.
 
 Built-in IDs: `splint_applied`, `fracture_healed`, `overburdened`, `max_load_bearing`, `hypothermia`, `heat_exhaustion`, `blood_transfused`, `max_nutrition`.
 
-`heat_exhaustion` has no emitter yet. There is no hot-climate body-temperature model, so heat, fire and hot biomes will never award `heatstroke` in this release. The definition and translations are there for when that mechanic lands, and `/advancement grant @s only humannature:heatstroke` can verify the resource itself.
+`heatstroke` is reserved: no code emits `heat_exhaustion` yet, so heat, fire and hot biomes do not award it. Use `/advancement grant @s only humannature:heatstroke` to check its definition and translations.
 
 Titles and descriptions use `advancements.humannature.<id>.title` / `.description`, translated in `en_us` and `vi_vn`.
 
@@ -52,4 +52,4 @@ Titles and descriptions use `advancements.humannature.<id>.title` / `.descriptio
 rtk .\gradlew.bat :common:test :forge:build :neoforge:build
 ```
 
-In game, on both loaders: join a survival world, check `L` shows the tree, then trigger a few milestones and make sure the negative cases above do not award anything. Reconnect and `/reload` to confirm progress persists and the log stays clean.
+On each loader, join a survival world and press `L` to check the tree. Test the milestone conditions and exclusions above, then reconnect and run `/reload`. Check that progress is saved and no errors appear in the log.

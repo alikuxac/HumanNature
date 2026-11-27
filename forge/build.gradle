@@ -41,8 +41,15 @@ repositories {
 
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}")
-    implementation project(':api')
+    implementation(project(':api')) {
+        attributes {
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.CLASSES))
+        }
+    }
     implementation project(':common')
+    if (providers.gradleProperty('withJei').orElse('false').get().toBoolean()) {
+        runtimeOnly "mezz.jei:jei-${rootProject.minecraft_version}-forge:${rootProject.jei_version}"
+    }
 }
 
 sourceSets.main.resources {

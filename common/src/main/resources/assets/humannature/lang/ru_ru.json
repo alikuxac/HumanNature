@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Питательные вещества",
+  "jei.humannature.nutrition.per_serving": "Прирост за употребление",
+  "jei.humannature.nutrition.calcium": "Кальций: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Углеводы: +%s",
+  "jei.humannature.nutrition.vitamins": "Витамины: +%s",
   "item.humannature.wooden_splint": "Деревянная шина",
   "item.humannature.reinforced_splint": "Укрепленная шина",
   "item.humannature.golden_splint": "Золотая шина",

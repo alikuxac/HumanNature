@@ -147,25 +147,16 @@ public class NeoForgeConfig {
                 .comment("Healing rate multiplier for Tier 1 fractures with active calcium buff")
                 .defineInRange("calciumHealingMultiplier", 2.0, 1.0, 5.0);
 
-        serverBuilder.comment("3-tier macro-nutrient reserves (Conventional Tags food pipeline)").push("nutrition");
+        serverBuilder.comment("Nutrient reserves (food gains are defined by datapacks)").push("nutrition");
         ModConfigSpec.BooleanValue enableNutrientReserves = serverBuilder
                 .comment("Enable calcium / carbohydrate / vitamin reserves and their cross-module buffs")
                 .define("enableNutrientReserves", true);
         ModConfigSpec.IntValue nutrientDepletionIntervalTicks = serverBuilder
-                .comment("Ticks between slow passive nutrient reserve depletion steps (150 ticks = 7.5s)")
-                .defineInRange("nutrientDepletionIntervalTicks", 150, 100, 200);
+                .comment("Ticks between nutrient reserve depletion steps (600 ticks = 30 seconds)")
+                .defineInRange("nutrientDepletionIntervalTicks", 600, 100, 72000);
         ModConfigSpec.IntValue nutrientDepletionAmount = serverBuilder
                 .comment("Reserve points lost per depletion step")
                 .defineInRange("nutrientDepletionAmount", 1, 1, 10);
-        ModConfigSpec.IntValue calciumFoodGain = serverBuilder
-                .comment("Calcium reserve gained from #c:foods/calcium_rich")
-                .defineInRange("calciumFoodGain", 25, 1, 100);
-        ModConfigSpec.IntValue carbohydrateFoodGain = serverBuilder
-                .comment("Carbohydrate reserve gained from #c:foods/carbohydrates")
-                .defineInRange("carbohydrateFoodGain", 25, 1, 100);
-        ModConfigSpec.IntValue vitaminFoodGain = serverBuilder
-                .comment("Vitamin reserve gained from #c:foods/vegetables or #c:foods/fruits")
-                .defineInRange("vitaminFoodGain", 20, 1, 100);
         ModConfigSpec.DoubleValue nutritionCalciumKnittingBonus = serverBuilder
                 .comment("Bone knitting speed bonus at full calcium reserve (0.25 = +25%)")
                 .defineInRange("nutritionCalciumKnittingBonus", 0.25, 0.0, 2.0);
@@ -377,9 +368,6 @@ public class NeoForgeConfig {
         ServerConfig.ENABLE_NUTRIENT_RESERVES = enableNutrientReserves::get;
         ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS = nutrientDepletionIntervalTicks::get;
         ServerConfig.NUTRIENT_DEPLETION_AMOUNT = nutrientDepletionAmount::get;
-        ServerConfig.CALCIUM_FOOD_GAIN = calciumFoodGain::get;
-        ServerConfig.CARBOHYDRATE_FOOD_GAIN = carbohydrateFoodGain::get;
-        ServerConfig.VITAMIN_FOOD_GAIN = vitaminFoodGain::get;
         ServerConfig.NUTRITION_CALCIUM_KNITTING_BONUS = nutritionCalciumKnittingBonus::get;
         ServerConfig.NUTRITION_CALCIUM_FALL_BONUS_BLOCKS = nutritionCalciumFallBonusBlocks::get;
         ServerConfig.NUTRITION_CALCIUM_FALL_DAMAGE_REDUCTION = nutritionCalciumFallDamageReduction::get;

@@ -168,35 +168,28 @@ class AccessorContractTest {
         assertNotNull(blood);
         UUID playerId = UUID.randomUUID();
 
-        // Default standard volume 5000 ml
         assertEquals(IBloodAccessor.DEFAULT_BLOOD_VOLUME, blood.getBloodVolume(playerId));
         assertNull(blood.getBloodType(playerId));
         assertEquals((byte) 0, blood.getBleedingTier(playerId));
 
-        // Assign BloodType
         blood.setBloodType(playerId, BloodType.A_POSITIVE);
         assertEquals(BloodType.A_POSITIVE, blood.getBloodType(playerId));
 
-        // Modify volume
         blood.modifyBloodVolume(playerId, -500);
         assertEquals((short) 4500, blood.getBloodVolume(playerId));
 
         blood.setBloodVolume(playerId, (short) 3200);
         assertEquals((short) 3200, blood.getBloodVolume(playerId));
 
-        // Upper clamp
         blood.modifyBloodVolume(playerId, 10000);
         assertEquals(IBloodAccessor.MAX_BLOOD_VOLUME, blood.getBloodVolume(playerId));
 
-        // Lower clamp
         blood.modifyBloodVolume(playerId, -10000);
         assertEquals((short) 0, blood.getBloodVolume(playerId));
 
-        // Bleeding tier
         blood.setBleedingTier(playerId, (byte) 2);
         assertEquals((byte) 2, blood.getBleedingTier(playerId));
 
-        // Clamp bleeding tier max 3
         blood.setBleedingTier(playerId, (byte) 10);
         assertEquals((byte) 3, blood.getBleedingTier(playerId));
     }

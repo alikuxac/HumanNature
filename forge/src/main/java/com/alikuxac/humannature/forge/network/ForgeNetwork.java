@@ -6,6 +6,7 @@ import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
 import com.alikuxac.humannature.network.SyncBloodPayload;
 import com.alikuxac.humannature.network.SyncInjuryPayload;
 import com.alikuxac.humannature.network.SyncNutritionPayload;
+import com.alikuxac.humannature.network.SyncFoodNutritionPayload;
 import com.alikuxac.humannature.network.TreatLimbPayload;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -26,6 +27,12 @@ public class ForgeNetwork {
 
         builder.play(protocol -> {
             protocol.clientbound()
+                    .add(SyncFoodNutritionPayload.TYPE, SyncFoodNutritionPayload.STREAM_CODEC.cast(), (payload, context) -> {
+                        context.enqueueWork(() -> {
+                            if (context.isClientSide()) ForgeClientPayloadHandler.handleSyncFoodNutrition(payload);
+                        });
+                        context.setPacketHandled(true);
+                    })
                     .add(SyncBloodPayload.TYPE, SyncBloodPayload.STREAM_CODEC.cast(), (payload, context) -> {
                         context.enqueueWork(() -> {
                             if (context.isClientSide()) {

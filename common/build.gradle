@@ -23,7 +23,12 @@ neoForge {
 }
 
 dependencies {
-    api project(':api')
+    api(project(':api')) {
+        attributes {
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.CLASSES))
+        }
+    }
+    compileOnly "mezz.jei:jei-${rootProject.minecraft_version}-common-api:${rootProject.jei_version}"
     compileOnly 'dev.latvian.mods:kubejs-neoforge:2101.7.2-build.265'
     testImplementation 'org.mockito:mockito-core:5.14.2'
 }

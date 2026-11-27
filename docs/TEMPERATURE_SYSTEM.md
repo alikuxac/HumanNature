@@ -1,6 +1,6 @@
 # Temperature & Moisture System
 
-Tracks wetness from rain and water, gear insulation, nearby heat sources, and freezing penalties.
+Rain and water make the player wet. Armor changes how quickly they get soaked or freeze, while nearby heat dries them and clears freezing.
 
 ---
 
@@ -8,7 +8,7 @@ Tracks wetness from rain and water, gear insulation, nearby heat sources, and fr
 
 ### 1. Wetness Accumulation
 
-The server tracks moisture per tick on `wetnessBuffer` (0.0 to 1.0).
+The server updates `wetnessBuffer` (0.0 to 1.0) each tick.
 
 | Exposure | Condition | Rate | Time to 100% |
 | :--- | :--- | :--- | :--- |
@@ -19,13 +19,13 @@ The server tracks moisture per tick on `wetnessBuffer` (0.0 to 1.0).
 #### Helmet Protection
 An empty helmet slot doubles rain accumulation (2.0x). Any helmet or wearable in the `HEAD` slot prevents this penalty.
 
-#### Thermal & Leather Armor Insulation
+#### Insulating Armor
 Items tagged `#humannature:insulating_armor` or `#minecraft:freeze_immune_wearables` reduce wetness accumulation up to 65%. Each equipped piece grants a 16.25% reduction:
 $$\text{Reduction} = \text{equippedPieces} \times 16.25\%$$
 Full insulating armor extends rain soaking time from 20 seconds to ~57 seconds. Custom modpack gear can be added via the `#humannature:insulating_armor` item tag.
 
-#### Armor Insulation & Conduction
-Equipped armor modifies thermal conductivity:
+#### Freezing in Armor
+Armor affects how quickly the player freezes:
 - **Leather Armor** (`#humannature:insulating_armor` / `#minecraft:freeze_immune_wearables`): Cuts hypothermia freeze tick rate by $15\%$ per piece (up to $60\%$, `LEATHER_INSULATION_FREEZE_REDUCTION`).
 - **Metallic Armor** (`#c:metallic_items` / `#humannature:metallic_items`): Increases cold conduction by $+12.5\%$ per piece (up to $+50\%$, `METALLIC_ARMOR_COLD_CONDUCTION_MULTIPLIER`) when wet or in cold biomes (`coldEnoughToSnow` or base temperature $< 0.15$).
 
@@ -34,7 +34,7 @@ Equipped armor modifies thermal conductivity:
 ### 2. Heat Sources, Drying & Core Body Temperature
 
 #### Core Body Temperature
-Core body temperature is tracked in `PlayerTemperatureData`, clamped between $25.0^\circ\text{C}$ and $45.0^\circ\text{C}$ around a $37.0^\circ\text{C}$ baseline. Temperature persists across player reconnects and resets to $37.0^\circ\text{C}$ on respawn.
+`PlayerTemperatureData` stores core temperature between $25.0^\circ\text{C}$ and $45.0^\circ\text{C}$, with a baseline of $37.0^\circ\text{C}$. It is saved across reconnects and resets to $37.0^\circ\text{C}$ on respawn.
 
 #### Heat Sources
 - **Campfires**: Block tagged `#minecraft:campfires` with `lit=true`.
@@ -44,7 +44,7 @@ Core body temperature is tracked in `PlayerTemperatureData`, clamped between $25
 - **Magma Blocks**: `Blocks.MAGMA_BLOCK`.
 - **Direct Burning**: `player.isOnFire()` or `player.isInLava()`.
 
-#### Rewarming & Thawing Rates
+#### Drying & Thawing
 - **Heat Drying**: Drains `wetnessBuffer` at ~0.004 / tick (12.5 seconds to dry 100%).
 - **Rapid Thaw**: Decrements vanilla `ticksFrozen` by 10 ticks per tick (5x natural thaw rate).
 - **Sound**: Plays `SoundEvents.FIRE_EXTINGUISH` every 35 ticks while drying or thawing near heat.
@@ -88,22 +88,22 @@ Moving while `OVERBURDENED` (weight ratio $\ge 0.85$) in hot biomes (Nether, Bad
 
 ### 5. HUD & Diagnostics
 
-#### Swappable HUD Modes
-- **`ENVIRONMENT` Mode**: Minimalist Action Bar cue. Shows `[HUD Mode]: ENVIRONMENT` on switch, then outputs `Wetness: X% | Temp: Normal/Chilly/Freezing` only when wet, cold, or buffed. Auto-hides when dry and warm.
-- **`COMBINED` Mode**: Displays active wetness progress bar and standardized temperature line `Temperature: %s (%s)` (e.g. `Temperature: 37.0°C (Normal)`) styled with the tier's designated color code.
+#### HUD Modes
+- **`ENVIRONMENT` Mode**: Shows `[HUD Mode]: ENVIRONMENT` on switch, then `Wetness: X% | Temp: Normal/Chilly/Freezing` in the action bar when wet, cold, or buffed. Hides when dry and warm.
+- **`COMBINED` Mode**: Shows a wetness bar and `Temperature: %s (%s)` (e.g. `Temperature: 37.0°C (Normal)`), colored by temperature tier.
 - **`OFF` / `PHYSIOLOGY` / `INJURY` / `WEIGHT`**: Hides temperature lines.
 
-#### Smart Auto-Hide HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
-When enabled, the temperature display automatically suppresses when conditions are healthy:
+#### Auto-Hide HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
+With this option enabled, the temperature display hides when all of these are true:
 - `wetnessBuffer <= 0.0f`
 - `ticksFrozen <= 0`
 - `coreTemperature` is stable between $36.5^\circ\text{C}$ and $37.5^\circ\text{C}$
 - No active hypothermia debuff, internal warming buff, or nearby heat source
 
 #### Diagnostic Screen (`H` Key)
-- Quick overview panel displays warning tags (`Wetness: Damp/Soaked`, `Freezing`, `Heat Exhaustion`, `Hyperthermia`, `Internal Warming`) when abnormal.
-- Detailed temperature and wetness rows with exact percentages and stage indicators appear in the body metrics breakdown.
-- Fully localized across 7 languages (`en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`).
+- The overview lists active warnings: `Wetness: Damp/Soaked`, `Freezing`, `Heat Exhaustion`, `Hyperthermia`, `Internal Warming`.
+- Temperature and wetness rows show exact values and current stages.
+- Supports 7 languages: `en_us`, `vi_vn`, `zh_cn`, `ru_ru`, `es_es`, `pt_br`, `de_de`.
 
 ---
 
@@ -111,8 +111,7 @@ When enabled, the temperature display automatically suppresses when conditions a
 
 #### Server (`humannature-server.toml`)
 
-Master module switch under `[general]`:
-- `enableTemperature` (boolean, default: `true`): Master toggle for the body temperature and climate module.
+`enableTemperature` under `[general]` enables body temperature and climate effects (default: `true`).
 
 Core thresholds and rate scaling under `[temperature]`:
 

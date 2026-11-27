@@ -33,10 +33,12 @@ neoForge {
 }
 
 tasks.named('jar', Jar) {
+    enabled = isJitPack
     archiveFileName = "${rootProject.mod_id}-api-${publishVersion}.jar"
 }
 
 tasks.named('sourcesJar', Jar) {
+    enabled = isJitPack
     archiveFileName = "${rootProject.mod_id}-api-${publishVersion}-sources.jar"
 }
 

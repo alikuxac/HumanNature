@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "营养",
+  "jei.humannature.nutrition.per_serving": "每次食用增加",
+  "jei.humannature.nutrition.calcium": "钙：+%s",
+  "jei.humannature.nutrition.carbohydrates": "碳水化合物：+%s",
+  "jei.humannature.nutrition.vitamins": "维生素：+%s",
   "item.humannature.wooden_splint": "木夹板",
   "item.humannature.reinforced_splint": "加固夹板",
   "item.humannature.golden_splint": "金夹板",

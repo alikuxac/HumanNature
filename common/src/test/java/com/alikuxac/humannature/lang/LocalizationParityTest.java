@@ -56,17 +56,14 @@ class LocalizationParityTest {
             Map<String, String> current = loadLocale(locale);
             assertFalse(current.isEmpty(), locale + ".json must not be empty");
 
-            // Check for missing keys
             Set<String> missing = new TreeSet<>(baseKeys);
             missing.removeAll(current.keySet());
             assertTrue(missing.isEmpty(), "Locale [" + locale + "] is missing keys: " + missing);
 
-            // Check for extraneous / orphaned keys
             Set<String> extra = new TreeSet<>(current.keySet());
             extra.removeAll(baseKeys);
             assertTrue(extra.isEmpty(), "Locale [" + locale + "] has extra keys: " + extra);
 
-            // Check for blank translations
             for (Map.Entry<String, String> entry : current.entrySet()) {
                 assertNotNull(entry.getValue(), "Locale [" + locale + "] key " + entry.getKey() + " has null value");
                 assertFalse(entry.getValue().trim().isEmpty(), "Locale [" + locale + "] key " + entry.getKey() + " is blank");
@@ -104,7 +101,6 @@ class LocalizationParityTest {
         for (int i = 0; i < len; i++) {
             if (text.charAt(i) == '%') {
                 if (i + 1 < len && text.charAt(i + 1) == '%') {
-                    // Escaped %%
                     i++;
                 } else {
                     count++;

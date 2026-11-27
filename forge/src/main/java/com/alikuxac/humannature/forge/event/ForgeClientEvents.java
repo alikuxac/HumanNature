@@ -2,6 +2,8 @@ package com.alikuxac.humannature.forge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
+import com.alikuxac.humannature.client.FoodNutritionClientData;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import com.alikuxac.humannature.client.BloodScreenEffectHandler;
 import com.alikuxac.humannature.client.HeartbeatAudioHandler;
 import com.alikuxac.humannature.client.ModKeyMappings;
@@ -25,6 +27,11 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
 public class ForgeClientEvents {
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        FoodNutritionClientData.clear();
+    }
 
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {

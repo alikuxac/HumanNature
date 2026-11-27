@@ -21,7 +21,6 @@ public class ModCreativeTabs {
                 .title(Component.translatable("itemGroup.humannature"))
                 .icon(() -> new ItemStack(ModItems.REINFORCED_SPLINT.get()))
                 .displayItems((parameters, output) -> {
-                    // Splints
                     output.accept(ModItems.WOODEN_SPLINT.get());
                     output.accept(ModItems.REINFORCED_SPLINT.get());
                     output.accept(ModItems.GOLDEN_SPLINT.get());

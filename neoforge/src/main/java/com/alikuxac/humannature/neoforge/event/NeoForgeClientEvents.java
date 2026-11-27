@@ -2,6 +2,8 @@ package com.alikuxac.humannature.neoforge.event;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.client.AimTremorHandler;
+import com.alikuxac.humannature.client.FoodNutritionClientData;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import com.alikuxac.humannature.client.BloodScreenEffectHandler;
 import com.alikuxac.humannature.client.BloodVolumeHudOverlay;
 import com.alikuxac.humannature.client.HeartbeatAudioHandler;
@@ -31,6 +33,11 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 @EventBusSubscriber(modid = HumanNatureCommon.MOD_ID, value = Dist.CLIENT)
 public class NeoForgeClientEvents {
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        FoodNutritionClientData.clear();
+    }
 
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {

@@ -1,8 +1,11 @@
 package com.alikuxac.humannature.advancement;
 
 import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.api.event.HumanNatureEvents;
+import com.alikuxac.humannature.api.event.NutritionConsumptionEvent;
 import com.alikuxac.humannature.api.injury.InjuryTier;
 import com.alikuxac.humannature.api.injury.LimbType;
+import com.alikuxac.humannature.api.nutrition.NutritionValues;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.init.ModEnchantments;
 import com.alikuxac.humannature.init.ModItems;
@@ -54,6 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -136,12 +140,17 @@ class GameplayAdvancementsTest {
 
     @Test
     void nutritionRequiresAllThreeReservesAndAConsumptionTransition() {
+        Consumer<NutritionConsumptionEvent> gains = event ->
+                event.setValues(event.getStack().is(Items.APPLE)
+                        ? new NutritionValues(0, 0, 20)
+                        : new NutritionValues(25, 0, 0));
+        HumanNatureEvents.registerNutritionConsumptionListener(gains);
+        try {
         var data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         data.setCalcium(100);
         data.setCarbohydrates(100);
         data.setVitamins(79);
-        var fruit = mock(ItemStack.class);
-        when(fruit.is(NutritionEventHandler.FRUIT_FOODS)).thenReturn(true);
+        var fruit = new ItemStack(Items.APPLE);
         NutritionEventHandler.handleItemConsumption(player, fruit);
         assertEquals(99, data.getVitamins());
         verifyNoInteractions(output);
@@ -154,12 +163,14 @@ class GameplayAdvancementsTest {
         data.setCalcium(99);
         NutritionEventHandler.handleItemConsumption(player, fruit);
         verify(output, times(1)).trigger(player, "max_nutrition");
-        var calciumFood = mock(ItemStack.class);
-        when(calciumFood.is(NutritionEventHandler.CALCIUM_RICH_FOODS)).thenReturn(true);
+        var calciumFood = new ItemStack(Items.MILK_BUCKET);
         ServerConfig.ENABLE_NUTRIENT_RESERVES = () -> false;
         NutritionEventHandler.handleItemConsumption(player, calciumFood);
         assertEquals(99, data.getCalcium());
         verify(output, times(1)).trigger(player, "max_nutrition");
+        } finally {
+            HumanNatureEvents.unregisterNutritionConsumptionListener(gains);
+        }
     }
 
     @Test

@@ -2,27 +2,18 @@ package com.alikuxac.humannature.modules.physiology;
 
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.advancement.HumanNatureAdvancements;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
+import com.alikuxac.humannature.api.event.HumanNatureEvents;
+import com.alikuxac.humannature.api.event.NutritionConsumptionEvent;
+import com.alikuxac.humannature.api.nutrition.NutritionValues;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.function.Supplier;
 
 public final class NutritionEventHandler {
 
-    public static final TagKey<Item> CALCIUM_RICH_FOODS = commonTag("foods/calcium_rich");
-    public static final TagKey<Item> CARBOHYDRATE_FOODS = commonTag("foods/carbohydrates");
-    public static final TagKey<Item> VEGETABLE_FOODS = commonTag("foods/vegetables");
-    public static final TagKey<Item> FRUIT_FOODS = commonTag("foods/fruits");
+    private static final NutritionValues ZERO_GAINS = new NutritionValues(0, 0, 0);
 
     private NutritionEventHandler() {
-    }
-
-    private static TagKey<Item> commonTag(String path) {
-        return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", path));
     }
 
     public static boolean isEnabled() {
@@ -37,15 +28,14 @@ public final class NutritionEventHandler {
         PlayerPhysiologyData data = PhysiologyModule.getOrCreatePhysiologyData(player.getUUID());
         boolean wasMaxNutrition = hasMaxNutrition(data);
 
-        if (stack.is(CALCIUM_RICH_FOODS)) {
-            data.modifyCalcium(gain(ServerConfig.CALCIUM_FOOD_GAIN, 25));
-        }
-        if (stack.is(CARBOHYDRATE_FOODS)) {
-            data.modifyCarbohydrates(gain(ServerConfig.CARBOHYDRATE_FOOD_GAIN, 25));
-        }
-        if (stack.is(VEGETABLE_FOODS) || stack.is(FRUIT_FOODS)) {
-            data.modifyVitamins(gain(ServerConfig.VITAMIN_FOOD_GAIN, 20));
-        }
+        NutritionValues defaults = FoodNutritionReloadListener.INSTANCE.get(stack.getItem());
+        if (defaults == null) defaults = ZERO_GAINS;
+        NutritionConsumptionEvent event = HumanNatureEvents.postNutritionConsumption(
+                new NutritionConsumptionEvent(player, stack, defaults));
+        NutritionValues values = event.getValues();
+        data.modifyCalcium(values.calcium());
+        data.modifyCarbohydrates(values.carbohydrates());
+        data.modifyVitamins(values.vitamins());
         if (!wasMaxNutrition && hasMaxNutrition(data)) {
             HumanNatureAdvancements.trigger(player, HumanNatureAdvancements.MAX_NUTRITION);
         }
@@ -60,7 +50,7 @@ public final class NutritionEventHandler {
         if (!isEnabled()) return;
 
         int interval = ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS != null
-                ? ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS.get() : 150;
+                ? ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS.get() : 600;
         if (interval <= 0) return;
 
         data.incrementNutrientTickCounter();
@@ -75,7 +65,4 @@ public final class NutritionEventHandler {
         }
     }
 
-    private static int gain(Supplier<Integer> supplier, int fallback) {
-        return supplier != null ? Math.max(0, supplier.get()) : fallback;
-    }
 }

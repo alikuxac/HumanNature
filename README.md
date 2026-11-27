@@ -3,15 +3,25 @@
 [![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen.svg?style=flat-square)](https://minecraft.net/)
 [![NeoForge 21.1.77+](https://img.shields.io/badge/NeoForge-21.1.77+-orange.svg?style=flat-square)](https://neoforged.net/)
 [![Forge 52.1.20+](https://img.shields.io/badge/Forge-52.1.20+-blue.svg?style=flat-square)](https://files.minecraftforge.net/)
+[![JEI 19.21.0.247+ (optional)](https://img.shields.io/badge/JEI-19.21.0.247%2B-9c6b3f.svg?style=flat-square)](docs/JEI.md)
 [![JitPack](https://img.shields.io/badge/JitPack-Available-brightgreen.svg?style=flat-square)](https://jitpack.io/#alikuxac/HumanNature)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/Models-CC%20BY--NC--ND%204.0-yellow.svg?style=flat-square)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 [![License: CC0 1.0](https://img.shields.io/badge/Audio-CC0%201.0-green.svg?style=flat-square)](https://creativecommons.org/publicdomain/zero/1.0/)
 
-**Human Nature** is a survival-realism mod for Minecraft 1.21.1 supporting both **NeoForge (21.1.77+)** and **Minecraft Forge (52.1.20+)**. It adds localized skeletal injuries, environmental temperature, inventory encumbrance, and metabolic recovery.
+**Human Nature** adds injuries, body temperature, carried weight, fatigue, and nutrient reserves to Minecraft **1.21.1**. It supports **NeoForge 21.1.77+** and **Minecraft Forge 52.1.20+**.
+
+## Gameplay
+
+- **Elytra flight risks**: Rapid consecutive firework boosts trigger a brief G-force blackout, while high-speed wall and landing impacts can cause fractures.
+- **Falling-block head trauma**: Anvils and other falling blocks can injure your head. Blast Protection on helmets reduces concussion risk.
+- **Hard-block mining strain**: Mining very hard blocks can injure your main arm, affecting mining speed, attacks, and bow handling.
+- **Deep-cave claustrophobia**: Prolonged exposure to pitch-black conditions below Y=0 can trigger panic and bow or crossbow aim tremors. Light, campfires, music, and nearby pets offer ways to calm down.
+- **Recursive container weight**: Shulker Box and Bundle contents count toward your carried load, including nested containers.
+- **Potions and enchantments for hauling**: Burden Bearer increases carrying capacity. Load Bearing adds capacity on armor and reduces contents weight on containers.
 
 > [!CAUTION]
-> **Mechanics First**: Core gameplay systems, mechanics, and balance take priority over visual polish. Textures, icons, and models remain minimal or placeholders while features are actively being built.
+> Some textures, icons, and models are placeholders. Development currently focuses on mechanics and balance.
 
 ---
 
@@ -64,9 +74,28 @@ Tracks sleep deprivation and fatigue buildup over time, triggering brief involun
 
 ---
 
+## JEI Support
+
+With **JEI 19.21.0.247+** installed on the client, open a food's **Uses** view to see its **Nutrition** category: calcium, carbohydrates, and vitamins gained per consumption. Values come from the server's datapacks and update on login and `/reload`.
+
+JEI is optional on **Forge and NeoForge** for Minecraft **1.21.1**. Human Nature works without it. EMI and REI have no native integration and have not been verified with this category.
+
+See [JEI Support](docs/JEI.md) for installation, display limits, and development setup.
+
+---
+
+## Feedback & Support
+
+OP players can run `/humannature feedback` to display the project's Discord, GitHub, and feedback email contacts.
+
+Contact: [Discord](https://discord.gg/tP7uhhQdpP) | [GitHub](https://github.com/alikuxac/HumanNature) | [Email](mailto:hello@alikuxac.xyz)
+
+---
+
 ## Documentation
 For detailed module specifications, refer to:
 - [Extensibility API & Event Pipeline](docs/API.md)
+- [JEI Support & Nutrition Display](docs/JEI.md)
 - [Advancements & Gameplay Milestones](docs/ADVANCEMENTS.md)
 - [Injury System Documentation](docs/INJURY_SYSTEM.md)
 - [Physiology System Documentation](docs/PHYSIOLOGY_SYSTEM.md)
@@ -108,9 +137,16 @@ See [API Documentation](docs/API.md) for accessor interfaces, event bus registra
 ./gradlew clean build
 ```
 Output JAR files are generated in:
-- `api/build/libs/` (`humannature-api-*+mc1.21.1.jar`)
 - `neoforge/build/libs/` (`humannature-*+mc1.21.1-neoforge.jar`)
 - `forge/build/libs/` (`humannature-*+mc1.21.1-forge.jar`)
+
+Local builds use the API classes directly. The standalone API JAR is built and published by JitPack.
+
+---
+
+## Development
+
+I develop Human Nature with AI assistance, including generated code. I review the code, make the design decisions, and test the mod in-game.
 
 ---
 

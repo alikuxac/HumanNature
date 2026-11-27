@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Nutrientes",
+  "jei.humannature.nutrition.per_serving": "Ganancia por consumo",
+  "jei.humannature.nutrition.calcium": "Calcio: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Carbohidratos: +%s",
+  "jei.humannature.nutrition.vitamins": "Vitaminas: +%s",
   "item.humannature.wooden_splint": "Tablilla de madera",
   "item.humannature.reinforced_splint": "Tablilla reforzada",
   "item.humannature.golden_splint": "Tablilla de oro",

@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Nährstoffe",
+  "jei.humannature.nutrition.per_serving": "Zuwachs pro Verzehr",
+  "jei.humannature.nutrition.calcium": "Kalzium: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Kohlenhydrate: +%s",
+  "jei.humannature.nutrition.vitamins": "Vitamine: +%s",
   "item.humannature.wooden_splint": "Holzschiene",
   "item.humannature.reinforced_splint": "Verstärkte Schiene",
   "item.humannature.golden_splint": "Goldschiene",

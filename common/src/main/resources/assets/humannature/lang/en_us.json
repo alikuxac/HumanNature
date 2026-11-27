@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Nutrition",
+  "jei.humannature.nutrition.per_serving": "Gains per consumption",
+  "jei.humannature.nutrition.calcium": "Calcium: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Carbohydrates: +%s",
+  "jei.humannature.nutrition.vitamins": "Vitamins: +%s",
   "item.humannature.wooden_splint": "Wooden Splint",
   "item.humannature.reinforced_splint": "Reinforced Splint",
   "item.humannature.golden_splint": "Golden Splint",

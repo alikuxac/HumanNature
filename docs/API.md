@@ -1,6 +1,6 @@
-# Public Extensibility API & Event Pipeline
+# Addon API & Events
 
-Public API and event system for Human Nature **v0.4.0** on Minecraft 1.21.1 (NeoForge and Forge).
+Public API and event system for Human Nature **v0.4.1** on Minecraft 1.21.1 (NeoForge and Forge).
 
 ---
 
@@ -25,9 +25,9 @@ dependencies {
 
 ---
 
-## Core API Access
+## API Access
 
-The singleton entry point is `com.alikuxac.humannature.api.HumanNatureAPI`:
+Access the API through `com.alikuxac.humannature.api.HumanNatureAPI`:
 
 ```java
 import com.alikuxac.humannature.api.HumanNatureAPI;
@@ -62,8 +62,9 @@ injury.treatLimb(player, LimbType.LEFT_LEG);
 injury.clearInjuries(player);
 ```
 
-#### Limb Splint Management (`SplintTier`)
-Query active splints per limb (`SplintTier`):
+#### Limb Splints (`SplintTier`)
+
+Read the active splint for a limb:
 ```java
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.item.SplintTier;
@@ -74,7 +75,7 @@ boolean isSplinted = splint != null;
 
 ### 2. Nutrition & Physiology (`INutritionAccessor`)
 
-Read and mutate macro-nutrients (clamped to 0–100), toxin level, and physical exertion score.
+Read and change nutrient reserves (clamped to 0–100), toxin buildup, and exertion.
 
 ```java
 import com.alikuxac.humannature.api.HumanNatureAPI;
@@ -91,17 +92,108 @@ float toxin = nutrition.getToxinBuildup(player);
 float exertion = nutrition.getExertionScore(player);
 ```
 
-#### 3-Tier Reserve Buffs
+#### Nutrient Reserves
 
-Three `byte` reserves (0–100) live in `HumanNatureNutrition` player NBT: calcium, carbohydrates, vitamins. Tagged foods fill them on `LivingEntityUseItemEvent.Finish`:
+Calcium, carbohydrates, and vitamins are stored as `byte` reserves (0–100) in the player's `HumanNatureNutrition` NBT. Consuming an item adds the gains defined by its server datapack entry:
 
-| Reserve | Tag | Effect at full |
-| :--- | :--- | :--- |
-| Calcium | `#c:foods/calcium_rich` | fracture healing +25%, safe fall +2 blocks, fall damage −25% |
-| Carbohydrates | `#c:foods/carbohydrates` | exertion cap 100 → 150 |
-| Vitamins | `#c:foods/vegetables`, `#c:foods/fruits` | cold buildup −50%, toxin decay ×2 |
+| Reserve | Effect at full |
+| :--- | :--- |
+| Calcium | fracture healing +25%, safe fall +2 blocks, fall damage −25% |
+| Carbohydrates | exertion cap 100 → 150 |
+| Vitamins | cold buildup −50%, toxin decay ×2 |
 
-Each reserve drops by 1 every `nutrientDepletionIntervalTicks` (default 150). Empty just turns the buff off — no damage or debuff. Strength scales with the current reserve; gains, intervals and multipliers are in `ServerConfig` under `nutrition`.
+Each reserve loses 1 point every 30 seconds by default (`nutrientDepletionIntervalTicks = 600`). An empty reserve disables its buff without causing damage or a debuff. Buff strength scales with the reserve level. Configure depletion and buff multipliers in `ServerConfig` under `nutrition`; food gains come from datapacks.
+
+#### Food Datapacks (0.4.1)
+
+For item `<namespace>:<path>`, use `data/<namespace>/humannature/nutrition/<path>.json`.
+For example, `data/minecraft/humannature/nutrition/apple.json`:
+
+```json
+{
+  "calcium": 0,
+  "carbohydrates": 8,
+  "vitamins": 20
+}
+```
+
+All three fields are required integers from 0 to 100, representing reserve points gained per
+consumption. The highest-priority pack's file replaces the whole entry; fields are not merged.
+Use three zeros to disable gains for a food. Items without an entry give zero nutrients,
+regardless of their tags. Invalid entries are logged and ignored, giving zero gains unless an
+addon supplies values. `/reload` replaces the server's loaded entries, including removing stale ones.
+
+Human Nature includes presets for vanilla foods consumed from the hand, milk, and bone broth.
+Placed cake slices do not use the item-consumption hook. These values balance gameplay;
+they are not dietary measurements. Addons and modpacks can define entries for other item IDs
+using the same directory layout. These files change nutrient reserves, not vanilla hunger,
+saturation, or food effects.
+
+#### JEI Nutrition Category (0.4.1)
+
+With JEI installed on the client, a food's Uses view includes a Nutrition category showing
+calcium, carbohydrate and vitamin gains per consumption. Foods with three zero gains are
+omitted. No nutrition text is added to normal item tooltips.
+
+The category uses the server's datapack values, synchronized on login and `/reload`. Leaving
+the server clears that data. Addon listeners that calculate consumption-specific overrides
+are not evaluated for this preview. JEI is optional on both loaders; the declared minimum is
+`19.21.0.247` for Minecraft `1.21.1`. See [JEI Support](JEI.md) for setup and compatibility details.
+
+#### Custom Food Gains (0.4.1)
+
+Register a `NutritionConsumptionEvent` listener during addon initialization. It runs on the
+server before nutrients are added, for any consumed item with a nonempty stack, including
+items without nutrient tags. Both physiology and nutrient reserves must be enabled;
+creative and spectator players are excluded.
+
+Call `setValues(new NutritionValues(calcium, carbohydrates, vitamins))` to replace all three
+gains for that consumption. Leave it uncalled to keep the datapack values, or pass `(0, 0, 0)` to
+give no nutrients. Each gain and the resulting reserves are clamped to 0–100; negative gains
+become zero. Null values are rejected.
+
+For example, this listener gives apples 8 vitamins and no calcium or carbohydrates:
+
+```java
+import com.alikuxac.humannature.api.event.HumanNatureEvents;
+import com.alikuxac.humannature.api.nutrition.NutritionValues;
+import net.minecraft.world.item.Items;
+
+HumanNatureEvents.registerNutritionConsumptionListener(event -> {
+    if (event.getStack().is(Items.APPLE)) {
+        event.setValues(new NutritionValues(0, 0, 8));
+    }
+});
+```
+
+| Method | Returns |
+| :--- | :--- |
+| `getPlayer()` | The consuming player. |
+| `getStack()` | A copy of the consumed stack, including its data components. Editing it does not change the original. |
+| `getDefaultValues()` | The food's datapack gains, or `(0, 0, 0)` if no entry exists. Listener replacements do not change this value. |
+| `getValues()` | The replacement gains, or the defaults if no listener has replaced them. |
+| `isOverridden()` | Whether a listener called `setValues()`, including with all zeros. |
+
+Register each listener once. To remove one, keep its `Consumer<NutritionConsumptionEvent>`
+reference and pass it to `unregisterNutritionConsumptionListener(listener)`. This event uses
+`HumanNatureEvents` on both loaders; it has no native `@SubscribeEvent` wrapper.
+
+Datapack gains are resolved before the hook, so addons can replace them without coordinating
+listener order with Human Nature. If several addons replace the same food's gains, the last
+replacement wins.
+
+The core adds the final gains once, checks `max_nutrition`, and sends one `SyncNutritionPayload`,
+even if the gains are zero. The advancement triggers only when consumption fills the last
+reserve to 100. Ineligible consumptions skip the event, gains, advancement check and sync.
+Supply values through the event; applying them again from a separate Finish listener would
+count the food twice.
+
+`INutritionAccessor` mutators only change stored data. They clamp reserves but do not check
+gameplay eligibility, sync clients or award advancements. `Player` overloads delegate by UUID.
+Call them from the server thread.
+
+Human Delight supplies Farmer's Delight food values and tooltips.
+Human Nature has no dependency on Human Delight or Farmer's Delight.
 
 ### 3. Blood (`IBloodAccessor`)
 
@@ -164,9 +256,11 @@ boolean encumbered = weight.isEncumbered(player);
 
 ---
 
-## Event Pipeline
+## Events
 
-Human Nature dispatches events through both its internal functional bus and native mod loader event buses (`NeoForge.EVENT_BUS` on NeoForge, `MinecraftForge.EVENT_BUS` on Forge).
+Events are sent through `HumanNatureEvents`. Injury, fracture, encumbrance and hypothermia events
+also have native wrappers on `NeoForge.EVENT_BUS` or `MinecraftForge.EVENT_BUS`.
+`NutritionConsumptionEvent` uses only the common functional bus on both loaders.
 
 ### Event Types
 
@@ -176,10 +270,11 @@ Human Nature dispatches events through both its internal functional bus and nati
 | `FractureEvent` | No | None | Fired when bone fracture starts or resolves. |
 | `EncumbranceChangeEvent` | No | None | Fired when total weight transitions between encumbrance tiers. |
 | `HypothermiaEvent` | Yes | None | Fired when severe cold trauma applies to a player. |
+| `NutritionConsumptionEvent` | No (use zero gains) | `setValues(NutritionValues)` | Replaces all nutrient gains before a server consumption is applied. |
 
-### Functional Registration (Loader-Agnostic)
+### Registering Without a Loader Dependency
 
-Register consumers directly on `HumanNatureEvents`:
+Register listeners on `HumanNatureEvents`:
 
 ```java
 import com.alikuxac.humannature.api.event.HumanNatureEvents;
@@ -193,7 +288,7 @@ HumanNatureEvents.registerInjuryListener(event -> {
 });
 ```
 
-### Native Mod Loader Registration
+### Registering on the Loader Event Bus
 
 #### NeoForge
 
@@ -225,7 +320,7 @@ public void onHypothermia(HypothermiaEvent event) {
 
 ## KubeJS Integration
 
-Third-party pack developers can access Human Nature via static helpers without compile-time imports:
+Modpack scripts can use the static helpers without compile-time imports:
 
 ```javascript
 PlayerEvents.tick(event => {
@@ -239,7 +334,7 @@ PlayerEvents.tick(event => {
 
 ---
 
-## Domain Enums & Formatting
+## Enums & Formatting
 
 | Enum | Translation Key Pattern | Style / Formatting | Description |
 | :--- | :--- | :--- | :--- |
@@ -254,12 +349,12 @@ PlayerEvents.tick(event => {
 
 ## Network Payloads
 
-Custom payloads dispatched via `NetworkHandler`:
+`NetworkHandler` sends the following custom payloads:
 
 | Payload ID | Direction | Purpose | Contents |
 | :--- | :--- | :--- | :--- |
-| `humannature:treat_limb` (`TreatLimbPayload`) | Client $\rightarrow$ Server | Dispatched when clicking an injured limb in the body silhouette UI to treat with an inventory splint. | `byte limbIndex` |
-| `humannature:sync_injury` (`SyncInjuryPayload`) | Server $\rightarrow$ Client | Synchronizes limb trauma severities and active splint tiers to the client. | 6 limb severities + 6 limb splint tier indices |
+| `humannature:treat_limb` (`TreatLimbPayload`) | Client $\rightarrow$ Server | Sent when a player clicks an injured limb to apply a splint from their inventory. | `byte limbIndex` |
+| `humannature:sync_injury` (`SyncInjuryPayload`) | Server $\rightarrow$ Client | Updates the client's limb injuries and active splint tiers. | 6 limb severities + 6 limb splint tier indices |
 
 ---
 

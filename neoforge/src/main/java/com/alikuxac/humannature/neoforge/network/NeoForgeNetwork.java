@@ -2,6 +2,8 @@ package com.alikuxac.humannature.neoforge.network;
 
 import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.client.FoodNutritionClientData;
+import com.alikuxac.humannature.network.SyncFoodNutritionPayload;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
@@ -25,6 +27,9 @@ public class NeoForgeNetwork {
 
     public static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(HumanNatureCommon.MOD_ID);
+
+        registrar.playToClient(SyncFoodNutritionPayload.TYPE, SyncFoodNutritionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> FoodNutritionClientData.apply(payload)));
 
         registrar.playToClient(
                 SyncBloodPayload.TYPE,

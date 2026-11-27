@@ -104,15 +104,6 @@ class PlayerPhysiologyNutritionTest {
     }
 
     @Test
-    void testConventionalTagKeys() {
-        assertEquals("c", NutritionEventHandler.CALCIUM_RICH_FOODS.location().getNamespace());
-        assertEquals("foods/calcium_rich", NutritionEventHandler.CALCIUM_RICH_FOODS.location().getPath());
-        assertEquals("foods/carbohydrates", NutritionEventHandler.CARBOHYDRATE_FOODS.location().getPath());
-        assertEquals("foods/vegetables", NutritionEventHandler.VEGETABLE_FOODS.location().getPath());
-        assertEquals("foods/fruits", NutritionEventHandler.FRUIT_FOODS.location().getPath());
-    }
-
-    @Test
     void testFractionalKnittingAccumulatesWithoutRoundingLoss() {
         UUID playerId = UUID.randomUUID();
         InjuryModule.startFractureTimer(playerId, InjuryTier.TIER_1_SINGLE_LEG);

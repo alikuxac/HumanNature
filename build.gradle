@@ -8,6 +8,10 @@ subprojects {
     }
 
     repositories {
+        maven {
+            url = 'https://maven.blamejared.com/'
+            content { includeGroup 'mezz.jei' }
+        }
         mavenCentral()
         maven { name = "Mojang"; url = 'https://libraries.minecraft.net/' }
         maven { name = "Forge"; url = 'https://maven.minecraftforge.net/' }

@@ -5,6 +5,18 @@ import java.util.function.Consumer;
 public final class HumanNatureEvents {
     private HumanNatureEvents() {}
 
+    public static void registerNutritionConsumptionListener(Consumer<NutritionConsumptionEvent> listener) {
+        HumanNatureEventBus.getInstance().register(NutritionConsumptionEvent.class, listener);
+    }
+
+    public static void unregisterNutritionConsumptionListener(Consumer<NutritionConsumptionEvent> listener) {
+        HumanNatureEventBus.getInstance().unregister(NutritionConsumptionEvent.class, listener);
+    }
+
+    public static NutritionConsumptionEvent postNutritionConsumption(NutritionConsumptionEvent event) {
+        return HumanNatureEventBus.getInstance().post(event);
+    }
+
     public static void registerInjuryListener(Consumer<LimbInjuryEvent> listener) {
         HumanNatureEventBus.getInstance().register(LimbInjuryEvent.class, listener);
     }

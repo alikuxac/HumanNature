@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Nutrientes",
+  "jei.humannature.nutrition.per_serving": "Ganho por consumo",
+  "jei.humannature.nutrition.calcium": "Cálcio: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Carboidratos: +%s",
+  "jei.humannature.nutrition.vitamins": "Vitaminas: +%s",
   "item.humannature.wooden_splint": "Tala de Madeira",
   "item.humannature.reinforced_splint": "Tala Reforçada",
   "item.humannature.golden_splint": "Tala de Ouro",

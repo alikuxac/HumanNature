@@ -29,14 +29,12 @@ class AutoHealthyHudTest {
 
     @Test
     void testHealthyDataStructures() {
-        // 1. Injury data clean state
         PlayerInjuryData injuryData = new PlayerInjuryData();
         assertFalse(injuryData.hasAnyInjury());
         for (LimbType limb : LimbType.values()) {
             assertEquals(0, injuryData.getSeverity(limb));
         }
 
-        // 2. Temperature data clean state
         PlayerTemperatureData tempData = new PlayerTemperatureData();
         assertEquals(0.0f, tempData.getWetnessBuffer());
         assertFalse(tempData.isNearHeatSource());
@@ -45,7 +43,6 @@ class AutoHealthyHudTest {
         assertEquals(37.0f, tempData.getCoreTemperature());
         assertTrue(tempData.getCoreTemperature() >= 36.5f && tempData.getCoreTemperature() <= 37.5f);
 
-        // 3. Physiology data clean state
         PlayerPhysiologyData physData = new PlayerPhysiologyData();
         assertEquals(0.0f, physData.getToxinBuildup());
         assertEquals(0.0f, physData.getExertionScore());
@@ -54,7 +51,6 @@ class AutoHealthyHudTest {
         assertFalse(physData.isAdrenalineActive());
         assertFalse(physData.isPanicking());
 
-        // 4. Encumbrance tier evaluations
         assertEquals(EncumbranceTier.NORMAL, EncumbranceTier.fromWeightRatio(0.20f));
         assertEquals(EncumbranceTier.LIGHT, EncumbranceTier.fromWeightRatio(0.55f));
         assertEquals(EncumbranceTier.MEDIUM, EncumbranceTier.fromWeightRatio(0.75f));
@@ -81,7 +77,6 @@ class AutoHealthyHudTest {
         assertNotNull(sentPayload.get());
         assertEquals((byte) LimbType.LEFT_LEG.getIndex(), sentPayload.get().limbIndex());
 
-        // Clean up
         NetworkHandler.setSender(null);
     }
 }

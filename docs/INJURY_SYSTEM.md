@@ -1,6 +1,6 @@
 # Injury & Bone Trauma System
 
-Tracks skeletal trauma across 6 body regions with localized penalties, armor mitigation, resting recovery rates, craftable splints, and diagnostic interfaces.
+Injuries affect 6 body regions. Each has its own penalties, protection and recovery rules. Press `H` to check injuries and apply treatment.
 
 ---
 
@@ -48,11 +48,11 @@ Tracks skeletal trauma across 6 body regions with localized penalties, armor mit
 
 ---
 
-### 5. Splints & Limb Retention
+### 5. Splints
 
 Hold right-click for 2 seconds (40 ticks) to apply in-world, or click an injured limb in the Diagnostic Screen (`H` key).
 
-Splints attach to a specific limb, immobilizing fractures. Splinting a broken leg cuts the movement speed penalty from $-45\%$/$-85\%$ down to $-10\%$ (`SPLINT_SPEED_REDUCTION`). The splint clears automatically when the limb heals to severity 0.
+Each splint stabilizes one limb. On a broken leg, it reduces the movement speed penalty from $-45\%$/$-85\%$ to $-10\%$ (`SPLINT_SPEED_REDUCTION`). It is removed when the limb heals to severity 0.
 
 | Tier | Item ID | Max Durability | Sprint Dislodge | Light Fall Dislodge | Natural Heal Mult | Sprint Drain Interval | Application Effects |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -92,12 +92,12 @@ Recovery foods reduce remaining fracture time on consumption:
 
 ### 7. Diagnostic UI
 
-- **Interactive Body Silhouette**:
+- **Body Silhouette**:
   - Open with `H` (`DiagnosticScreen`); press `E` to return to the inventory.
   - Silhouette colors show limb status: Green (Healthy), Yellow (Minor / Sprain), Red (Severe / Fracture).
   - Splinted limbs display a cyan border (`#00FFFF`), the splint tier, and remaining durability.
   - Clicking an injured limb uses the first suitable splint or bandage from inventory via `TreatLimbPayload`.
-  - Hovering a limb shows context hints: `[Click to Treat with Splint]` or `[Need Splint to Treat]`.
+  - Hovering a limb shows `[Click to Treat with Splint]` or `[Need Splint to Treat]`.
   - Active Osteogenesis shows a bone icon with remaining duration.
 - **Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)**:
   - When enabled, hides the HUD overlay whenever the player is fully healthy (no active injuries, fractures, temperature debuffs, or physiological stress).
@@ -106,21 +106,21 @@ Recovery foods reduce remaining fracture time on consumption:
 
 ---
 
-### 8. Trauma Totem Bypass (Lethal Fall Damage)
+### 8. Totems After Fatal Falls
 
-When a player triggers a Totem of Undying to survive fatal fall damage:
+Surviving a fatal fall with a Totem of Undying has these effects:
 
-- **Health & Effects Nullification**: Negates vanilla Totem Regeneration and Absorption. Locks player health at $1.0$ HP ($0.5$ heart) and applies `Darkness` for 3 seconds.
+- **Health**: Removes the totem's Regeneration and Absorption effects, locks health at $1.0$ HP ($0.5$ heart), and applies `Darkness` for 3 seconds.
 - **Tier 2 Double Leg Fracture**: Applies Tier 2 fractures to both legs ($-85\%$ movement speed, jumping disabled, sprint locked).
-- **Kinetic Inventory Scatter**: Bypasses `keepInventory`, ejecting items held in both hands (consuming 1 totem), the 9-slot hotbar, and $\lceil 30\% \rceil$ of occupied storage slots within a 4-block radius with a 40-tick pickup cooldown.
+- **Dropped Items**: Bypasses `keepInventory`, dropping items held in both hands (consuming 1 totem), the 9-slot hotbar, and $\lceil 30\% \rceil$ of occupied storage slots within a 4-block radius with a 40-tick pickup cooldown.
 
 ---
 
-### 9. Elytra Flight Dynamics & Kinetic Impact
+### 9. Elytra Flight & Crashes
 
 - **G-Force Overload**:
   - Activating $\ge 2$ firework rockets within 40 ticks (2 seconds) while gliding applies `Darkness` for 1 second (20 ticks) and plays wind shear audio.
-- **Kinetic Crash Impact**:
+- **Crashes**:
   - Colliding with walls or hitting the ground while gliding:
     - **Moderate Impact** ($\ge 4.0$ damage or impact speed $\ge 0.7$ blocks/tick): Applies a Tier 1 fracture to one leg ($-45\%$ movement speed, sprint locked).
     - **Extreme Impact** ($\ge 12.0$ damage, dive angle $\ge 35^\circ$ with speed $\ge 1.4$, or speed $\ge 1.8$):
@@ -129,15 +129,16 @@ When a player triggers a Totem of Undying to survive fatal fall damage:
 
 ---
 
-### 10. Hemorrhage & Field Hemostasis
+### 10. Bleeding & Treatment
 
-Physical trauma triggers bleeding tracked by the physiology module:
+Injuries can cause bleeding:
 
 - **Tier 1 (Minor Bleeding)**: Any non-magic, non-freeze hit $\ge 2.0$ damage triggers minor capillary bleeding (2 ml/s). Clots automatically after 35 seconds.
 - **Tier 2 (Arterial Bleeding)**: Severe trauma, including Tier 2 double leg fractures, triggers arterial bleeding (20 ml/s). Does not clot naturally; emits falling blood particles in-world.
-- **Cloth Bandage** (`humannature:cloth_bandage`): Channels for 1.5 seconds. Instantly halts minor bleeding; halts arterial bleeding while inflicting 5 seconds of Slowness I numbness.
-- **Emergency Tourniquet**: Consuming 1 Leather or String halts bleeding immediately at the cost of Slowness II and Mining Fatigue I for 8 seconds.
-- For complete circulatory thresholds and transfusion mechanics, see [PHYSIOLOGY_SYSTEM.md](./PHYSIOLOGY_SYSTEM.md).
+- **Cloth Bandage** (`humannature:cloth_bandage`): Takes 1.5 seconds to apply. Stops minor bleeding without side effects; stopping arterial bleeding also applies Slowness I for 5 seconds.
+- **Emergency Tourniquet**: Uses 1 Leather or String to stop bleeding immediately. Applies Slowness II and Mining Fatigue I for 8 seconds.
+
+See [PHYSIOLOGY_SYSTEM.md](./PHYSIOLOGY_SYSTEM.md) for blood loss thresholds and transfusions.
 
 ---
 
@@ -145,8 +146,8 @@ Physical trauma triggers bleeding tracked by the physiology module:
 
 ### Server (`humannature-server.toml`)
 
-Master module switch under `[general]`:
-- `enableInjury` (boolean, default: `true`): Master toggle for the injury and trauma module.
+Module switch under `[general]`:
+- `enableInjury` (boolean, default: `true`): Enable injuries and trauma.
 
 Core keys under `[injury]`:
 

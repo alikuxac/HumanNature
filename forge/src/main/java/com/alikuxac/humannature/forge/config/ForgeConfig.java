@@ -149,25 +149,16 @@ public class ForgeConfig {
                 .comment("Healing rate multiplier for Tier 1 fractures with active calcium buff")
                 .defineInRange("calciumHealingMultiplier", 2.0, 1.0, 5.0);
 
-        serverBuilder.comment("3-tier macro-nutrient reserves (Conventional Tags food pipeline)").push("nutrition");
+        serverBuilder.comment("Nutrient reserves (food gains are defined by datapacks)").push("nutrition");
         ForgeConfigSpec.BooleanValue enableNutrientReserves = serverBuilder
                 .comment("Enable calcium / carbohydrate / vitamin reserves and their cross-module buffs")
                 .define("enableNutrientReserves", true);
         ForgeConfigSpec.IntValue nutrientDepletionIntervalTicks = serverBuilder
-                .comment("Ticks between slow passive nutrient reserve depletion steps (150 ticks = 7.5s)")
-                .defineInRange("nutrientDepletionIntervalTicks", 150, 100, 200);
+                .comment("Ticks between nutrient reserve depletion steps (600 ticks = 30 seconds)")
+                .defineInRange("nutrientDepletionIntervalTicks", 600, 100, 72000);
         ForgeConfigSpec.IntValue nutrientDepletionAmount = serverBuilder
                 .comment("Reserve points lost per depletion step")
                 .defineInRange("nutrientDepletionAmount", 1, 1, 10);
-        ForgeConfigSpec.IntValue calciumFoodGain = serverBuilder
-                .comment("Calcium reserve gained from #c:foods/calcium_rich")
-                .defineInRange("calciumFoodGain", 25, 1, 100);
-        ForgeConfigSpec.IntValue carbohydrateFoodGain = serverBuilder
-                .comment("Carbohydrate reserve gained from #c:foods/carbohydrates")
-                .defineInRange("carbohydrateFoodGain", 25, 1, 100);
-        ForgeConfigSpec.IntValue vitaminFoodGain = serverBuilder
-                .comment("Vitamin reserve gained from #c:foods/vegetables or #c:foods/fruits")
-                .defineInRange("vitaminFoodGain", 20, 1, 100);
         ForgeConfigSpec.DoubleValue nutritionCalciumKnittingBonus = serverBuilder
                 .comment("Bone knitting speed bonus at full calcium reserve (0.25 = +25%)")
                 .defineInRange("nutritionCalciumKnittingBonus", 0.25, 0.0, 2.0);
@@ -377,11 +368,8 @@ public class ForgeConfig {
         ServerConfig.ENABLE_CALCIUM_HEALING = safe(SERVER_SPEC, enableCalciumHealing, true);
         ServerConfig.CALCIUM_HEALING_MULTIPLIER = safe(SERVER_SPEC, calciumHealingMultiplier, 2.0);
         ServerConfig.ENABLE_NUTRIENT_RESERVES = safe(SERVER_SPEC, enableNutrientReserves, true);
-        ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS = safe(SERVER_SPEC, nutrientDepletionIntervalTicks, 150);
+        ServerConfig.NUTRIENT_DEPLETION_INTERVAL_TICKS = safe(SERVER_SPEC, nutrientDepletionIntervalTicks, 600);
         ServerConfig.NUTRIENT_DEPLETION_AMOUNT = safe(SERVER_SPEC, nutrientDepletionAmount, 1);
-        ServerConfig.CALCIUM_FOOD_GAIN = safe(SERVER_SPEC, calciumFoodGain, 25);
-        ServerConfig.CARBOHYDRATE_FOOD_GAIN = safe(SERVER_SPEC, carbohydrateFoodGain, 25);
-        ServerConfig.VITAMIN_FOOD_GAIN = safe(SERVER_SPEC, vitaminFoodGain, 20);
         ServerConfig.NUTRITION_CALCIUM_KNITTING_BONUS = safe(SERVER_SPEC, nutritionCalciumKnittingBonus, 0.25);
         ServerConfig.NUTRITION_CALCIUM_FALL_BONUS_BLOCKS = safe(SERVER_SPEC, nutritionCalciumFallBonusBlocks, 2.0);
         ServerConfig.NUTRITION_CALCIUM_FALL_DAMAGE_REDUCTION = safe(SERVER_SPEC, nutritionCalciumFallDamageReduction, 0.25);

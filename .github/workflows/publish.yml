@@ -55,7 +55,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Mod & API Jars
+      - name: Build Mod Jars
         run: |
           chmod +x ./gradlew
           ./gradlew build -Pmod_version="${{ steps.parse_release.outputs.mod_version }}"
@@ -64,7 +64,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            api/build/libs/humannature-api-*.jar
             neoforge/build/libs/humannature-*.jar
             forge/build/libs/humannature-*.jar
           tag_name: ${{ steps.parse_release.outputs.tag_name }}

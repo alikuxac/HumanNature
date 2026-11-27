@@ -1,6 +1,8 @@
 package com.alikuxac.humannature.forge.client;
 
 import com.alikuxac.humannature.api.blood.BloodType;
+import com.alikuxac.humannature.client.FoodNutritionClientData;
+import com.alikuxac.humannature.network.SyncFoodNutritionPayload;
 import com.alikuxac.humannature.modules.injury.InjuryModule;
 import com.alikuxac.humannature.modules.injury.PlayerInjuryData;
 import com.alikuxac.humannature.modules.physiology.PhysiologyModule;
@@ -12,6 +14,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 
 public class ForgeClientPayloadHandler {
+
+    public static void handleSyncFoodNutrition(SyncFoodNutritionPayload payload) {
+        FoodNutritionClientData.apply(payload);
+    }
 
     public static void handleSyncBlood(SyncBloodPayload payload) {
         Player player = Minecraft.getInstance().player;

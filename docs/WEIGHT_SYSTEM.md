@@ -1,6 +1,6 @@
 # Weight & Encumbrance System
 
-Tracks inventory load, armor weight, container contents, and applies graduated encumbrance penalties. Introduces capacity-expanding potions and armor enchantments.
+Items in the inventory, armor slots, offhand and containers add to carried weight. Heavy loads slow movement, pull the player down in water and increase fall damage. Potions and enchantments raise carrying capacity.
 
 ---
 
@@ -42,19 +42,19 @@ $$\text{Weight Ratio} = \frac{\text{Current Weight}}{\text{Max Capacity}}$$
 | **Overburdened** | $\ge 0.85$ | -50% | +0.065 / tick | 2.00x | `⚠ Overburdened: -50% Speed` |
 
 - **Speed Penalty**: Applied as a persistent attribute modifier on `Attributes.MOVEMENT_SPEED`.
-- **Water Sink Pull**: In water, heavier encumbrance pulls players downward per tick, counteracting buoyancy.
-- **Fall Damage**: Scales impact damage upon landing based on momentum and load mass.
+- **Water Sink Pull**: Heavier loads pull players downward in water each tick.
+- **Fall Damage**: Scales landing damage with momentum and carried weight.
 
 ---
 
 ### 3. Capacity Boosts
 
-Default base capacity is **500.0 kg**. Players can raise this limit through potions and enchantments:
+Base capacity is **500.0 kg**, plus potion and enchantment bonuses:
 
 $$\text{Max Capacity} = \text{Base} (500\text{kg}) + \text{Burden Bearer Bonus} + \text{Load Bearing Bonus}$$
 
 #### Mob Effect: Burden Bearer (`humannature:burden_bearer`)
-Grants temporary carry capacity bonus: **+150.0 kg per level**.
+Temporarily adds **+150.0 kg per level** to carrying capacity.
 
 | Potion Variant | Duration | Amplifier | Capacity Bonus |
 | :--- | :--- | :--- | :--- |
@@ -76,27 +76,27 @@ Max level III. Applies to armor and containers (`#humannature:enchantable/load_b
 
 ### 4. UI & Diagnostics
 
-#### Swappable HUD (`WEIGHT` & `COMBINED` Modes)
-- **`WEIGHT` Mode**: Dedicated overlay panel:
+#### HUD Modes (`WEIGHT` & `COMBINED`)
+- **`WEIGHT` Mode** shows:
   - Header: `[WEIGHT & ENCUMBRANCE]`
   - 12-segment progress bar with tier color coding (`[██████░░░░░░] 391.0/800kg (49%)`).
-  - Active tier status and penalty readouts.
+  - Current tier and penalties.
   - Load breakdown: `Load: Inv XX.Xkg | Armor XX.Xkg`.
   - Active capacity buffs: `Buffs: +XXXkg bonus capacity`.
-- **`COMBINED` Mode**: Standardized line `Weight: %s/%skg (%s %s)` (e.g. `Weight: 391.0/800.0kg (Normal 49%)`).
+- **`COMBINED` Mode** uses `Weight: %s/%skg (%s %s)` (e.g. `Weight: 391.0/800.0kg (Normal 49%)`).
 
 #### Auto-Hide Healthy HUD (`ClientConfig.AUTO_HIDE_HEALTHY_HUD`)
 Hides the overlay when carry load is in the `NORMAL` or `LIGHT` tier (ratio $< 0.70$) and other vitals are healthy.
 
 #### Item Tooltips
-Hovering an item displays weight metrics:
+Item tooltips show:
 - Single item: `Weight: 0.8 kg`
 - Stack: `Weight: 51.2 kg (0.8 kg each)`
 - Containers: `Weight: 1383.2 kg (Contents: 1382.4 kg)`
 - Hold `Shift` to show total load: ` (Total: 49% - Light)`
 
 #### Diagnostic Screen
-The Diagnostic Screen displays total carried weight against maximum capacity alongside limb health and vital signs. Fully localized across 7 languages.
+The Diagnostic Screen shows weight, capacity, limb health and vital signs in 7 languages.
 
 ---
 
@@ -104,8 +104,7 @@ The Diagnostic Screen displays total carried weight against maximum capacity alo
 
 #### Server (`humannature-server.toml`)
 
-Master module switch under `[general]`:
-- `enableWeight` (boolean, default: `true`): Master toggle for the inventory weight and encumbrance module.
+`enableWeight` under `[general]` enables inventory weight and encumbrance (default: `true`).
 
 Core keys under `[weight]`:
 

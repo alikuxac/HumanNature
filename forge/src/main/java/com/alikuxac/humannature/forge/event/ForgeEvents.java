@@ -4,6 +4,9 @@ import com.alikuxac.humannature.HumanNatureCommon;
 import com.alikuxac.humannature.config.ServerConfig;
 import com.alikuxac.humannature.modules.injury.InjuryEventHandler;
 import com.alikuxac.humannature.modules.physiology.PhysiologyEventHandler;
+import com.alikuxac.humannature.modules.physiology.FoodNutritionReloadListener;
+import com.alikuxac.humannature.modules.physiology.FoodNutritionSync;
+import net.minecraftforge.event.OnDatapackSyncEvent;
 import com.alikuxac.humannature.modules.temperature.TemperatureEventHandler;
 import com.alikuxac.humannature.modules.weight.WeightEventHandler;
 import com.alikuxac.humannature.forge.init.ForgeModPotions;
@@ -32,16 +35,28 @@ import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = HumanNatureCommon.MOD_ID)
 public class ForgeEvents {
+
+    @SubscribeEvent
+    public static void onDatapackSync(OnDatapackSyncEvent event) {
+        FoodNutritionSync.sync(event.getPlayer() != null ? List.of(event.getPlayer()) : event.getPlayerList().getPlayers());
+    }
+
+    @SubscribeEvent
+    public static void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(FoodNutritionReloadListener.INSTANCE);
+    }
 
     @SubscribeEvent
     public static void onBrewingRecipeRegister(BrewingRecipeRegisterEvent event) {

@@ -28,11 +28,9 @@ class BloodTransfusionTest {
 
     @Test
     void testIncompatiblePairs() {
-        // A cannot give to B
         assertFalse(BloodType.B_POSITIVE.canReceiveFrom(BloodType.A_POSITIVE));
         assertFalse(BloodType.B_NEGATIVE.canReceiveFrom(BloodType.A_NEGATIVE));
 
-        // Rh+ cannot give to Rh-
         assertFalse(BloodType.O_NEGATIVE.canReceiveFrom(BloodType.O_POSITIVE));
         assertFalse(BloodType.A_NEGATIVE.canReceiveFrom(BloodType.A_POSITIVE));
         assertFalse(BloodType.B_NEGATIVE.canReceiveFrom(BloodType.B_POSITIVE));
@@ -81,7 +79,6 @@ class BloodTransfusionTest {
 
         assertFalse(recipient.getBloodType().canReceiveFrom(donorType));
 
-        // When incompatible transfusion occurs:
         recipient.setToxinBuildup(100.0f);
         recipient.setLastToxinType(ToxinType.POISON);
 
@@ -93,12 +90,10 @@ class BloodTransfusionTest {
     void testHemostasisTreatmentLogic() {
         PlayerPhysiologyData patient = new PlayerPhysiologyData();
 
-        // 1. Minor bleeding hemostasis
         patient.setBleedingTier((byte) 1);
         assertTrue(patient.isBleeding());
         assertTrue(patient.getClottingTicks() > 0);
 
-        // Apply treatment
         patient.setBleedingTier((byte) 0);
         patient.setClottingTicks(0);
 
@@ -106,7 +101,6 @@ class BloodTransfusionTest {
         assertFalse(patient.isBleeding());
         assertEquals(0, patient.getClottingTicks());
 
-        // 2. Arterial bleeding hemostasis
         patient.setBleedingTier((byte) 2);
         assertTrue(patient.isBleeding());
 
@@ -122,15 +116,12 @@ class BloodTransfusionTest {
         PlayerPhysiologyData data = new PlayerPhysiologyData();
         data.setBloodVolume((short) 4000);
 
-        // Milk instant restore (+500 ml)
         data.modifyBloodVolume(500);
         assertEquals(4500, data.getBloodVolume());
 
-        // Boost ticks activation
         data.setBloodRegenBoostTicks(1200);
         assertEquals(1200, data.getBloodRegenBoostTicks());
 
-        // Boosted tick regen calculation
         int baseRegen = 1;
         int mult = 3;
         data.modifyBloodVolume(baseRegen * mult);
@@ -145,19 +136,16 @@ class BloodTransfusionTest {
         assertTrue(empty.canAccept(BloodType.O_NEGATIVE));
         assertTrue(empty.canAccept(BloodType.A_POSITIVE));
 
-        // Add 500 ml of A+
         BloodBagItem.BloodBagData partial = new BloodBagItem.BloodBagData(500, BloodType.A_POSITIVE);
         assertFalse(partial.isEmpty());
         assertFalse(partial.isFull());
         assertEquals(500, partial.storedMl());
         assertEquals(BloodType.A_POSITIVE, partial.bloodType());
 
-        // Locked to A+: rejects other types, accepts same type
         assertTrue(partial.canAccept(BloodType.A_POSITIVE));
         assertFalse(partial.canAccept(BloodType.B_POSITIVE));
         assertFalse(partial.canAccept(BloodType.O_NEGATIVE));
 
-        // Filled to capacity (1000 ml)
         BloodBagItem.BloodBagData full = new BloodBagItem.BloodBagData(1000, BloodType.A_POSITIVE);
         assertFalse(full.isEmpty());
         assertTrue(full.isFull());
@@ -166,7 +154,6 @@ class BloodTransfusionTest {
 
     @Test
     void testExtractionSafetyThresholdBoundary() {
-        // Safe extraction requires bloodVolume > 3500
         short unsafeBoundary = 3500;
         short safeBoundary = 3501;
 

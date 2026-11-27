@@ -1,4 +1,9 @@
 {
+  "jei.humannature.nutrition.title": "Dinh dưỡng",
+  "jei.humannature.nutrition.per_serving": "Lượng tăng mỗi lần ăn/uống",
+  "jei.humannature.nutrition.calcium": "Canxi: +%s",
+  "jei.humannature.nutrition.carbohydrates": "Tinh bột: +%s",
+  "jei.humannature.nutrition.vitamins": "Vitamin: +%s",
   "item.humannature.wooden_splint": "Nẹp Gỗ Thô",
   "item.humannature.reinforced_splint": "Nẹp Sắt",
   "item.humannature.golden_splint": "Nẹp Vàng",

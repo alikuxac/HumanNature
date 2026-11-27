@@ -47,7 +47,6 @@ class BloodTypeTest {
             assertSame(type, BloodType.fromName(type.getDisplayName()));
         }
 
-        // Default fallbacks for invalid inputs
         assertSame(BloodType.O_POSITIVE, BloodType.fromId((byte) 99));
         assertSame(BloodType.O_POSITIVE, BloodType.fromName(null));
         assertSame(BloodType.O_POSITIVE, BloodType.fromName("UNKNOWN"));
@@ -68,7 +67,6 @@ class BloodTypeTest {
             assertTrue(donor.canDonateTo(universalRecipient), donor + " should be able to donate to AB+");
         }
 
-        // O- cannot receive from anyone except O-
         for (BloodType donor : BloodType.values()) {
             if (donor == BloodType.O_NEGATIVE) {
                 assertTrue(universalDonor.canReceiveFrom(donor));
@@ -80,7 +78,6 @@ class BloodTypeTest {
 
     @Test
     void testSpecificTypeCompatibilities() {
-        // A+ can receive from A+, A-, O+, O-
         assertTrue(BloodType.A_POSITIVE.canReceiveFrom(BloodType.A_POSITIVE));
         assertTrue(BloodType.A_POSITIVE.canReceiveFrom(BloodType.A_NEGATIVE));
         assertTrue(BloodType.A_POSITIVE.canReceiveFrom(BloodType.O_POSITIVE));
@@ -88,7 +85,6 @@ class BloodTypeTest {
         assertFalse(BloodType.A_POSITIVE.canReceiveFrom(BloodType.B_POSITIVE));
         assertFalse(BloodType.A_POSITIVE.canReceiveFrom(BloodType.AB_POSITIVE));
 
-        // B- can receive from B-, O- only
         assertTrue(BloodType.B_NEGATIVE.canReceiveFrom(BloodType.B_NEGATIVE));
         assertTrue(BloodType.B_NEGATIVE.canReceiveFrom(BloodType.O_NEGATIVE));
         assertFalse(BloodType.B_NEGATIVE.canReceiveFrom(BloodType.B_POSITIVE));
