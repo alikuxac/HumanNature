@@ -10,16 +10,24 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.suggestion.Suggestions;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 public final class HumanNatureCommands {
+    private static final String DISCORD_URL = "https://discord.gg/tP7uhhQdpP";
+    private static final String FEEDBACK_EMAIL = "hello@alikuxac.xyz";
+    private static final String GITHUB_URL = "https://github.com/alikuxac/HumanNature/issues";
+
     private static final String[] TYPE_NAMES = {
             "O_NEG", "O_POS", "A_NEG", "A_POS", "B_NEG", "B_POS", "AB_NEG", "AB_POS"
     };
@@ -34,6 +42,7 @@ public final class HumanNatureCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("humannature")
                 .requires(source -> source.hasPermission(2))
+                .then(Commands.literal("feedback").executes(HumanNatureCommands::feedback))
                 .then(Commands.literal("blood")
                         .then(Commands.literal("get")
                                 .then(Commands.argument("player", EntityArgument.player())
@@ -49,7 +58,39 @@ public final class HumanNatureCommands {
                                                 .executes(HumanNatureCommands::setVolume))))));
     }
 
-    static CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestTypes(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+    private static int feedback(CommandContext<CommandSourceStack> context) {
+        context.getSource().sendSuccess(() -> feedbackMessage(DISCORD_URL, FEEDBACK_EMAIL), false);
+        return 1;
+    }
+
+    static Component feedbackMessage(String discordUrl, String email) {
+        return Component.empty()
+                .append(Component.literal("[Human Nature] Feedback & Support")
+                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+                .append("\n")
+                .append(feedbackContact("Discord", "Click here to join Discord", discordUrl, ClickEvent.Action.OPEN_URL))
+                .append("\n")
+                .append(feedbackContact("GitHub", "Click here to report an issue", GITHUB_URL, ClickEvent.Action.OPEN_URL))
+                .append("\n")
+                .append(feedbackContact("Email", "Click here to copy email", email, ClickEvent.Action.COPY_TO_CLIPBOARD))
+                .append("\n")
+                .append(Component.literal("For bug reports, include your mod version, loader, and what happened.")
+                        .withStyle(ChatFormatting.GRAY));
+    }
+
+    private static Component feedbackContact(String label, String text, String value, ClickEvent.Action action) {
+        if (value.isBlank() || value.startsWith("YOUR_")) {
+            return Component.literal(label + ": Not configured yet").withStyle(ChatFormatting.GRAY);
+        }
+        String hint = action == ClickEvent.Action.COPY_TO_CLIPBOARD ? "Click to copy email" : "Click to open link";
+        return Component.literal(label + ": " + text).withStyle(style -> style
+                .withColor(ChatFormatting.AQUA)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent(action, value))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hint))));
+    }
+
+    static CompletableFuture<Suggestions> suggestTypes(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         for (BloodType type : TYPES) {
             builder.suggest(type.getDisplayName());
         }
