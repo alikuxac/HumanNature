@@ -12,6 +12,9 @@ pluginManagement {
 rootProject.name = 'human-nature'
 
 include 'api'
-include 'common'
-include 'neoforge'
-include 'forge'
+
+if ('true' != System.getenv('JITPACK')) {
+    include 'common'
+    include 'neoforge'
+    include 'forge'
+}
